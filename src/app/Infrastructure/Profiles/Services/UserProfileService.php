@@ -14,18 +14,22 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileHandleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
 use App\Infrastructure\Profiles\ProfileHandleCandidates;
-use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Every write runs in its own transaction, nested as a savepoint when the caller already holds one: a
- * clash on an address rolls back only that try, so the account being saved around it (registration,
- * the panel) never fails in PostgreSQL because of an aborted transaction.
+ * The history decides who holds an address: giving one writes its row (primary key `handle_hash`) in the
+ * same transaction as the profile, so two accounts racing for it can never both get it, and retiring only
+ * stamps `retired_at` on the owner's own row.
+ *
+ * Every try runs in its own transaction, nested as a savepoint when the caller already holds one: a clash
+ * rolls back only that try, so the account being saved around it (registration, the panel) never fails in
+ * PostgreSQL because of an aborted transaction.
  */
 final readonly class UserProfileService implements UserProfileServiceInterface
 {
@@ -52,7 +56,7 @@ final readonly class UserProfileService implements UserProfileServiceInterface
 
             try {
                 DB::transaction(function () use ($handle, $userId): void {
-                    $this->reclaim($handle, $userId);
+                    $this->claim($handle, $userId);
                     UserProfileModel::query()->create([
                         'user_id' => $userId,
                         'handle' => $handle->value,
@@ -74,48 +78,41 @@ final readonly class UserProfileService implements UserProfileServiceInterface
         throw ProfileHandleUnavailableException::forUser($userId);
     }
 
-    public function followPublicName(string $userId): void
+    public function followPublicName(string $userId): bool
     {
         $user = UserModel::query()->withTrashed()->find($userId);
         $profile = UserProfileModel::query()->find($userId);
 
         if (! $user instanceof UserModel || $user->anonymized_at !== null || ! $profile instanceof UserProfileModel || $profile->handle_chosen) {
-            return;
+            return false;
         }
 
         $current = $profile->handle;
 
-        // Still no public name: the random address stays
-        if (ProfileHandleCandidates::baseOf($user->display_name) === '' && ProfileHandleCandidates::isRandom($current)) {
-            return;
+        if (ProfileHandleCandidates::follows($current, $user->display_name)) {
+            return false;
         }
 
         foreach (ProfileHandleCandidates::for($user->display_name) as $handle) {
-            // The address the name gives is already this one (`ana-2` while `ana` is someone else's)
-            if ($handle->value === $current) {
-                return;
-            }
-
             if (! $this->isFreeFor($handle, $userId)) {
                 continue;
             }
 
             try {
-                // A row changed meanwhile (chosen by the owner, moved by another save) is left as it is now
-                DB::transaction(function () use ($handle, $userId, $current): void {
-                    $updated = UserProfileModel::query()
-                        ->whereKey($userId)
-                        ->where('handle', $current)
-                        ->where('handle_chosen', false)
-                        ->update(['handle' => $handle->value, 'updated_at' => now()]);
+                return DB::transaction(function () use ($handle, $userId, $current): bool {
+                    $locked = UserProfileModel::query()->lockForUpdate()->find($userId);
 
-                    if ($updated > 0) {
-                        $this->reclaim($handle, $userId);
-                        $this->retire($current, $userId);
+                    // Changed meanwhile (chosen by the owner, moved by another save): left as it is now
+                    if (! $locked instanceof UserProfileModel || $locked->handle_chosen || $locked->handle !== $current) {
+                        return false;
                     }
-                });
 
-                return;
+                    $this->claim($handle, $userId);
+                    $this->retire($current, $userId);
+                    $locked->update(['handle' => $handle->value]);
+
+                    return true;
+                });
             } catch (UniqueConstraintViolationException) {
                 // Taken since it was checked: the next candidate
             }
@@ -130,7 +127,7 @@ final readonly class UserProfileService implements UserProfileServiceInterface
             $profile = UserProfileModel::query()->lockForUpdate()->find($userId);
 
             if ($profile instanceof UserProfileModel) {
-                $this->retire($profile->handle, null);
+                $this->retire($profile->handle, $userId);
                 $banner = $profile->banner_public_id;
                 $profile->delete();
 
@@ -139,13 +136,19 @@ final readonly class UserProfileService implements UserProfileServiceInterface
                 }
             }
 
+            UserProfileHandleModel::query()->where('user_id', $userId)->whereNull('retired_at')->update(['retired_at' => now()]);
             UserProfileHandleModel::query()->where('user_id', $userId)->update(['handle' => null, 'user_id' => null]);
         });
     }
 
     public function createMissing(bool $dryRun, int $chunk): ProfileCreationResultDTO
     {
-        $query = UserModel::query()
+        $chunk = max(1, $chunk);
+        $created = 0;
+        $realigned = 0;
+        $failed = 0;
+
+        $missing = UserModel::query()
             ->withTrashed()
             ->whereNull('anonymized_at')
             ->whereNotExists(static function (QueryBuilder $profiles): void {
@@ -153,43 +156,60 @@ final readonly class UserProfileService implements UserProfileServiceInterface
             });
 
         if ($dryRun) {
-            return new ProfileCreationResultDTO($query->count());
+            $created = $missing->count();
+        } else {
+            // By id, so rows created along the way never shift the next chunk
+            $missing->select('users.id')->chunkById($chunk, function (Collection $users) use (&$created, &$failed): void {
+                foreach ($users as $user) {
+                    $userId = (string) $user->getKey();
+
+                    try {
+                        if ($this->createFor($userId)) {
+                            $created++;
+                        }
+                    } catch (Throwable $e) {
+                        $failed++;
+                        $this->logFailure('The public profile of an account could not be created.', $userId, $e);
+                    }
+                }
+            }, 'users.id', 'id');
         }
 
-        $created = 0;
-        $failed = 0;
+        // Addresses left behind by a failed move when the public name changed
+        UserProfileModel::query()
+            ->where('handle_chosen', false)
+            ->whereHas('user', static function (Builder $users): void {
+                $users->whereNull('anonymized_at');
+            })
+            ->with('user:id,display_name,anonymized_at')
+            ->chunkById($chunk, function (Collection $profiles) use ($dryRun, &$realigned, &$failed): void {
+                foreach ($profiles as $profile) {
+                    if (ProfileHandleCandidates::follows($profile->handle, $profile->user?->display_name)) {
+                        continue;
+                    }
 
-        $this->eachMissing($query, max(1, $chunk), function (string $userId) use (&$created, &$failed): void {
-            try {
-                if ($this->createFor($userId)) {
-                    $created++;
+                    if ($dryRun) {
+                        $realigned++;
+
+                        continue;
+                    }
+
+                    try {
+                        if ($this->followPublicName($profile->user_id)) {
+                            $realigned++;
+                        }
+                    } catch (Throwable $e) {
+                        $failed++;
+                        $this->logFailure('The public profile address of an account could not follow its public name.', $profile->user_id, $e);
+                    }
                 }
-            } catch (Throwable $e) {
-                $failed++;
-                Log::warning('[Profiles] The public profile of an account could not be created.', [
-                    'user_id' => $userId,
-                    'exception' => $e,
-                ]);
-            }
-        });
+            }, 'user_id');
 
-        Log::info('[Profiles] Missing public profiles created.', ['created' => $created, 'failed' => $failed]);
+        if (! $dryRun) {
+            Log::info('[Profiles] Missing public profiles created.', ['created' => $created, 'realigned' => $realigned, 'failed' => $failed]);
+        }
 
-        return new ProfileCreationResultDTO($created, $failed);
-    }
-
-    /**
-     * @param  Builder<UserModel>  $query
-     * @param  Closure(string): void  $callback
-     */
-    private function eachMissing(Builder $query, int $chunk, Closure $callback): void
-    {
-        // By id, so rows created along the way never shift the next chunk
-        $query->select('users.id')->chunkById($chunk, static function ($users) use ($callback): void {
-            foreach ($users as $user) {
-                $callback((string) $user->getKey());
-            }
-        }, 'users.id', 'id');
+        return new ProfileCreationResultDTO($created, $realigned, $failed);
     }
 
     /**
@@ -203,36 +223,67 @@ final readonly class UserProfileService implements UserProfileServiceInterface
     }
 
     /**
-     * Free when nobody holds it now and it is not in the history, unless the history row is this
-     * account's own: an owner may get back an address they used before.
+     * Free when nobody ever held it, or when this account did: an owner may get back an address they used
+     * before. Only a quick check: claim() is what decides.
      */
     private function isFreeFor(ProfileHandle $handle, string $userId): bool
     {
-        if (UserProfileModel::query()->where('handle', $handle->value)->where('user_id', '!=', $userId)->exists()) {
-            return false;
+        $given = UserProfileHandleModel::query()->find($handle->hash());
+
+        if ($given instanceof UserProfileHandleModel) {
+            return $given->user_id === $userId;
         }
 
-        $retired = UserProfileHandleModel::query()->find($handle->hash());
-
-        return ! $retired instanceof UserProfileHandleModel || $retired->user_id === $userId;
+        return ! UserProfileModel::query()->where('handle', $handle->value)->where('user_id', '!=', $userId)->exists();
     }
 
     /**
-     * Takes an address back out of this account's own history.
+     * Writes the address to the history as this account's current one, or takes back one of its own.
+     *
+     * @throws UniqueConstraintViolationException when anybody else ever held it
      */
-    private function reclaim(ProfileHandle $handle, string $userId): void
+    private function claim(ProfileHandle $handle, string $userId): void
     {
-        UserProfileHandleModel::query()->whereKey($handle->hash())->where('user_id', $userId)->delete();
+        $reclaimed = UserProfileHandleModel::query()
+            ->whereKey($handle->hash())
+            ->where('user_id', $userId)
+            ->update(['retired_at' => null]);
+
+        if ($reclaimed === 0) {
+            UserProfileHandleModel::query()->insert([
+                'handle_hash' => $handle->hash(),
+                'handle' => $handle->value,
+                'user_id' => $userId,
+                'retired_at' => null,
+            ]);
+        }
     }
 
     /**
-     * Keeps an address in the history: with its owner while it should redirect, as a bare hash otherwise.
+     * Stamps the account's own row of an address as retired. Never touches anybody else's row: a missing
+     * one is written only if the hash is still free.
      */
-    private function retire(string $handle, ?string $userId): void
+    private function retire(string $handle, string $userId): void
     {
-        UserProfileHandleModel::query()->updateOrCreate(
-            ['handle_hash' => ProfileHandle::hashOf($handle)],
-            ['handle' => $userId === null ? null : $handle, 'user_id' => $userId, 'retired_at' => now()],
-        );
+        $hash = ProfileHandle::hashOf($handle);
+
+        $retired = UserProfileHandleModel::query()
+            ->whereKey($hash)
+            ->where('user_id', $userId)
+            ->update(['retired_at' => now()]);
+
+        if ($retired === 0) {
+            UserProfileHandleModel::query()->insertOrIgnore([
+                'handle_hash' => $hash,
+                'handle' => $handle,
+                'user_id' => $userId,
+                'retired_at' => now(),
+            ]);
+        }
+    }
+
+    private function logFailure(string $message, string $userId, Throwable $e): void
+    {
+        Log::warning('[Profiles] '.$message, ['user_id' => $userId, 'exception' => $e]);
     }
 }

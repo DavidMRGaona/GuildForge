@@ -18,6 +18,7 @@ use Closure;
 use Illuminate\Console\Scheduling\Event;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
@@ -201,10 +202,28 @@ final class UserProfileLifecycleTest extends TestCase
             ->assertSuccessful();
     }
 
+    public function test_the_command_realigns_addresses_apart_from_the_profiles_it_creates(): void
+    {
+        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+        DB::table('users')->where('id', $user->id)->update(['display_name' => 'Bea']);
+
+        $this->artisanCommand('profiles:create-missing', ['--dry-run' => true])
+            ->expectsOutputToContain('0 perfiles se crearían')
+            ->expectsOutputToContain('1 dirección se realinearía con el nombre público')
+            ->assertSuccessful();
+        $this->assertSame('ana', UserProfileModel::query()->findOrFail($user->id)->handle);
+
+        $this->artisanCommand('profiles:create-missing')
+            ->expectsOutputToContain('0 perfiles creados')
+            ->expectsOutputToContain('1 dirección realineada con el nombre público')
+            ->assertSuccessful();
+        $this->assertSame('bea', UserProfileModel::query()->findOrFail($user->id)->handle);
+    }
+
     public function test_the_command_fails_when_a_profile_could_not_be_created(): void
     {
         $profiles = Mockery::mock(UserProfileServiceInterface::class);
-        $profiles->shouldReceive('createMissing')->once()->with(false, 500)->andReturn(new ProfileCreationResultDTO(created: 2, failed: 1));
+        $profiles->shouldReceive('createMissing')->once()->with(false, 500)->andReturn(new ProfileCreationResultDTO(created: 2, realigned: 0, failed: 1));
         $this->app->instance(UserProfileServiceInterface::class, $profiles);
 
         $this->artisanCommand('profiles:create-missing')

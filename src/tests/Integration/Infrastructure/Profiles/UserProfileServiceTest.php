@@ -10,6 +10,7 @@ use App\Domain\Profiles\ValueObjects\ProfileHandle;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileHandleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -52,9 +53,7 @@ final class UserProfileServiceTest extends TestCase
     {
         $user = UserModel::factory()->create(['name' => 'Ana García López', 'display_name' => null]);
 
-        $handle = $this->profileOf($user)->handle;
-        $this->assertMatchesRegularExpression('/^miembro-'.self::RANDOM.'$/', $handle);
-        $this->assertStringNotContainsString('ana', $handle);
+        $this->assertMatchesRegularExpression('/^miembro-'.self::RANDOM.'$/', $this->profileOf($user)->handle);
     }
 
     public function test_a_public_name_with_nothing_to_slug_gets_a_random_address(): void
@@ -171,7 +170,7 @@ final class UserProfileServiceTest extends TestCase
         $history = UserProfileHandleModel::query()->findOrFail(ProfileHandle::hashOf('ana'));
         $this->assertSame('ana', $history->handle);
         $this->assertSame((string) $user->id, $history->user_id);
-        $this->assertTrue($history->retired_at->lessThanOrEqualTo(now()));
+        $this->assertNotNull($history->retired_at);
     }
 
     public function test_setting_a_public_name_replaces_the_random_address(): void
@@ -202,7 +201,7 @@ final class UserProfileServiceTest extends TestCase
         $user->update(['display_name' => '']);
 
         $this->assertSame($random, $this->profileOf($user)->handle);
-        $this->assertSame(0, UserProfileHandleModel::query()->count());
+        $this->assertSame(0, $this->retiredCount());
     }
 
     public function test_a_new_public_name_with_the_same_address_changes_nothing(): void
@@ -213,7 +212,7 @@ final class UserProfileServiceTest extends TestCase
         $user->update(['display_name' => 'ANA']);
 
         $this->assertSame('ana-2', $this->profileOf($user)->handle);
-        $this->assertSame(0, UserProfileHandleModel::query()->count());
+        $this->assertSame(0, $this->retiredCount());
     }
 
     public function test_a_chosen_address_no_longer_follows_the_public_name(): void
@@ -224,7 +223,7 @@ final class UserProfileServiceTest extends TestCase
         $user->update(['display_name' => 'Bea']);
 
         $this->assertSame('la-ana', $this->profileOf($user)->handle);
-        $this->assertSame(0, UserProfileHandleModel::query()->count());
+        $this->assertSame(0, $this->retiredCount());
     }
 
     public function test_the_owner_can_get_back_an_address_they_used_before(): void
@@ -235,7 +234,9 @@ final class UserProfileServiceTest extends TestCase
         $user->update(['display_name' => 'Ana']);
 
         $this->assertSame('ana', $this->profileOf($user)->handle);
-        $this->assertFalse(UserProfileHandleModel::query()->whereKey(ProfileHandle::hashOf('ana'))->exists());
+        $ana = UserProfileHandleModel::query()->findOrFail(ProfileHandle::hashOf('ana'));
+        $this->assertSame((string) $user->id, $ana->user_id);
+        $this->assertNull($ana->retired_at);
         $this->assertTrue(UserProfileHandleModel::query()->whereKey(ProfileHandle::hashOf('bea'))->exists());
     }
 
@@ -300,6 +301,82 @@ final class UserProfileServiceTest extends TestCase
         $this->assertSame('carla', $this->profileOf($deactivated)->handle);
         $this->assertNull(UserProfileModel::query()->find($anonymized->id));
         $this->assertSame(0, $this->profiles->createMissing(dryRun: false, chunk: 500)->created);
+    }
+
+    public function test_the_address_given_is_in_the_history_from_the_start(): void
+    {
+        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+
+        $row = UserProfileHandleModel::query()->findOrFail(ProfileHandle::hashOf('ana'));
+        $this->assertSame('ana', $row->handle);
+        $this->assertSame((string) $user->id, $row->user_id);
+        $this->assertNull($row->retired_at);
+    }
+
+    public function test_a_touched_up_public_name_keeps_a_random_suffix(): void
+    {
+        $this->retire('ana');
+        foreach (range(2, 20) as $number) {
+            $this->retire('ana-'.$number);
+        }
+        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+        $handle = $this->profileOf($user)->handle;
+        $retired = $this->retiredCount();
+
+        $user->update(['display_name' => 'Ana.']);
+
+        $this->assertSame($handle, $this->profileOf($user)->handle);
+        $this->assertSame($retired, $this->retiredCount());
+    }
+
+    public function test_addresses_that_no_longer_follow_the_public_name_are_realigned_once(): void
+    {
+        $stale = UserModel::factory()->create(['display_name' => 'Ana']);
+        // As if moving the address had failed when the name changed
+        DB::table('users')->where('id', $stale->id)->update(['display_name' => 'Bea']);
+        UserModel::factory()->create(['display_name' => 'Carla']);
+        $chosen = UserModel::factory()->create(['display_name' => 'Dora']);
+        UserProfileModel::query()->whereKey($chosen->id)->update(['handle' => 'la-dora', 'handle_chosen' => true]);
+        $numbered = UserModel::factory()->create(['display_name' => 'Carla']);
+        $random = UserModel::factory()->create(['display_name' => null]);
+        $anonymized = UserModel::factory()->create(['display_name' => 'Eva']);
+        DB::table('users')->where('id', $anonymized->id)->update(['display_name' => null, 'anonymized_at' => now()]);
+
+        $dryRun = $this->profiles->createMissing(dryRun: true, chunk: 1);
+
+        $this->assertSame(0, $dryRun->created);
+        $this->assertSame(1, $dryRun->realigned);
+        $this->assertSame('ana', $this->profileOf($stale)->handle);
+
+        $result = $this->profiles->createMissing(dryRun: false, chunk: 1);
+
+        $this->assertSame(0, $result->created);
+        $this->assertSame(1, $result->realigned);
+        $this->assertSame(0, $result->failed);
+        $this->assertSame('bea', $this->profileOf($stale)->handle);
+        $this->assertNotNull(UserProfileHandleModel::query()->findOrFail(ProfileHandle::hashOf('ana'))->retired_at);
+        $this->assertSame('la-dora', $this->profileOf($chosen)->handle);
+        $this->assertSame('carla-2', $this->profileOf($numbered)->handle);
+        $this->assertMatchesRegularExpression('/^miembro-'.self::RANDOM.'$/', $this->profileOf($random)->handle);
+        $this->assertSame('eva', $this->profileOf($anonymized)->handle);
+        $this->assertSame(0, $this->profiles->createMissing(dryRun: false, chunk: 500)->realigned);
+    }
+
+    public function test_an_account_with_addresses_cannot_be_deleted_around_the_profiles(): void
+    {
+        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+
+        try {
+            DB::transaction(static fn () => DB::table('users')->where('id', $user->id)->delete());
+            $this->fail('The history should keep the account from being deleted while it names it.');
+        } catch (QueryException) {
+            $this->assertSame('ana', UserProfileHandleModel::query()->findOrFail(ProfileHandle::hashOf('ana'))->handle);
+        }
+    }
+
+    private function retiredCount(): int
+    {
+        return UserProfileHandleModel::query()->whereNotNull('retired_at')->count();
     }
 
     private function profileOf(UserModel $user): UserProfileModel

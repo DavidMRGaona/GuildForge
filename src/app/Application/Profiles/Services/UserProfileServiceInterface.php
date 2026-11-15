@@ -12,7 +12,8 @@ use App\Domain\Profiles\Exceptions\ProfileHandleUnavailableException;
  * public name until the owner chooses one, and forgotten when the account is anonymized.
  *
  * The address comes from `display_name` only, never from `name`; without a public name it is random
- * (`miembro-xxxxxx`). An address once used is kept in the history and never given to anybody else.
+ * (`miembro-xxxxxx`). Every address given is written to the history in the same transaction, whose
+ * primary key keeps it reserved for ever: it is never given to anybody else.
  */
 interface UserProfileServiceInterface
 {
@@ -27,12 +28,15 @@ interface UserProfileServiceInterface
 
     /**
      * After the public name changed: while the owner has not chosen an address, it moves to the one the
-     * new name gives, and the previous one goes to the history (and redirects there). Does nothing for an
-     * account without a row, with a chosen address, or anonymized.
+     * new name gives, and the previous one is retired (and redirects there). An address that still follows
+     * the name (a numbered or random-suffixed form of its slug) is kept. Does nothing for an account
+     * without a row, with a chosen address, or anonymized.
+     *
+     * @return bool whether the address moved
      *
      * @throws ProfileHandleUnavailableException when no free address was found
      */
-    public function followPublicName(string $userId): void;
+    public function followPublicName(string $userId): bool;
 
     /**
      * Anonymizing or deleting the account: deletes its row, releases the banner, and keeps in the history
@@ -41,8 +45,10 @@ interface UserProfileServiceInterface
     public function forget(string $userId): void;
 
     /**
-     * Creates the rows missing for accounts not anonymized (deactivated ones included), in chunks.
-     * Idempotent; an account whose row cannot be created is logged and counted as failed.
+     * Creates the rows missing for accounts not anonymized (deactivated ones included), and moves the
+     * addresses not chosen that no longer follow the public name (a failed move when the name changed),
+     * in chunks. Idempotent; an account whose row cannot be created or moved is logged and counted as
+     * failed.
      */
     public function createMissing(bool $dryRun, int $chunk): ProfileCreationResultDTO;
 }

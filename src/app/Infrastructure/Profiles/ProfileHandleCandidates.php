@@ -54,6 +54,32 @@ final class ProfileHandleCandidates
     }
 
     /**
+     * Whether a handle is what this public name gives (core#740): its slug, a numbered or random-suffixed
+     * form of it or, without a public name, a random one. A handle that still follows the name is kept, so
+     * touching the name up (`Ana` → `Ana.`) never burns an address.
+     */
+    public static function follows(string $handle, ?string $publicName): bool
+    {
+        $base = self::baseOf($publicName);
+
+        if ($base === '') {
+            return self::isRandom($handle);
+        }
+
+        if ($handle === $base) {
+            return true;
+        }
+
+        for ($number = 2; $number <= self::NUMBERED_TRIES; $number++) {
+            if ($handle === self::withSuffix($base, (string) $number)) {
+                return true;
+            }
+        }
+
+        return preg_match('/^'.preg_quote(self::cut($base, ProfileHandle::MAX_LENGTH - self::RANDOM_LENGTH - 1), '/').'-['.self::RANDOM_ALPHABET.']{'.self::RANDOM_LENGTH.'}$/', $handle) === 1;
+    }
+
+    /**
      * Whether a handle is one of the random ones given without a public name.
      */
     public static function isRandom(string $handle): bool

@@ -9,13 +9,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
 /**
- * A profile address no longer in use (core#740). Reserved for ever; `handle` and `user_id` are null once
- * the account was anonymized or deleted.
+ * A profile address ever given (core#740), current or retired. Reserved for ever; `handle` and `user_id`
+ * are null once the account was anonymized or deleted.
  *
  * @property string $handle_hash
  * @property string|null $handle
  * @property string|null $user_id
- * @property Carbon $retired_at
+ * @property Carbon|null $retired_at null while it is the owner's current address
  */
 final class UserProfileHandleModel extends Model
 {

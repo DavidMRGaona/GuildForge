@@ -7,9 +7,10 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Profile addresses no longer in use (core#740). Each one stays reserved for ever, so an old link never
- * points to another person; while its owner exists it redirects to their current address. Anonymizing
- * leaves only the hash: still reserved, naming nobody.
+ * Every profile address ever given (core#740), written in the same transaction that gives it. The
+ * primary key keeps each one reserved for ever, so an old link never points to another person; a retired
+ * one redirects to its owner's current address while they exist. Anonymizing leaves only the hash: still
+ * reserved, naming nobody.
  */
 return new class extends Migration
 {
@@ -20,8 +21,11 @@ return new class extends Migration
             $table->string('handle_hash', 64)->primary();
             $table->string('handle', 30)->nullable();
             $table->uuid('user_id')->nullable()->index();
-            $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
-            $table->timestamp('retired_at');
+            // Restrict, not null on delete: deleting an account around Eloquent would leave its addresses
+            // readable. UserProfileServiceInterface::forget() reduces them to hashes first.
+            $table->foreign('user_id')->references('id')->on('users')->restrictOnDelete();
+            // Null while it is the owner's current address
+            $table->timestamp('retired_at')->nullable();
         });
     }
 
