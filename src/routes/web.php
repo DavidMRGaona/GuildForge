@@ -34,6 +34,7 @@ use App\Http\Controllers\MailSubjectMuteController;
 use App\Http\Controllers\MailUnsubscribeController;
 use App\Http\Controllers\OneClickMailUnsubscribeController;
 use App\Http\Controllers\PersonalCalendarFeedController;
+use App\Http\Controllers\Profiles\PublicProfileController;
 use App\Http\Controllers\Proposals\ArticleProposalController;
 use App\Http\Controllers\Proposals\EventProposalController;
 use App\Http\Controllers\Proposals\ProposalActionController;
@@ -43,6 +44,7 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SearchSuggestionsController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SiteNotificationsController;
+use App\Http\Middleware\KeepOutOfSearchEngines;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Session\Middleware\StartSession;
@@ -133,6 +135,12 @@ Route::get('/buscar/sugerencias', SearchSuggestionsController::class)
     ->name('search.suggestions');
 
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
+
+// Public profiles (core#741): decided per viewer by ProfileAccessRule, never indexed, with the same 404
+// for an address that does not exist and for a profile the viewer may not see
+Route::get('/miembros/{handle}', [PublicProfileController::class, 'show'])
+    ->middleware(KeepOutOfSearchEngines::class)
+    ->name('profiles.show');
 
 Route::get('/{slug}', [LegalPageController::class, 'show'])
     ->where('slug', 'politica-de-privacidad|aviso-legal|politica-de-cookies|terminos-y-condiciones')

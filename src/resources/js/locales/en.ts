@@ -594,6 +594,18 @@ export default {
             notFound: 'No registrations found',
         },
     },
+    publicProfile: {
+        noPublicName: 'No public name',
+        membershipBadge: 'Member',
+        memberSince: 'Member since {date}',
+        choosePublicName: 'Choose a public name so others can see your profile.',
+        choosePublicNameAction: 'Choose a public name',
+        onlyOwner: 'Only you can see this profile.',
+        emptyVisitor: 'Nothing to show yet.',
+        emptyOwnerTitle: 'Your profile is still empty',
+        emptyOwnerDescription: 'What you add will show here for whoever can see your profile.',
+        editProfile: 'Edit profile',
+    },
     auth: {
         backToHome: 'Back to home',
         register: {

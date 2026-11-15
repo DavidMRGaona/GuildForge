@@ -28,6 +28,7 @@ return [
         'verify_email' => 'Verificar correo',
         'profile' => 'Mi perfil',
         'notifications' => 'Avisos',
+        'public_profile' => 'Perfil de @:handle',
         'mail_unsubscribe' => 'Darte de baja de un tipo de correo',
         'mail_mute_subject' => 'Dejar de recibir avisos de algo concreto',
         'maintenance' => 'Estamos en mantenimiento',
