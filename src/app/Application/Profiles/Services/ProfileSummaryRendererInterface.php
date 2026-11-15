@@ -15,7 +15,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
  *
  * Like ProfileRendererInterface, which the same instance implements, it never decides whether the
  * person may see the profile and fails closed without throwing. Only the core calls it, through
- * PublicProfileServiceInterface::card(), once the access rule let the person see the profile;
+ * ProfileCardServiceInterface::card(), once the access rule let the person see the profile;
  * modules ask for the card instead.
  *
  * An interface of its own rather than a method of ProfileRendererInterface, so test doubles of the

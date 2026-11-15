@@ -65,7 +65,7 @@ export interface ProfileTextSegment {
 
 /**
  * The summary card of a public profile (core#744): what `GET /miembros/{handle}/tarjeta` answers for
- * whoever may see the profile (`PublicProfileServiceInterface::card()` on the server). Never the
+ * whoever may see the profile (`ProfileCardServiceInterface::card()` on the server). Never the
  * account id, the account name, the email or the roles.
  */
 export interface ProfileCard {

@@ -6,7 +6,7 @@ namespace App\Application\Profiles\DTOs;
 
 /**
  * The summary card of a public profile for one person (core#744): what `GET /miembros/{handle}/tarjeta`
- * answers and what PublicProfileServiceInterface::card() gives modules. Only what the profile page
+ * answers and what ProfileCardServiceInterface::card() gives modules. Only what the profile page
  * itself shows that person: never the account id, the account name, the email or the roles.
  */
 final readonly class ProfileCardDTO

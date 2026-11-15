@@ -25,6 +25,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Testing\TestResponse;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Response;
@@ -213,6 +214,10 @@ final class PublicProfileCardControllerTest extends TestCase
 
             $this->assertSameNotFound($page, $card);
             $this->assertSame($page->headers->get('Cache-Control'), $card->headers->get('Cache-Control'));
+            $this->assertStringContainsString('private', (string) $card->headers->get('Cache-Control'));
+            // The only difference: the card's limit, the same for every address
+            $this->assertNull($page->headers->get('X-RateLimit-Limit'));
+            $card->assertHeader('X-RateLimit-Limit', '30');
         }
     }
 
@@ -347,8 +352,35 @@ final class PublicProfileCardControllerTest extends TestCase
         }
 
         // Unknown addresses count too: guessing costs the same
-        $this->getJson('/miembros/nadie-con-esto/tarjeta')->assertStatus(429);
+        $this->getJson('/miembros/nadie-con-esto/tarjeta')
+            ->assertStatus(429)
+            ->assertHeader('X-Robots-Tag', 'noindex, nofollow')
+            // The web group's own headers: the limit answers inside it
+            ->assertHeader('X-Content-Type-Options', 'nosniff')
+            ->assertHeader('X-Frame-Options', 'DENY')
+            ->assertHeader('Retry-After');
         $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.2'])->getJson('/miembros/ana-prueba/tarjeta')->assertOk();
+    }
+
+    public function test_while_impersonating_the_limit_counts_inside_the_safety_net(): void
+    {
+        $this->owner(ProfileVisibility::Public);
+        $admin = UserModel::factory()->admin()->create();
+        $member = UserModel::factory()->create(['display_name' => 'Carla Prueba']);
+        // The real store, before the safety net swaps it for one of this process
+        $store = Cache::store()->getStore();
+
+        $this->actingAs($admin)->getJson('/miembros/ana-prueba/tarjeta')->assertOk();
+        $this->assertSame(1, $store->get($this->limiterKey('user:'.$admin->id)));
+
+        app(ImpersonationServiceInterface::class)->start($admin, $member, ImpersonationMode::ReadOnly);
+        $this->getJson('/miembros/ana-prueba/tarjeta')->assertOk();
+        $this->getJson('/miembros/ana-prueba/tarjeta')->assertOk();
+        app(ImpersonationServiceInterface::class)->stop(ImpersonationEndReason::Stopped);
+
+        // Counted after ApplyImpersonation: never written for the administrator nor the account
+        $this->assertSame(1, $store->get($this->limiterKey('user:'.$admin->id)));
+        $this->assertNull($store->get($this->limiterKey('user:'.$member->id)));
     }
 
     public function test_signed_in_people_behind_one_address_have_a_limit_each(): void
@@ -363,17 +395,6 @@ final class PublicProfileCardControllerTest extends TestCase
 
         $this->actingAs($first)->getJson('/miembros/ana-prueba/tarjeta')->assertStatus(429);
         $this->actingAs($second)->getJson('/miembros/ana-prueba/tarjeta')->assertOk();
-    }
-
-    public function test_the_card_does_not_use_the_page_s_limit(): void
-    {
-        $this->owner(ProfileVisibility::Public);
-
-        for ($i = 0; $i < 30; $i++) {
-            $this->getJson('/miembros/ana-prueba/tarjeta')->assertOk();
-        }
-
-        $this->get('/miembros/ana-prueba')->assertOk();
     }
 
     /**
@@ -448,6 +469,14 @@ final class PublicProfileCardControllerTest extends TestCase
         $this->app->bind($id, static fn (): FakeProfileStat => $instance);
 
         return $id;
+    }
+
+    /**
+     * Where Laravel's named limiter keeps its hits: the limiter's name and the limit's key, hashed.
+     */
+    private function limiterKey(string $key): string
+    {
+        return md5('profile-card'.$key);
     }
 
     /**

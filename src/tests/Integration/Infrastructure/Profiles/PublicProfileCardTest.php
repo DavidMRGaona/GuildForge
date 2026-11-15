@@ -10,8 +10,8 @@ use App\Application\Profiles\DTOs\ProfileCardDTO;
 use App\Application\Profiles\DTOs\ProfileHeaderDTO;
 use App\Application\Profiles\DTOs\ProfileOwnerDTO;
 use App\Application\Profiles\DTOs\ResolvedProfileDTO;
+use App\Application\Profiles\Services\ProfileCardServiceInterface;
 use App\Application\Profiles\Services\ProfileSummaryRendererInterface;
-use App\Application\Profiles\Services\PublicProfileServiceInterface;
 use App\Application\Services\UserServiceInterface;
 use App\Domain\Profiles\ProfileVisibility;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -23,7 +23,7 @@ use RuntimeException;
 use Tests\TestCase;
 
 /**
- * PublicProfileServiceInterface::card() (core#744): the summary card of an account's public profile for
+ * ProfileCardServiceInterface::card() (core#744): the summary card of an account's public profile for
  * modules, through the same access rule as the page; null whenever the card cannot be shown.
  */
 final class PublicProfileCardTest extends TestCase
@@ -51,6 +51,14 @@ final class PublicProfileCardTest extends TestCase
         $this->assertNull($card->bannerUrl);
         $this->assertFalse($card->isOwner);
         $this->assertSame([], $card->stats);
+    }
+
+    public function test_an_id_in_capitals_is_the_same_account(): void
+    {
+        $owner = $this->owner(ProfileVisibility::Public);
+
+        $this->assertSame('ana-prueba', $this->card(strtoupper($owner->id), null)?->handle);
+        $this->assertTrue($this->card(strtoupper($owner->id), $owner)?->isOwner);
     }
 
     public function test_the_owner_gets_their_own_card_whatever_the_visibility(): void
@@ -182,6 +190,6 @@ final class PublicProfileCardTest extends TestCase
     {
         $this->app->forgetScopedInstances();
 
-        return $this->app->make(PublicProfileServiceInterface::class)->card($userId, $viewer);
+        return $this->app->make(ProfileCardServiceInterface::class)->card($userId, $viewer);
     }
 }

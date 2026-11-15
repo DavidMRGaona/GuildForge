@@ -211,7 +211,7 @@ The owner's choices are stored with their profile (`user_profiles.layout`, `Prof
 
 ## How the core draws a profile
 
-**Modules never call `ProfileRendererInterface`.** Only the core draws a profile: its profile page (and the core's summary card), after `PublicProfileServiceInterface::findByHandle()` (core#741) has applied `ProfileAccessRule` to decide whether the person may see the profile at all. The renderer does not decide that, so a module calling it could draw a hidden profile. A module that wants to show a person's summary uses the [profile card](#profile-card) (`PublicProfileServiceInterface::card()` or `GET /miembros/{handle}/tarjeta`), never the renderer. This section is for reading what the page receives.
+**Modules never call `ProfileRendererInterface`.** Only the core draws a profile: its profile page (and the core's summary card), after `PublicProfileServiceInterface::findByHandle()` (core#741) has applied `ProfileAccessRule` to decide whether the person may see the profile at all. The renderer does not decide that, so a module calling it could draw a hidden profile. A module that wants to show a person's summary uses the [profile card](#profile-card) (`ProfileCardServiceInterface::card()` or `GET /miembros/{handle}/tarjeta`), never the renderer. This section is for reading what the page receives.
 
 1. **Access first.** `PublicProfileServiceInterface::findByHandle($handle, $viewer)` applies the access rule (and the redirect of an old address); only a visible profile goes on.
 2. **Render.** `ProfileRendererInterface::render(ProfileOwnerDTO $owner, ?Authenticatable $viewer): ResolvedProfileDTO` (scoped to the request; it never throws). Send `$dto->toArray()` to the page:
@@ -298,10 +298,10 @@ Route `profiles.card`. A visible profile answers `200` with this JSON (`ProfileC
 
 Nothing else travels: never the account id, the account name, the email, the roles or the bio.
 
-- **404.** A profile the person may not see, an unknown, malformed or reserved address, a deactivated or anonymized account, an account without a profile, or a card that could not be made all answer the very 404 the profile page answers (same body and headers for the same request, `X-Robots-Tag: noindex, nofollow` included), so the card never tells whether an account exists. Ask with `Accept: application/json` to get it as JSON.
+- **404.** A profile the person may not see, an unknown, malformed or reserved address, a deactivated or anonymized account, an account without a profile, or a card that could not be made all answer the same 404, so the card never tells whether an account exists: for the same request, the body, `Content-Type` and `X-Robots-Tag: noindex, nofollow` are the profile page's own, and it is private (`Cache-Control: no-cache, private`, like the page's 404). The only difference with the page is the limit's `X-RateLimit-Limit` and `X-RateLimit-Remaining`, which every answer of the card carries and which say nothing about the address. Ask with `Accept: application/json` to get it as JSON.
 - **An old address** (or the current one written differently) answers `200` with the card of the current address, not a redirect: `handle` and `url` already name it, the client needs one request, and a permanent redirect that depends on who asks is never left for a cache. It does so only once the access rule let the person see the profile, like the page's 301.
-- **Not cached.** Every answer depends on who asks: `Cache-Control: no-store, private`. Ask again when the card opens; do not keep it across page loads.
-- **Limit.** Its own limit, `profile-card`: 30 requests a minute per account when signed in, per network address otherwise; unknown addresses count alike. Over it answers `429`: say the card cannot be shown right now, never that the person does not exist.
+- **Not cached.** A card depends on who asks: the `200` carries `Cache-Control: no-store, private`. Ask again when the card opens; do not keep it across page loads.
+- **Limit.** Its own limit, `profile-card`: 30 requests a minute per account when signed in, per network address otherwise; unknown addresses count alike. Over it answers `429` with `Retry-After` (and `X-Robots-Tag`, like every answer): say the card cannot be shown right now, never that the person does not exist. The limit runs inside the web group, so during an impersonation it counts for the account being impersonated and, like everything then, is never stored.
 - **During an impersonation** it is decided for the account being impersonated, like the page.
 
 ```ts
@@ -314,15 +314,15 @@ const response = await fetch(`/miembros/${encodeURIComponent(handle)}/tarjeta`, 
 const card = response.ok ? ((await response.json()) as ProfileCard) : null;
 ```
 
-### From the server: `PublicProfileServiceInterface::card()`
+### From the server: `ProfileCardServiceInterface::card()`
 
 A module that builds its own answer (a JSON with the card and its own data, a page with authors' cards) asks the core by account id:
 
 ```php
 use App\Application\Profiles\DTOs\ProfileCardDTO;
-use App\Application\Profiles\Services\PublicProfileServiceInterface;
+use App\Application\Profiles\Services\ProfileCardServiceInterface;
 
-$card = $this->profiles->card($authorId, $request->user());
+$card = $this->cards->card($authorId, $request->user()); // ProfileCardServiceInterface $cards
 
 return [
     'card' => $card?->toArray(), // null: show the name the module already shows, without a link
@@ -330,12 +330,12 @@ return [
 ];
 ```
 
-- `card(string $userId, ?Authenticatable $viewer): ?ProfileCardDTO`. The viewer is the person who will see the card (the request's user, or `null` for a guest), never the author: the access rule decides for them.
+- `ProfileCardServiceInterface` (`App\Application\Profiles\Services`), an interface of its own so a module's test doubles of it keep working when the core's other profile services grow; its only method is `card(string $userId, ?Authenticatable $viewer): ?ProfileCardDTO`. The id is read without regard to case. The viewer is the person who will see the card (the request's user, or `null` for a guest), never the author: the access rule decides for them.
 - `null` when the viewer may not see the profile, when the account has no profile (an id that is not a UUID, unknown, deactivated, anonymized, no profile row) or when anything fails (logged as a warning with the account id and the exception's class only). It never throws; an id that is not a UUID is not even looked up.
 - `ProfileCardDTO` holds the fields of the JSON above as properties (`$card->stats` is a list of `ResolvedProfileStatDTO`); `toArray()` is that JSON.
 - Ask it only for people the page actually shows as such (an author whose name the viewer sees), never for a hidden NPC author: `card()` decides who may see the profile, not whether showing that this account wrote something is allowed.
 - Each call reads the profile and counts up to four stats: for a list, ask when a card opens (the endpoint) rather than for every author at once.
-- Resolve the service per call (or inject it in a class built per request): it reads the request's profile rows, bound scoped.
+- It asks for the request's (or job's) profile rows and renderer on each call, so it can be injected anywhere, a singleton included.
 
 ## Failing closed
 

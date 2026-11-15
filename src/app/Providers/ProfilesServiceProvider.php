@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Application\Profiles\Services\ProfileCardServiceInterface;
 use App\Application\Profiles\Services\ProfileRendererInterface;
 use App\Application\Profiles\Services\ProfileSectionRegistryInterface;
 use App\Application\Profiles\Services\ProfileStatRegistryInterface;
@@ -16,6 +17,7 @@ use App\Infrastructure\Profiles\ProfileRenderer;
 use App\Infrastructure\Profiles\ProfileSectionRegistry;
 use App\Infrastructure\Profiles\ProfileStatRegistry;
 use App\Infrastructure\Profiles\Sections\AboutProfileSection;
+use App\Infrastructure\Profiles\Services\ProfileCardService;
 use App\Infrastructure\Profiles\Services\PublicProfileService;
 use App\Infrastructure\Profiles\Services\UserProfileService;
 use App\Infrastructure\Profiles\StoredProfiles;
@@ -53,6 +55,7 @@ final class ProfilesServiceProvider extends ServiceProvider
         $this->app->scoped(ProfileRendererInterface::class, static fn ($app): ProfileRenderer => $app->make(ProfileRenderer::class));
         $this->app->scoped(ProfileSummaryRendererInterface::class, static fn ($app): ProfileRenderer => $app->make(ProfileRenderer::class));
         $this->app->bind(PublicProfileServiceInterface::class, PublicProfileService::class);
+        $this->app->bind(ProfileCardServiceInterface::class, ProfileCardService::class);
     }
 
     public function boot(): void

@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Profiles;
 
 use App\Application\Profiles\DTOs\ProfileCardDTO;
 use App\Application\Profiles\DTOs\PublicProfileDTO;
+use App\Application\Profiles\Services\ProfileCardServiceInterface;
 use App\Application\Profiles\Services\PublicProfileServiceInterface;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -25,7 +26,7 @@ final class PublicProfileCardController extends Controller
      * Resolved per call, never kept by a controller instance: the lookup and the card share the
      * request's profile rows (bound scoped).
      */
-    public function __invoke(Request $request, string $handle, PublicProfileServiceInterface $profiles): JsonResponse
+    public function __invoke(Request $request, string $handle, PublicProfileServiceInterface $profiles, ProfileCardServiceInterface $cards): JsonResponse
     {
         $viewer = $request->user();
         $lookup = $profiles->findByHandle($handle, $viewer);
@@ -34,7 +35,7 @@ final class PublicProfileCardController extends Controller
             $lookup = $profiles->findByHandle($lookup->movedTo, $viewer);
         }
 
-        $card = $lookup->profile instanceof PublicProfileDTO ? $profiles->card($lookup->profile->userId, $viewer) : null;
+        $card = $lookup->profile instanceof PublicProfileDTO ? $cards->card($lookup->profile->userId, $viewer) : null;
 
         abort_unless($card instanceof ProfileCardDTO, 404);
 
