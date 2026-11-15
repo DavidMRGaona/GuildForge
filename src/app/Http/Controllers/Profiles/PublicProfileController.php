@@ -42,7 +42,9 @@ final class PublicProfileController extends Controller
         $lookup = $profiles->findByHandle($handle, $request->user());
 
         if ($lookup->movedTo !== null) {
-            return redirect()->route('profiles.show', ['handle' => $lookup->movedTo], 301);
+            // Whether it moves depends on who asks: never kept by a shared cache
+            return redirect()->route('profiles.show', ['handle' => $lookup->movedTo], 301)
+                ->header('Cache-Control', 'no-store, private');
         }
 
         $profile = $lookup->profile;
@@ -59,7 +61,8 @@ final class PublicProfileController extends Controller
             'profile' => $resolved->toArray(),
             'notices' => [
                 'choosePublicName' => $lookup->isOwner && ! $profile->hasPublicName(),
-                'onlyOwner' => $lookup->isOwner && $profile->hasPublicName() && $profile->visibility === ProfileVisibility::Hidden,
+                // Both when both hold: hidden, and nobody else could see it even if it were not
+                'onlyOwner' => $lookup->isOwner && $profile->visibility === ProfileVisibility::Hidden,
             ],
             'editUrl' => $lookup->isOwner ? route('profile.show') : null,
             'seo' => $this->seo->forPage(new SeoPageDTO(

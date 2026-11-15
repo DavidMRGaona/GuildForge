@@ -12,10 +12,13 @@ use App\Application\Profiles\DTOs\ProfileOwnerDTO;
 use App\Application\Profiles\DTOs\ResolvedProfileDTO;
 use App\Application\Profiles\Services\ProfileRendererInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Services\UserServiceInterface;
 use App\Domain\Impersonation\Enums\ImpersonationEndReason;
 use App\Domain\Impersonation\Enums\ImpersonationMode;
 use App\Domain\Profiles\ProfileVisibility;
+use App\Domain\Profiles\ValueObjects\ProfileHandle;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Infrastructure\Persistence\Eloquent\Models\UserProfileHandleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -131,12 +134,47 @@ final class PublicProfileControllerTest extends TestCase
                 ->missing('profile.header.name'));
     }
 
-    public function test_a_deactivated_account_has_no_profile(): void
+    public function test_the_owner_of_a_hidden_profile_without_public_name_gets_both_notices(): void
+    {
+        $owner = UserModel::factory()->create(['display_name' => null]);
+        $this->setVisibility($owner, ProfileVisibility::Hidden);
+
+        $this->actingAs($owner)->get('/miembros/'.$this->handleOf($owner))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page): Assert => $page
+                ->where('notices.onlyOwner', true)
+                ->where('notices.choosePublicName', true));
+    }
+
+    public function test_a_deactivated_account_answers_the_404_of_an_unknown_address(): void
     {
         $owner = $this->owner(ProfileVisibility::Public);
         $owner->delete();
 
-        $this->get('/miembros/ana-prueba')->assertNotFound();
+        $this->assertSameNotFound($this->get('/miembros/nadie-con-esto'), $this->get('/miembros/ana-prueba'));
+    }
+
+    public function test_an_anonymized_account_answers_the_404_on_its_current_and_old_addresses(): void
+    {
+        $owner = $this->owner(ProfileVisibility::Public);
+        $owner->update(['display_name' => 'Ana Nueva']);
+        app(UserServiceInterface::class)->anonymize((string) $owner->id);
+
+        $unknown = $this->get('/miembros/nadie-con-esto');
+        $this->assertSameNotFound($unknown, $this->get('/miembros/ana-nueva'));
+        $this->assertSameNotFound($unknown, $this->get('/miembros/ana-prueba'));
+    }
+
+    public function test_a_reserved_address_without_owner_answers_the_404_of_an_unknown_one(): void
+    {
+        UserProfileHandleModel::query()->create([
+            'handle_hash' => ProfileHandle::hashOf('fantasma'),
+            'handle' => null,
+            'user_id' => null,
+            'retired_at' => now(),
+        ]);
+
+        $this->assertSameNotFound($this->get('/miembros/nadie-con-esto'), $this->get('/miembros/fantasma'));
     }
 
     public function test_an_account_without_a_profile_row_has_no_profile(): void
@@ -159,6 +197,8 @@ final class PublicProfileControllerTest extends TestCase
         $malformed = $this->get('/miembros/--no--');
         $reserved = $this->get('/miembros/editar');
 
+        $unknown->assertHeader('X-Robots-Tag', 'noindex, nofollow');
+
         foreach ([$hidden, $forbidden, $malformed, $reserved] as $response) {
             $this->assertSameNotFound($unknown, $response);
         }
@@ -170,10 +210,12 @@ final class PublicProfileControllerTest extends TestCase
         $owner->update(['display_name' => 'Ana Nueva']);
         $this->assertSame('ana-nueva', $this->handleOf($owner));
 
-        $this->get('/miembros/ana-prueba')
+        $moved = $this->get('/miembros/ana-prueba')
             ->assertStatus(301)
             ->assertRedirect('/miembros/ana-nueva')
             ->assertHeader('X-Robots-Tag', 'noindex, nofollow');
+        // It moves only for whoever may see it: no shared cache may keep it
+        $this->assertStringContainsString('no-store', (string) $moved->headers->get('Cache-Control'));
         $this->get('/miembros/ANA-Nueva')->assertStatus(301)->assertRedirect('/miembros/ana-nueva');
     }
 

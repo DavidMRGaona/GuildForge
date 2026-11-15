@@ -159,16 +159,15 @@ const numberFormat = computed(() => new Intl.NumberFormat(locale.value));
                     role="status"
                     data-testid="profile-owner-notice"
                 >
-                    <p class="flex items-start gap-2">
+                    <div class="flex items-start gap-2">
                         <EyeOff class="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                        <span>
-                            {{
-                                notices.choosePublicName
-                                    ? t('publicProfile.choosePublicName')
-                                    : t('publicProfile.onlyOwner')
-                            }}
-                        </span>
-                    </p>
+                        <div class="space-y-1">
+                            <p v-if="notices.onlyOwner">{{ t('publicProfile.onlyOwner') }}</p>
+                            <p v-if="notices.choosePublicName">
+                                {{ t('publicProfile.choosePublicName') }}
+                            </p>
+                        </div>
+                    </div>
                     <Link
                         v-if="notices.choosePublicName && editUrl"
                         :href="editUrl"
@@ -179,44 +178,69 @@ const numberFormat = computed(() => new Intl.NumberFormat(locale.value));
                 </div>
             </div>
 
-            <!-- The counters, in the owner's order; a row to swipe on a phone -->
-            <ul
+            <!--
+                The counters, in the owner's order; a row to swipe on a phone. The row is a named region
+                that takes the keyboard focus, so it can be scrolled with the arrow keys too.
+            -->
+            <div
                 v-if="stats.length > 0"
-                class="-mx-4 mt-8 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
+                role="region"
                 :aria-label="t('publicProfile.statsLabel')"
+                tabindex="0"
+                class="-mx-4 mt-8 snap-x scroll-px-4 overflow-x-auto rounded-lg px-4 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 sm:mx-0 sm:overflow-visible sm:px-0"
                 data-testid="profile-stats"
             >
-                <li v-for="stat in stats" :key="stat.key" class="shrink-0 snap-start">
-                    <component
-                        :is="stat.url ? (isInertiaPage(stat.url) ? Link : 'a') : 'div'"
-                        :href="stat.url ?? undefined"
-                        class="flex min-w-28 flex-col rounded-lg border border-default bg-surface px-4 py-2"
-                        :class="{
-                            'transition-colors hover:border-primary-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-bg-page) motion-reduce:transition-none':
-                                stat.url,
-                        }"
-                    >
-                        <span class="text-xl font-semibold text-base-primary tabular-nums">
-                            {{ numberFormat.format(stat.value) }}
-                        </span>
-                        <span class="text-sm text-base-muted">{{ stat.label }}</span>
-                    </component>
-                </li>
-            </ul>
+                <ul class="flex gap-3 sm:flex-wrap">
+                    <li v-for="stat in stats" :key="stat.key" class="shrink-0 snap-start">
+                        <component
+                            :is="stat.url ? (isInertiaPage(stat.url) ? Link : 'a') : 'div'"
+                            :href="stat.url ?? undefined"
+                            class="flex min-w-28 flex-col rounded-lg border border-default bg-surface px-4 py-2"
+                            :class="{
+                                'transition-colors hover:border-primary-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-bg-page) motion-reduce:transition-none':
+                                    stat.url,
+                            }"
+                        >
+                            <span class="text-xl font-semibold text-base-primary tabular-nums">
+                                {{ numberFormat.format(stat.value) }}
+                            </span>
+                            <span class="text-sm text-base-muted">{{ stat.label }}</span>
+                        </component>
+                    </li>
+                </ul>
+            </div>
 
             <!--
-                The sections of each region. On a narrow screen «Sobre mí» leads, then the main column,
-                then the rest of the side one; from lg, the main column and the side one beside it.
+                The sections of each region, in the DOM in the order a narrow screen shows them («Sobre
+                mí», the main column, the rest of the side one), so focus and reading follow what is seen.
+                From lg the grid places them: the main column on the left over two rows, «Sobre mí» and
+                the rest of the side column on the right.
             -->
             <div
                 v-if="hasSections"
                 class="mt-8 flex flex-col gap-6"
-                :class="twoColumns ? 'lg:grid lg:grid-cols-3 lg:items-start lg:gap-8' : 'max-w-3xl'"
+                :class="
+                    twoColumns ? 'lg:grid lg:grid-cols-3 lg:items-start lg:gap-x-8' : 'max-w-3xl'
+                "
             >
                 <div
+                    v-if="leadingAside.length > 0"
+                    class="flex flex-col gap-6"
+                    :class="{ 'lg:col-start-3 lg:row-start-1': twoColumns }"
+                    data-region="aside"
+                >
+                    <ProfileSection
+                        v-for="section in leadingAside"
+                        :key="section.key"
+                        :section="section"
+                    />
+                </div>
+                <div
                     v-if="mainSections.length > 0"
-                    class="order-2 flex flex-col gap-6 lg:order-none"
-                    :class="{ 'lg:col-span-2': twoColumns }"
+                    class="flex flex-col gap-6"
+                    :class="{
+                        'lg:col-span-2 lg:col-start-1 lg:row-span-2 lg:row-start-1': twoColumns,
+                    }"
                     data-region="main"
                 >
                     <ProfileSection
@@ -225,21 +249,24 @@ const numberFormat = computed(() => new Intl.NumberFormat(locale.value));
                         :section="section"
                     />
                 </div>
-                <div class="contents lg:flex lg:flex-col lg:gap-6" data-region="aside">
-                    <div
-                        v-for="section in leadingAside"
-                        :key="section.key"
-                        class="order-1 lg:order-none"
-                    >
-                        <ProfileSection :section="section" />
-                    </div>
-                    <div
+                <div
+                    v-if="otherAside.length > 0"
+                    class="flex flex-col gap-6"
+                    :class="
+                        twoColumns
+                            ? [
+                                  'lg:col-start-3',
+                                  leadingAside.length > 0 ? 'lg:row-start-2' : 'lg:row-start-1',
+                              ]
+                            : []
+                    "
+                    data-region="aside"
+                >
+                    <ProfileSection
                         v-for="section in otherAside"
                         :key="section.key"
-                        class="order-3 lg:order-none"
-                    >
-                        <ProfileSection :section="section" />
-                    </div>
+                        :section="section"
+                    />
                 </div>
             </div>
 

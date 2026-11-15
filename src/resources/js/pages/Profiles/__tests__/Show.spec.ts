@@ -126,6 +126,11 @@ describe('Profiles/Show', () => {
             )
         );
 
+        const region = wrapper.get('[data-testid="profile-stats"]');
+        // A row that can scroll: a named region the keyboard can reach
+        expect(region.attributes('role')).toBe('region');
+        expect(region.attributes('tabindex')).toBe('0');
+        expect(region.attributes('aria-label')).toBe('Estadísticas');
         const items = wrapper.findAll('[data-testid="profile-stats"] li');
         expect(items.map((item) => item.text())).toEqual(['1394Mensajes', '12Mesas']);
         expect(items[0]?.get('a').attributes('href')).toBe('/foro?autor=ana');
@@ -133,7 +138,7 @@ describe('Profiles/Show', () => {
         expect(wrapper.find('[data-testid="profile-empty-visitor"]').exists()).toBe(false);
     });
 
-    it('draws each region, «Sobre mí» first on narrow screens', () => {
+    it('puts the sections in the DOM in the order a narrow screen shows them', () => {
         const wrapper = mountPage(
             props(
                 {},
@@ -144,18 +149,50 @@ describe('Profiles/Show', () => {
             )
         );
 
+        // Focus and reading follow what is seen: «Sobre mí», the main column, the rest of the side one
         expect(
             wrapper
-                .findAll('[data-region="main"] [data-profile-section]')
+                .findAll('[data-profile-section]')
                 .map((s) => s.attributes('data-profile-section'))
-        ).toEqual(['forum.latest-posts']);
-        const aside = wrapper.findAll('[data-region="aside"] > div');
-        expect(aside.map((item) => item.classes())).toEqual([
-            ['order-1', 'lg:order-none'],
-            ['order-3', 'lg:order-none'],
-        ]);
-        expect(wrapper.get('[data-region="main"]').classes()).toContain('order-2');
+        ).toEqual(['core.about', 'forum.latest-posts', 'gt.campaigns']);
+        const [lead, other] = wrapper.findAll('[data-region="aside"]');
+        expect(lead?.classes()).toEqual(
+            expect.arrayContaining(['lg:col-start-3', 'lg:row-start-1'])
+        );
+        expect(other?.classes()).toEqual(
+            expect.arrayContaining(['lg:col-start-3', 'lg:row-start-2'])
+        );
+        expect(wrapper.get('[data-region="main"]').classes()).toEqual(
+            expect.arrayContaining([
+                'lg:col-span-2',
+                'lg:col-start-1',
+                'lg:row-span-2',
+                'lg:row-start-1',
+            ])
+        );
         expect(wrapper.find('[data-region="empty"]').exists()).toBe(false);
+    });
+
+    it('starts the side column at the top when there is no «Sobre mí»', () => {
+        const wrapper = mountPage(
+            props(
+                {},
+                {
+                    main: [section('forum.latest-posts', 'main')],
+                    aside: [section('gt.campaigns', 'aside')],
+                }
+            )
+        );
+
+        expect(wrapper.get('[data-region="aside"]').classes()).toContain('lg:row-start-1');
+    });
+
+    it('keeps one narrow column when only one region has sections', () => {
+        const wrapper = mountPage(props({}, { aside: [section('core.about', 'aside')] }));
+
+        const regions = wrapper.get('[data-region="aside"]').element.parentElement;
+        expect(regions?.classList.contains('max-w-3xl')).toBe(true);
+        expect(wrapper.get('[data-region="aside"]').classes()).not.toContain('lg:col-start-3');
     });
 
     it('gives a visitor the quiet empty state and no owner notice', () => {
@@ -188,6 +225,19 @@ describe('Profiles/Show', () => {
         const notice = wrapper.get('[data-testid="profile-owner-notice"]');
         expect(notice.text()).toContain('Solo tú ves este perfil.');
         expect(notice.find('a').exists()).toBe(false);
+    });
+
+    it('gives the owner of a hidden profile without public name both notices', () => {
+        const wrapper = mountPage(
+            props(
+                { publicName: null, isOwner: true },
+                { editUrl: '/perfil', notices: { choosePublicName: true, onlyOwner: true } }
+            )
+        );
+
+        const notice = wrapper.get('[data-testid="profile-owner-notice"]');
+        expect(notice.text()).toContain('Solo tú ves este perfil.');
+        expect(notice.text()).toContain('Elige un nombre público');
     });
 
     it('asks an owner without public name to choose one, never showing another name', () => {

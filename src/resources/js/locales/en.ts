@@ -596,7 +596,7 @@ export default {
     },
     publicProfile: {
         noPublicName: 'No public name',
-        membershipBadge: 'Member',
+        membershipBadge: 'Association member',
         memberSince: 'Member since {date}',
         choosePublicName: 'Choose a public name so others can see your profile.',
         choosePublicNameAction: 'Choose a public name',
