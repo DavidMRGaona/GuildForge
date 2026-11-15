@@ -16,6 +16,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\ImpersonationLogEntryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleAuditEntryModel;
 use App\Infrastructure\Persistence\Eloquent\Models\SiteNotificationModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Infrastructure\Services\SettingsService;
 use Illuminate\Contracts\Cache\Store;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -297,12 +298,16 @@ final class ImpersonationSafetyNetTest extends TestCase
     {
         $shared = $this->sharedCacheStore();
         $this->app->make(SettingsServiceInterface::class)->get('guild_name');
-        $this->assertNotNull($shared->get('site_settings'));
+        $version = $shared->get(SettingsService::VERSION_KEY);
+        $this->assertIsString($version);
+        $this->assertNotNull($shared->get(SettingsService::CACHE_KEY_PREFIX.$version));
         $this->startImpersonating(ImpersonationMode::Simulate);
 
         $this->get('/_test/net/settings')->assertOk()->assertSee('Reverted guild');
 
-        $this->assertStringNotContainsString('Reverted guild', serialize($shared->get('site_settings')));
+        // Neither a renewed version nor the reverted value reached the shared store
+        $this->assertSame($version, $shared->get(SettingsService::VERSION_KEY));
+        $this->assertStringNotContainsString('Reverted guild', serialize($shared));
     }
 
     public function test_the_upload_disk_is_read_but_never_written_or_deleted(): void

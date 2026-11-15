@@ -11,10 +11,22 @@ use DateTimeImmutable;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
+/**
+ * Settings are cached as one entry under a key carrying a version token. A write renews the
+ * token after its commit instead of forgetting a fixed key, so a read that loaded the old rows
+ * before the commit can only store them under a version nobody asks for again.
+ */
 final class SettingsService implements SettingsServiceInterface
 {
-    private const string CACHE_KEY = 'site_settings';
+    public const string CACHE_KEY_PREFIX = 'site_settings_';
+
+    public const string VERSION_KEY = 'site_settings_version';
+
+    private const string VERSION_PATTERN = '/^[0-9a-f]{32}$/';
 
     private const int CACHE_TTL = 3600;
 
@@ -33,17 +45,23 @@ final class SettingsService implements SettingsServiceInterface
      */
     public function getEncrypted(string $key, mixed $default = null): mixed
     {
-        $value = $this->get($key);
+        return $this->decrypt($this->get($key), $default);
+    }
 
-        if ($value === null || $value === '') {
-            return $default;
-        }
+    /**
+     * Read a setting from the table, never from the cache: for code that decides a write on it.
+     */
+    public function getStored(string $key, mixed $default = null): mixed
+    {
+        return SettingModel::query()->where('key', $key)->value('value') ?? $default;
+    }
 
-        try {
-            return Crypt::decryptString((string) $value);
-        } catch (DecryptException) {
-            return $default;
-        }
+    /**
+     * Read an encrypted setting from the table, never from the cache, decrypting it.
+     */
+    public function getStoredEncrypted(string $key, mixed $default = null): mixed
+    {
+        return $this->decrypt($this->getStored($key), $default);
     }
 
     /**
@@ -86,7 +104,18 @@ final class SettingsService implements SettingsServiceInterface
      */
     public function clearCache(): void
     {
-        Cache::forget(self::CACHE_KEY);
+        // Until the commit this request reads the table: it sees its own write uncached
+        app(SettingsCacheVersion::class)->pendingWrite = true;
+
+        // After the commit: renewing earlier lets a request in between cache the old rows
+        // under the new version. Runs at once outside a transaction.
+        DB::afterCommit(static function (): void {
+            $current = app(SettingsCacheVersion::class);
+            // Until the new version is stored: if storing fails, this request reads the store again
+            $current->token = null;
+            $current->token = self::replaceVersion();
+            $current->pendingWrite = false;
+        });
     }
 
     /**
@@ -160,9 +189,85 @@ final class SettingsService implements SettingsServiceInterface
      */
     private function getAllSettings(): array
     {
-        return Cache::remember(self::CACHE_KEY, self::CACHE_TTL, static fn () => SettingModel::all()
-            ->pluck('value', 'key')
-            ->toArray());
+        $current = app(SettingsCacheVersion::class);
+
+        if ($current->pendingWrite) {
+            return $this->loadAll();
+        }
+
+        $version = $current->token ??= $this->readVersion();
+
+        return Cache::remember(self::CACHE_KEY_PREFIX.$version, self::CACHE_TTL, $this->loadAll(...));
+    }
+
+    /**
+     * @return array<string, string|null>
+     */
+    private function loadAll(): array
+    {
+        return SettingModel::all()->pluck('value', 'key')->toArray();
+    }
+
+    /**
+     * The stored version. Callers keep it in SettingsCacheVersion, so it is read once per
+     * request or job.
+     */
+    private function readVersion(): string
+    {
+        $version = Cache::get(self::VERSION_KEY);
+
+        if (! is_string($version) || preg_match(self::VERSION_PATTERN, $version) !== 1) {
+            // Missing (evicted, flushed) or malformed: start a version no cached entry can match
+            $version = self::newVersion();
+            Cache::forever(self::VERSION_KEY, $version);
+        }
+
+        return $version;
+    }
+
+    /**
+     * Stores a new version, so every entry cached under the old one is left behind (it
+     * expires with its TTL).
+     */
+    private static function replaceVersion(): string
+    {
+        $version = self::newVersion();
+
+        try {
+            Cache::forever(self::VERSION_KEY, $version);
+
+            return $version;
+        } catch (Throwable $e) {
+            Log::error("Settings cache could not be invalidated: {$e->getMessage()}");
+
+            // Without a version readers start a new one, so the old entry is never served
+            try {
+                Cache::forget(self::VERSION_KEY);
+            } catch (Throwable) {
+                // Store unreachable: reads cannot use it either until it is back
+            }
+
+            // The setting is saved: the caller must still see that other requests may read the old value
+            throw $e;
+        }
+    }
+
+    private static function newVersion(): string
+    {
+        return bin2hex(random_bytes(16));
+    }
+
+    private function decrypt(mixed $value, mixed $default): mixed
+    {
+        if ($value === null || $value === '') {
+            return $default;
+        }
+
+        try {
+            return Crypt::decryptString((string) $value);
+        } catch (DecryptException) {
+            return $default;
+        }
     }
 
     /**

@@ -217,6 +217,7 @@ use App\Infrastructure\Services\HeroSlideQueryService;
 use App\Infrastructure\Services\ImageOptimizationService;
 use App\Infrastructure\Services\LegalPageService;
 use App\Infrastructure\Services\Logging\HttpLogContextProvider;
+use App\Infrastructure\Services\SettingsCacheVersion;
 use App\Infrastructure\Services\SettingsService;
 use App\Infrastructure\Services\SiteBrandingService;
 use App\Infrastructure\Services\SitemapQueryService;
@@ -303,6 +304,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Application Service bindings
         $this->app->singleton(SettingsServiceInterface::class, SettingsService::class);
+        $this->app->scoped(SettingsCacheVersion::class);
         $this->app->singleton(
             TimezoneServiceInterface::class,
             fn (): TimezoneService => new TimezoneService((string) config('app.display_timezone')),

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Database;
 
+use App\Application\Services\SettingsServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\SettingModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -46,6 +47,19 @@ final class MoveModuleSettingsToSettingsTableMigrationTest extends TestCase
 
         $this->assertSame(['default_check_in_starts_before' => 30, 'nested' => ['on' => false]], $this->stored('tournaments'));
         $this->assertSame(['show_banner' => false], $this->stored('announcements'));
+    }
+
+    public function test_the_copied_settings_are_read_once_the_migration_commits(): void
+    {
+        $settings = app(SettingsServiceInterface::class);
+        $this->module('tournaments', "<?php\n\nreturn ".var_export(['default_check_in_starts_before' => 30], true).";\n");
+        // Warm cache without the copied row, as on a running site before the deploy
+        $this->assertNull($settings->get('module_settings:tournaments'));
+
+        $this->runMigrationFile($this->migrationPath());
+
+        $this->app->forgetScopedInstances();
+        $this->assertSame('{"default_check_in_starts_before":30}', $settings->get('module_settings:tournaments'));
     }
 
     public function test_it_leaves_release_default_files_alone(): void

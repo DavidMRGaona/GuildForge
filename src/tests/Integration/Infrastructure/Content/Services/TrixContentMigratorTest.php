@@ -11,6 +11,7 @@ use App\Infrastructure\Content\Services\TrixHtmlConverter;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Infrastructure\Services\SettingsService;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -85,9 +86,11 @@ final class TrixContentMigratorTest extends TestCase
 
     public function test_settings_are_read_from_the_table_not_from_the_cache(): void
     {
-        app(SettingsServiceInterface::class)->set('legal_terms_content', self::TRIX);
+        $settings = app(SettingsServiceInterface::class);
+        $settings->set('legal_terms_content', self::TRIX);
+        $settings->get('legal_terms_content');
         // A stale settings cache (seeders write settings without clearing it)
-        Cache::forever('site_settings', []);
+        Cache::forever(SettingsService::CACHE_KEY_PREFIX.Cache::get(SettingsService::VERSION_KEY), []);
 
         $report = $this->migrator()->migrate();
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Integration\Database;
 
 use App\Application\Services\SettingsServiceInterface;
+use App\Infrastructure\Services\SettingsService;
 use DateTimeImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -75,17 +76,19 @@ final class RecordEmailVerificationCutoffTest extends TestCase
         $settings->clearCache();
         // Warm cache without the cutoff, as on a running site before the deploy
         $this->assertNull($settings->getEmailVerificationEnforcedSince());
-        $this->assertTrue(Cache::has('site_settings'));
+        $before = Cache::get(SettingsService::VERSION_KEY);
+        $this->assertIsString($before);
 
         // The migrator runs each migration in a transaction on PostgreSQL
-        DB::transaction(function (): void {
+        DB::transaction(function () use ($before): void {
             $this->runMigration('up');
 
-            // Cleared before the commit, a request could cache the old settings again for an hour
-            $this->assertTrue(Cache::has('site_settings'), 'The cache was cleared before the commit');
+            // Invalidated before the commit, a request could cache the old settings again for an hour
+            $this->assertSame($before, Cache::get(SettingsService::VERSION_KEY), 'The cache was invalidated before the commit');
         });
 
-        $this->assertFalse(Cache::has('site_settings'));
+        $this->assertNotSame($before, Cache::get(SettingsService::VERSION_KEY));
+        $this->app->forgetScopedInstances();
         $this->assertNotNull($settings->getEmailVerificationEnforcedSince());
     }
 
