@@ -4,6 +4,7 @@ import vue from '@vitejs/plugin-vue';
 import tailwindcss from '@tailwindcss/vite';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { DEV_DEDUPED_PACKAGES } from './scripts/public-api.mjs';
 
 // Shared packages and public entries modules get through the import map (see ModuleImportMap)
 const publicApi = JSON.parse(
@@ -42,8 +43,9 @@ export default defineConfig({
         // The dev server serves module sources through this config, with one dependency cache
         // keyed by import name: a module's own copy of these packages would mix with the core's
         // on the page, and ProseMirror refuses two copies in one editor. Module builds (their own
-        // root, vite.module.config.ts) still bundle the module's copies
-        dedupe: ['@tiptap/core', '@tiptap/pm', '@tiptap/vue-3'],
+        // root, vite.module.config.ts) still bundle the module's copies, so the module quality
+        // checks require the versions the core installs
+        dedupe: [...DEV_DEDUPED_PACKAGES],
     },
     server: {
         host: '0.0.0.0',

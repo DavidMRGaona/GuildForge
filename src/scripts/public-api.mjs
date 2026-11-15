@@ -35,6 +35,21 @@ export const FORBIDDEN_MODULE_PACKAGES = Object.freeze([
 export const SHARED_SCOPES = Object.freeze(['@vue', '@intlify']);
 
 /**
+ * Packages the dev server always resolves to the core's copy (resolve.dedupe in vite.config.ts):
+ * ProseMirror refuses two copies in one editor. Module builds still bundle the module's own,
+ * so a module locks them at the versions the core installs (check-module-package.mjs).
+ */
+export const DEV_DEDUPED_PACKAGES = Object.freeze([
+    '@tiptap/core',
+    '@tiptap/pm',
+    '@tiptap/vue-3',
+    'prosemirror-model',
+    'prosemirror-state',
+    'prosemirror-transform',
+    'prosemirror-view',
+]);
+
+/**
  * @param {string} srcDir The core's src/ directory
  * @returns {PublicApi}
  */
