@@ -190,6 +190,47 @@ describe('cookie consent contract', () => {
             expect(settled).not.toHaveBeenCalled();
         });
 
+        it('resolves a waiting caller at once when, once withdrawn, the page declares no consent module', async () => {
+            vi.useFakeTimers();
+            pageProps.cookieConsentModule = true;
+            const unregister = contract.registerCookieConsentProvider({
+                hasConsent: (): boolean => false,
+                hasDecided: (): boolean => false,
+            });
+            const settled = vi.fn();
+            void contract.whenConsentDecided().then(settled);
+            pageProps.cookieConsentModule = false;
+
+            unregister();
+            await Promise.resolve();
+
+            expect(settled).toHaveBeenCalledTimes(1);
+            expect(vi.getTimerCount()).toBe(0);
+        });
+
+        it('resolves a waiting caller at once when the provider comes back already decided', async () => {
+            vi.useFakeTimers();
+            pageProps.cookieConsentModule = true;
+            const unregister = contract.registerCookieConsentProvider({
+                hasConsent: (): boolean => false,
+                hasDecided: (): boolean => false,
+            });
+            const settled = vi.fn();
+            void contract.whenConsentDecided().then(settled);
+            unregister();
+            await Promise.resolve();
+            expect(settled).not.toHaveBeenCalled();
+
+            contract.registerCookieConsentProvider({
+                hasConsent: (): boolean => true,
+                hasDecided: (): boolean => true,
+            });
+            await Promise.resolve();
+
+            expect(settled).toHaveBeenCalledTimes(1);
+            expect(vi.getTimerCount()).toBe(0);
+        });
+
         it('resolves at once for a caller that arrives after the withdrawal and the page has no module', async () => {
             pageProps.cookieConsentModule = true;
             const unregister = contract.registerCookieConsentProvider({
