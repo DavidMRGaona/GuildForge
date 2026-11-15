@@ -3,48 +3,75 @@ import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { BadgeCheck, Calendar, EyeOff, PencilLine, UserRound } from '@lucide/vue';
+import ProfileSection from '@/components/layout/ProfileSection.vue';
 import { buildAvatarUrl, buildImageUrl } from '@/utils/cloudinary';
 import { initialsOf } from '@/utils/initials';
+import { isInertiaPage } from '@/utils/inertiaLinks';
 import type { PublicProfilePageProps } from '@/types/profilePage';
 
 /**
  * A person's public profile (core#741): the band of the account page, with the avatar, the public name,
  * the joining month and the membership badge (the banner, when there is one, as the band's background);
- * below it the counters and the sections modules add, in a main and a side column. Whoever reaches this page may see it: the server decided. The owner also
- * sees why nobody else does, when that is the case, and an invitation to fill an empty profile.
+ * below it the counters and the sections the core and the modules add (core#742), in a main and a side
+ * column. Whoever reaches this page may see it: the server decided, and resolved every section and
+ * counter for this person. The owner also sees why nobody else does, when that is the case, and an
+ * invitation to fill an empty profile.
  */
 const props = defineProps<PublicProfilePageProps>();
 
 const { t, locale } = useI18n();
 
+/** The section that leads on narrow screens, before the main column */
+const LEADING_SECTION = 'core.about';
+
+const header = computed(() => props.profile.header);
 const bannerUrl = computed(() =>
-    buildImageUrl(props.profile.bannerPublicId, {
+    buildImageUrl(header.value.bannerPublicId, {
         width: 1500,
         height: 500,
         crop: 'fill',
         gravity: 'auto',
     })
 );
-const avatarUrl = computed(() => buildAvatarUrl(props.profile.avatarPublicId, 256));
-const initials = computed(() => initialsOf(props.profile.publicName));
-const heading = computed(() => props.profile.publicName ?? t('publicProfile.noPublicName'));
+const avatarUrl = computed(() => buildAvatarUrl(header.value.avatarPublicId, 256));
+const initials = computed(() => initialsOf(header.value.publicName));
+const heading = computed(() => header.value.publicName ?? t('publicProfile.noPublicName'));
 
-/** «junio de 2024»: the server gives the month in the display zone, so it is read as is */
+/**
+ * «junio de 2024». The server sends the instant with the display zone's offset, so the year and month
+ * are read from the text itself: a browser in another zone would move the first hours of a month.
+ */
+const memberSinceMonth = computed(() => /^(\d{4})-(\d{2})/.exec(header.value.memberSince ?? ''));
 const memberSince = computed(() => {
-    const match = /^(\d{4})-(\d{2})$/.exec(props.profile.memberSince ?? '');
+    const match = memberSinceMonth.value;
 
     if (!match) {
         return null;
     }
 
-    const month = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1));
-
-    return month.toLocaleDateString(locale.value, {
-        month: 'long',
-        year: 'numeric',
-        timeZone: 'UTC',
-    });
+    return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1)).toLocaleDateString(
+        locale.value,
+        { month: 'long', year: 'numeric', timeZone: 'UTC' }
+    );
 });
+
+const stats = computed(() => props.profile.stats);
+const mainSections = computed(() => props.profile.sections.main);
+const leadingAside = computed(() =>
+    props.profile.sections.aside.filter((section) => section.key === LEADING_SECTION)
+);
+const otherAside = computed(() =>
+    props.profile.sections.aside.filter((section) => section.key !== LEADING_SECTION)
+);
+const hasSections = computed(
+    () => mainSections.value.length > 0 || props.profile.sections.aside.length > 0
+);
+const isEmpty = computed(() => stats.value.length === 0 && !hasSections.value);
+const twoColumns = computed(
+    () => mainSections.value.length > 0 && props.profile.sections.aside.length > 0
+);
+
+const numberFormat = computed(() => new Intl.NumberFormat(locale.value));
 </script>
 
 <template>
@@ -95,7 +122,7 @@ const memberSince = computed(() => {
                             class="text-2xl font-bold break-words sm:text-3xl"
                             :class="[
                                 bannerUrl ? 'text-white' : 'text-base-primary',
-                                { 'italic opacity-80': !profile.publicName },
+                                { 'italic opacity-80': !header.publicName },
                             ]"
                         >
                             {{ heading }}
@@ -106,12 +133,12 @@ const memberSince = computed(() => {
                                 class="inline-flex items-center gap-1.5 rounded-full border border-default bg-surface px-3 py-1 text-sm text-base-secondary"
                             >
                                 <Calendar class="h-4 w-4" aria-hidden="true" />
-                                <time :datetime="profile.memberSince ?? undefined">
+                                <time :datetime="memberSinceMonth?.[0] ?? undefined">
                                     {{ t('publicProfile.memberSince', { date: memberSince }) }}
                                 </time>
                             </span>
                             <span
-                                v-if="profile.membershipBadge"
+                                v-if="header.showsMembership"
                                 class="inline-flex items-center gap-1.5 rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-sm font-medium text-primary-800 dark:border-primary-800 dark:bg-primary-950 dark:text-primary-200"
                                 data-testid="profile-membership"
                             >
@@ -152,37 +179,98 @@ const memberSince = computed(() => {
                 </div>
             </div>
 
-            <!-- Counters and the main and side regions: filled by the sections of the profile contract -->
-            <div class="mt-8 grid gap-6 lg:grid-cols-3 lg:gap-8">
-                <div class="lg:col-span-3" data-region="empty">
-                    <div
-                        v-if="isOwner"
-                        class="rounded-lg border border-dashed border-default bg-surface px-6 py-10 text-center"
-                        data-testid="profile-empty-owner"
+            <!-- The counters, in the owner's order; a row to swipe on a phone -->
+            <ul
+                v-if="stats.length > 0"
+                class="-mx-4 mt-8 flex snap-x scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
+                :aria-label="t('publicProfile.statsLabel')"
+                data-testid="profile-stats"
+            >
+                <li v-for="stat in stats" :key="stat.key" class="shrink-0 snap-start">
+                    <component
+                        :is="stat.url ? (isInertiaPage(stat.url) ? Link : 'a') : 'div'"
+                        :href="stat.url ?? undefined"
+                        class="flex min-w-28 flex-col rounded-lg border border-default bg-surface px-4 py-2"
+                        :class="{
+                            'transition-colors hover:border-primary-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-bg-page) motion-reduce:transition-none':
+                                stat.url,
+                        }"
                     >
-                        <h2 class="text-lg font-medium text-base-primary">
-                            {{ t('publicProfile.emptyOwnerTitle') }}
-                        </h2>
-                        <p class="mx-auto mt-2 max-w-md text-sm text-base-muted">
-                            {{ t('publicProfile.emptyOwnerDescription') }}
-                        </p>
-                        <Link
-                            v-if="editUrl"
-                            :href="editUrl"
-                            class="mt-6 inline-flex items-center justify-center gap-2 rounded-md bg-(--button-primary-bg) px-4 py-2 text-sm font-medium text-(--button-primary-text) inset-ring inset-ring-(--button-primary-border) transition-colors hover:bg-(--button-primary-hover-bg) hover:text-(--button-primary-hover-text) focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-bg-surface) motion-reduce:transition-none"
-                        >
-                            <PencilLine class="h-4 w-4" aria-hidden="true" />
-                            {{ t('publicProfile.editProfile') }}
-                        </Link>
-                    </div>
-                    <p
-                        v-else
-                        class="py-10 text-center text-sm text-base-muted"
-                        data-testid="profile-empty-visitor"
-                    >
-                        {{ t('publicProfile.emptyVisitor') }}
-                    </p>
+                        <span class="text-xl font-semibold text-base-primary tabular-nums">
+                            {{ numberFormat.format(stat.value) }}
+                        </span>
+                        <span class="text-sm text-base-muted">{{ stat.label }}</span>
+                    </component>
+                </li>
+            </ul>
+
+            <!--
+                The sections of each region. On a narrow screen «Sobre mí» leads, then the main column,
+                then the rest of the side one; from lg, the main column and the side one beside it.
+            -->
+            <div
+                v-if="hasSections"
+                class="mt-8 flex flex-col gap-6"
+                :class="twoColumns ? 'lg:grid lg:grid-cols-3 lg:items-start lg:gap-8' : 'max-w-3xl'"
+            >
+                <div
+                    v-if="mainSections.length > 0"
+                    class="order-2 flex flex-col gap-6 lg:order-none"
+                    :class="{ 'lg:col-span-2': twoColumns }"
+                    data-region="main"
+                >
+                    <ProfileSection
+                        v-for="section in mainSections"
+                        :key="section.key"
+                        :section="section"
+                    />
                 </div>
+                <div class="contents lg:flex lg:flex-col lg:gap-6" data-region="aside">
+                    <div
+                        v-for="section in leadingAside"
+                        :key="section.key"
+                        class="order-1 lg:order-none"
+                    >
+                        <ProfileSection :section="section" />
+                    </div>
+                    <div
+                        v-for="section in otherAside"
+                        :key="section.key"
+                        class="order-3 lg:order-none"
+                    >
+                        <ProfileSection :section="section" />
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="isEmpty" class="mt-8" data-region="empty">
+                <div
+                    v-if="header.isOwner"
+                    class="rounded-lg border border-dashed border-default bg-surface px-6 py-10 text-center"
+                    data-testid="profile-empty-owner"
+                >
+                    <h2 class="text-lg font-medium text-base-primary">
+                        {{ t('publicProfile.emptyOwnerTitle') }}
+                    </h2>
+                    <p class="mx-auto mt-2 max-w-md text-sm text-base-muted">
+                        {{ t('publicProfile.emptyOwnerDescription') }}
+                    </p>
+                    <Link
+                        v-if="editUrl"
+                        :href="editUrl"
+                        class="mt-6 inline-flex items-center justify-center gap-2 rounded-md bg-(--button-primary-bg) px-4 py-2 text-sm font-medium text-(--button-primary-text) inset-ring inset-ring-(--button-primary-border) transition-colors hover:bg-(--button-primary-hover-bg) hover:text-(--button-primary-hover-text) focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-bg-surface) motion-reduce:transition-none"
+                    >
+                        <PencilLine class="h-4 w-4" aria-hidden="true" />
+                        {{ t('publicProfile.editProfile') }}
+                    </Link>
+                </div>
+                <p
+                    v-else
+                    class="py-10 text-center text-sm text-base-muted"
+                    data-testid="profile-empty-visitor"
+                >
+                    {{ t('publicProfile.emptyVisitor') }}
+                </p>
             </div>
         </div>
     </article>

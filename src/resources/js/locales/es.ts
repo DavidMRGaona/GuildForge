@@ -605,6 +605,7 @@ export default {
         emptyOwnerTitle: 'Tu perfil todavía está vacío',
         emptyOwnerDescription: 'Lo que añadas aparecerá aquí para quienes puedan ver tu perfil.',
         editProfile: 'Editar perfil',
+        statsLabel: 'Estadísticas',
     },
     auth: {
         backToHome: 'Volver al inicio',

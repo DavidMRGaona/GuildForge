@@ -1,26 +1,16 @@
 import type { SeoProps } from '@/types/seo';
+import type { ResolvedProfile } from '@/types/profileSections';
 
-/** The header of a public profile (core#741): never the account name or email. */
-export interface PublicProfileHeader {
-    handle: string;
-    url: string;
-    /** Null only for the owner, who is asked to choose one */
-    publicName: string | null;
-    avatarPublicId: string | null;
-    bannerPublicId: string | null;
-    membershipBadge: boolean;
-    /** The month the account was created in the display zone, `YYYY-MM` */
-    memberSince: string | null;
-}
-
+/** What only the owner is told about their own profile (core#741) */
 export interface PublicProfileNotices {
     choosePublicName: boolean;
     onlyOwner: boolean;
 }
 
+/** The public profile page, `/miembros/{handle}` (core#741) */
 export interface PublicProfilePageProps {
-    profile: PublicProfileHeader;
-    isOwner: boolean;
+    /** Already decided for the person viewing: the server only sends a profile they may see */
+    profile: ResolvedProfile;
     notices: PublicProfileNotices;
     /** Where the owner edits what the profile shows; null for everybody else */
     editUrl: string | null;

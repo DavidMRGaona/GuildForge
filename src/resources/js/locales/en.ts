@@ -605,6 +605,7 @@ export default {
         emptyOwnerTitle: 'Your profile is still empty',
         emptyOwnerDescription: 'What you add will show here for whoever can see your profile.',
         editProfile: 'Edit profile',
+        statsLabel: 'Statistics',
     },
     auth: {
         backToHome: 'Back to home',

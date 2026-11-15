@@ -7,12 +7,17 @@ namespace Tests\Feature\Http\Controllers;
 use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Impersonation\Services\ImpersonationServiceInterface;
+use App\Application\Profiles\DTOs\ProfileHeaderDTO;
+use App\Application\Profiles\DTOs\ProfileOwnerDTO;
+use App\Application\Profiles\DTOs\ResolvedProfileDTO;
+use App\Application\Profiles\Services\ProfileRendererInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Domain\Impersonation\Enums\ImpersonationEndReason;
 use App\Domain\Impersonation\Enums\ImpersonationMode;
 use App\Domain\Profiles\ProfileVisibility;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Testing\TestResponse;
@@ -29,6 +34,23 @@ final class PublicProfileControllerTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
+    /**
+     * Every request starts afresh, as it does in production: what is bound scoped (the profile rows the
+     * renderer and the lookup share) lasts one request, not the whole test.
+     *
+     * @param  array<string, mixed>  $parameters
+     * @param  array<string, mixed>  $cookies
+     * @param  array<string, mixed>  $files
+     * @param  array<string, mixed>  $server
+     * @return TestResponse<\Symfony\Component\HttpFoundation\Response>
+     */
+    public function call($method, $uri, $parameters = [], $cookies = [], $files = [], $server = [], $content = null)
+    {
+        $this->app->forgetScopedInstances();
+
+        return parent::call($method, $uri, $parameters, $cookies, $files, $server, $content);
+    }
+
     public function test_a_public_profile_shows_its_header_to_a_guest(): void
     {
         $owner = $this->owner(ProfileVisibility::Public, ['avatar_public_id' => 'avatars/ana.jpg']);
@@ -39,18 +61,21 @@ final class PublicProfileControllerTest extends TestCase
             ->assertHeader('X-Robots-Tag', 'noindex, nofollow')
             ->assertInertia(fn (Assert $page): Assert => $page
                 ->component('Profiles/Show')
-                ->where('profile.handle', 'ana-prueba')
-                ->where('profile.publicName', 'Ana Prueba')
-                ->where('profile.avatarPublicId', 'avatars/ana.jpg')
-                ->where('profile.bannerPublicId', null)
-                ->where('profile.membershipBadge', false)
-                ->where('isOwner', false)
+                ->where('profile.header.handle', 'ana-prueba')
+                ->where('profile.header.publicName', 'Ana Prueba')
+                ->where('profile.header.avatarPublicId', 'avatars/ana.jpg')
+                ->where('profile.header.bannerPublicId', null)
+                ->where('profile.header.showsMembership', false)
+                ->where('profile.header.isOwner', false)
+                ->has('profile.stats')
+                ->has('profile.sections.main')
+                ->has('profile.sections.aside')
                 ->where('notices.onlyOwner', false)
                 ->where('notices.choosePublicName', false)
                 ->where('editUrl', null)
                 ->where('seo.robots', 'noindex, nofollow')
-                ->missing('profile.email')
-                ->missing('profile.name'));
+                ->missing('profile.header.email')
+                ->missing('profile.header.name'));
 
         $this->assertStringNotContainsString($owner->email, (string) $response->getContent());
         $this->assertStringNotContainsString('Nombre de cuenta', (string) $response->getContent());
@@ -82,7 +107,7 @@ final class PublicProfileControllerTest extends TestCase
         $this->actingAs($owner)->get('/miembros/ana-prueba')
             ->assertOk()
             ->assertInertia(fn (Assert $page): Assert => $page
-                ->where('isOwner', true)
+                ->where('profile.header.isOwner', true)
                 ->where('notices.onlyOwner', true)
                 ->where('notices.choosePublicName', false)
                 ->where('editUrl', route('profile.show')));
@@ -98,12 +123,12 @@ final class PublicProfileControllerTest extends TestCase
         $this->actingAs($owner)->get("/miembros/{$handle}")
             ->assertOk()
             ->assertInertia(fn (Assert $page): Assert => $page
-                ->where('profile.publicName', null)
+                ->where('profile.header.publicName', null)
                 ->where('notices.choosePublicName', true)
                 ->where('notices.onlyOwner', false)
                 // The account name is the owner's own `auth.user`, never part of the profile
                 ->where('seo.title', "Perfil de @{$handle}")
-                ->missing('profile.name'));
+                ->missing('profile.header.name'));
     }
 
     public function test_a_deactivated_account_has_no_profile(): void
@@ -206,7 +231,7 @@ final class PublicProfileControllerTest extends TestCase
         // 23:30 UTC on 31 May is already June in Madrid
         $owner->forceFill(['created_at' => Carbon::parse('2024-05-31 23:30:00', 'UTC')])->save();
 
-        $this->get('/miembros/ana-prueba')->assertInertia(fn (Assert $page): Assert => $page->where('profile.memberSince', '2024-06'));
+        $this->get('/miembros/ana-prueba')->assertInertia(fn (Assert $page): Assert => $page->where('profile.header.memberSince', '2024-06-01T01:30:00+02:00'));
     }
 
     public function test_while_impersonating_it_is_decided_for_the_impersonated_account(): void
@@ -226,7 +251,47 @@ final class PublicProfileControllerTest extends TestCase
         app(ImpersonationServiceInterface::class)->start($admin, $owner, ImpersonationMode::ReadOnly);
         $this->get('/miembros/ana-prueba')
             ->assertOk()
-            ->assertInertia(fn (Assert $page): Assert => $page->where('isOwner', true)->where('notices.onlyOwner', true));
+            ->assertInertia(fn (Assert $page): Assert => $page->where('profile.header.isOwner', true)->where('notices.onlyOwner', true));
+    }
+
+    public function test_the_sections_are_drawn_once_the_profile_may_be_seen(): void
+    {
+        $owner = $this->owner(ProfileVisibility::Public);
+        UserProfileModel::query()->whereKey($owner->id)->update(['bio' => 'Juego a rol desde 1998.']);
+
+        $this->get('/miembros/ana-prueba')->assertInertia(fn (Assert $page): Assert => $page
+            ->where('profile.sections.aside.0.key', 'core.about')
+            ->where('profile.sections.aside.0.label', 'Sobre mí'));
+    }
+
+    public function test_the_renderer_is_only_asked_once_the_access_rule_let_the_person_see(): void
+    {
+        $owner = $this->owner(ProfileVisibility::Hidden);
+        $owner->update(['display_name' => 'Ana Nueva']);
+        $renderer = new class implements ProfileRendererInterface
+        {
+            public int $calls = 0;
+
+            public function render(ProfileOwnerDTO $owner, ?Authenticatable $viewer): ResolvedProfileDTO
+            {
+                $this->calls++;
+
+                return new ResolvedProfileDTO(new ProfileHeaderDTO($owner->handle, $owner->publicName, null, null, null, false, false), [], [], []);
+            }
+        };
+        $this->app->scoped(ProfileRendererInterface::class, static fn (): ProfileRendererInterface => $renderer);
+
+        $this->get('/miembros/ana-nueva')->assertNotFound();
+        $this->get('/miembros/ana-prueba')->assertNotFound();
+        $this->get('/miembros/nadie-con-esto')->assertNotFound();
+        $this->assertSame(0, $renderer->calls);
+
+        $this->setVisibility($owner, ProfileVisibility::Public);
+        $this->get('/miembros/ana-prueba')->assertStatus(301);
+        $this->assertSame(0, $renderer->calls);
+
+        $this->get('/miembros/ana-nueva')->assertOk();
+        $this->assertSame(1, $renderer->calls);
     }
 
     /**
@@ -266,7 +331,7 @@ final class PublicProfileControllerTest extends TestCase
 
     private function assertBadge(bool $expected): void
     {
-        $this->get('/miembros/ana-prueba')->assertInertia(fn (Assert $page): Assert => $page->where('profile.membershipBadge', $expected));
+        $this->get('/miembros/ana-prueba')->assertInertia(fn (Assert $page): Assert => $page->where('profile.header.showsMembership', $expected));
     }
 
     /**

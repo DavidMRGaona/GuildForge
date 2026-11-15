@@ -15,22 +15,20 @@ final readonly class ProfileLookupDTO
         /** The current address, when the one asked for is old or written differently */
         public ?string $movedTo,
         public bool $isOwner,
-        /** The owner shows the membership badge and is an association member */
-        public bool $membershipBadge,
     ) {}
 
     public static function notFound(): self
     {
-        return new self(null, null, false, false);
+        return new self(null, null, false);
     }
 
     public static function movedTo(string $handle): self
     {
-        return new self(null, $handle, false, false);
+        return new self(null, $handle, false);
     }
 
-    public static function visible(PublicProfileDTO $profile, bool $isOwner, bool $membershipBadge): self
+    public static function visible(PublicProfileDTO $profile, bool $isOwner): self
     {
-        return new self($profile, null, $isOwner, $membershipBadge);
+        return new self($profile, null, $isOwner);
     }
 }

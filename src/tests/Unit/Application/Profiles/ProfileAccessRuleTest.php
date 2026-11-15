@@ -9,7 +9,6 @@ use App\Application\Profiles\DTOs\PublicProfileDTO;
 use App\Application\Profiles\Services\ProfileAccessRule;
 use App\Application\Services\EmailVerificationPolicyInterface;
 use App\Domain\Profiles\ProfileVisibility;
-use DateTimeImmutable;
 use Illuminate\Auth\GenericUser;
 use Illuminate\Contracts\Auth\Authenticatable;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -177,10 +176,6 @@ final class ProfileAccessRuleTest extends TestCase
             handle: 'ana-prueba',
             publicName: $state === 'nameless' ? null : $publicName,
             visibility: $visibility,
-            avatarPublicId: null,
-            bannerPublicId: null,
-            showMembership: false,
-            memberSince: new DateTimeImmutable('2024-06-10 10:00:00'),
             deactivated: $state === 'deactivated',
             anonymized: $state === 'anonymized',
         );
