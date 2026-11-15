@@ -14,4 +14,7 @@ enum SiteBlockPlacement: string
 
     /** Inside a popup window of the announcements module */
     case Popup = 'popup';
+
+    /** On the link page of the link-page module (the page a printed QR code leads to) */
+    case LinkPage = 'link_page';
 }

@@ -30,11 +30,13 @@ final class CoreFooterBlocksTest extends TestCase
         );
 
         $this->assertSame(['core.links', 'core.text', 'core.brand', 'core.contact'], array_slice($keys, 0, 4));
-        // Their settings belong to the footer's own JSON: none of them is offered for popups
-        $this->assertSame([], array_values(array_filter(
-            array_map(static fn ($block): string => $block->key(), app(SiteBlockRegistryInterface::class)->forPlacement(SiteBlockPlacement::Popup)),
-            static fn (string $key): bool => str_starts_with($key, 'core.'),
-        )));
+        // Their settings belong to the footer's own JSON: none of them is offered for popups or the link page
+        foreach ([SiteBlockPlacement::Popup, SiteBlockPlacement::LinkPage] as $placement) {
+            $this->assertSame([], array_values(array_filter(
+                array_map(static fn ($block): string => $block->key(), app(SiteBlockRegistryInterface::class)->forPlacement($placement)),
+                static fn (string $key): bool => str_starts_with($key, 'core.'),
+            )));
+        }
     }
 
     public function test_links_draw_the_chosen_footer_menu_for_that_person(): void

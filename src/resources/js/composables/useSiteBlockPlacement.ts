@@ -12,8 +12,8 @@ export const SITE_BLOCK_PLACEMENT: InjectionKey<ComputedRef<SiteBlockPlacement>>
 export const DEFAULT_SITE_BLOCK_PLACEMENT: SiteBlockPlacement = 'footer';
 
 /**
- * The placement the calling block is drawn in: `footer` (always dark, in both colour schemes) or
- * `popup` (follows the page's colour scheme). Reactive; outside `SiteBlock.vue` (a spec mounting the
+ * The placement the calling block is drawn in: `footer` (always dark, in both colour schemes), `popup`
+ * or `link_page` (both follow the page's colour scheme). Reactive; outside `SiteBlock.vue` (a spec mounting the
  * component alone) it is the footer.
  */
 export function useSiteBlockPlacement(): ComputedRef<SiteBlockPlacement> {
