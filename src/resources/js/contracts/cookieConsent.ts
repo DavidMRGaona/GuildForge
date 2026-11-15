@@ -50,10 +50,27 @@ const changeListeners = new Set<() => void>();
 // Bumped on every change, so that reading consent inside a computed, watcher or render follows it
 const revision = shallowRef(0);
 
-export function registerCookieConsentProvider(next: CookieConsentProvider): void {
+/**
+ * Registers the provider and returns the function that withdraws it. Call that function when
+ * the provider goes away (the banner component unmounts), so nobody keeps waiting for a banner
+ * that no longer exists. It withdraws only this registration: if a later one replaced it, the
+ * call does nothing, and calling it twice is harmless. Callers that ignore the return value
+ * keep the earlier behaviour.
+ */
+export function registerCookieConsentProvider(next: CookieConsentProvider): () => void {
     provider = next;
     revision.value += 1;
     runAll(changeListeners);
+
+    return (): void => {
+        if (provider !== next) {
+            return;
+        }
+
+        provider = null;
+        revision.value += 1;
+        runAll(changeListeners);
+    };
 }
 
 /**
@@ -155,8 +172,9 @@ export function onCookieConsentDecided(listener: CookieConsentDecidedListener): 
  * Resolves once the banner is not waiting for an answer, and at once when there is nothing to
  * wait for: no consent module on the page, or an answer already given. If the module is declared
  * but its provider does not register within `CONSENT_PROVIDER_TIMEOUT_MS` it resolves too, so a
- * module that failed to load never holds the caller back. It rejects only when the optional
- * signal aborts.
+ * module that failed to load never holds the caller back. If the provider is withdrawn while
+ * the caller waits, the same time limit starts again (a provider that comes back stops it). It
+ * rejects only when the optional signal aborts.
  */
 export function whenConsentDecided(options: WhenConsentDecidedOptions = {}): Promise<void> {
     const { signal } = options;
@@ -192,6 +210,9 @@ export function whenConsentDecided(options: WhenConsentDecidedOptions = {}): Pro
 
         const check = (): void => {
             if (provider === null) {
+                // The provider was withdrawn: back to waiting for one to register, with a limit
+                timer ??= setTimeout(finish, CONSENT_PROVIDER_TIMEOUT_MS);
+
                 return;
             }
 

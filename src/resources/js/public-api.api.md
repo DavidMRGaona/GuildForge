@@ -875,7 +875,7 @@ export declare const CONSENT_PROVIDER_TIMEOUT_MS: number;
 export interface WhenConsentDecidedOptions {
     signal?: AbortSignal;
 }
-export declare function registerCookieConsentProvider(next: CookieConsentProvider): void;
+export declare function registerCookieConsentProvider(next: CookieConsentProvider): () => void;
 export declare function notifyCookieConsentChanged(): void;
 export declare function notifyCookieConsentDecided(): void;
 export declare function hasCookieConsent(categorySlug: string): boolean;
