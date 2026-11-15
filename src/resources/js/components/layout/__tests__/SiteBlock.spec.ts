@@ -75,7 +75,9 @@ describe('SiteBlock', () => {
             expect(wrapper.get('[data-testid="placed"]').text()).toBe(placement);
             // A context, not an attribute: the block itself never receives a `placement` prop
             expect(
-                JSON.parse(wrapper.get('[data-testid="placed"]').attributes('data-received'))
+                JSON.parse(
+                    wrapper.get('[data-testid="placed"]').attributes('data-received') ?? '{}'
+                )
             ).not.toHaveProperty('placement');
         }
     );
