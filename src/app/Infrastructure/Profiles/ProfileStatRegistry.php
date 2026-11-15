@@ -29,9 +29,4 @@ final class ProfileStatRegistry extends ProfileContributionRegistry implements P
     {
         return null;
     }
-
-    protected function orderOf(object $item): int
-    {
-        return $item->order();
-    }
 }

@@ -15,8 +15,8 @@ use Throwable;
 
 /**
  * What the section and stat registries share (core#742): classes registered by the core and the
- * modules, each built once the first time one is asked for, only to check it and read its key and
- * default order. The registry keeps what it read and the class (ProfileRegistrationDTO), never the
+ * modules, each built once the first time one is asked for, only to check it and read its key,
+ * default order and default on/off. The registry keeps what it read and the class (ProfileRegistrationDTO), never the
  * instance: it is a singleton, and an instance kept here would carry what it read in one request or
  * job (a scoped service, a row) into the next. Whoever draws them builds them again in its own scope. It fails closed: a class that
  * cannot be built, is not of the expected interface, has an invalid key or one that is not its
@@ -124,13 +124,6 @@ abstract class ProfileContributionRegistry
     abstract protected function refusalOf(object $item): ?string;
 
     /**
-     * The default order of an item, read once while it is checked.
-     *
-     * @param  T  $item
-     */
-    abstract protected function orderOf(object $item): int;
-
-    /**
      * @return array<string, ProfileRegistrationDTO>
      */
     private function resolveAll(): array
@@ -139,7 +132,7 @@ abstract class ProfileContributionRegistry
             return $this->resolved;
         }
 
-        /** @var array<string, list<array{key: string, order: int, module: string|null, class: string}>> $byKey */
+        /** @var array<string, list<array{key: string, order: int, enabledByDefault: bool, module: string|null, class: string}>> $byKey */
         $byKey = [];
 
         foreach ($this->classes as $class => $module) {
@@ -164,7 +157,7 @@ abstract class ProfileContributionRegistry
                 continue;
             }
 
-            $valid[] = new ProfileRegistrationDTO($key, $entries[0]['module'], $entries[0]['class'], $entries[0]['order']);
+            $valid[] = new ProfileRegistrationDTO($key, $entries[0]['module'], $entries[0]['class'], $entries[0]['order'], $entries[0]['enabledByDefault']);
         }
 
         usort($valid, static fn (ProfileRegistrationDTO $a, ProfileRegistrationDTO $b): int => [$a->order, $a->key] <=> [$b->order, $b->key]);
@@ -178,10 +171,10 @@ abstract class ProfileContributionRegistry
     }
 
     /**
-     * The key and order of the class, read once from an instance built only for this, or null (with a
-     * warning) when it cannot be offered.
+     * The key, order and default of the class, read once from an instance built only for this, or null
+     * (with a warning) when it cannot be offered.
      *
-     * @return array{key: string, order: int}|null
+     * @return array{key: string, order: int, enabledByDefault: bool}|null
      */
     private function build(string $class, ?string $module): ?array
     {
@@ -213,7 +206,8 @@ abstract class ProfileContributionRegistry
                 return $this->refuse($class, $reason, sprintf('A profile %s failed its %s check; it is left out.', $this->kind(), $reason), $context);
             }
 
-            $order = $this->orderOf($item);
+            $order = $item->order();
+            $enabledByDefault = $item->enabledByDefault();
         } catch (Throwable $exception) {
             // Only the class: a module's message may carry what a person can see
             return $this->refuse($class, 'build', sprintf('A profile %s could not be built; it is left out.', $this->kind()), [
@@ -222,7 +216,7 @@ abstract class ProfileContributionRegistry
             ]);
         }
 
-        return ['key' => $key->value, 'order' => $order];
+        return ['key' => $key->value, 'order' => $order, 'enabledByDefault' => $enabledByDefault];
     }
 
     /**

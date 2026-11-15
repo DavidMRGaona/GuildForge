@@ -171,11 +171,16 @@ final class ProfileRendererTest extends TestCase
         $this->assertSame('Después', $this->render($user, null)->aside[0]->props['lines'][0][0]['text']);
     }
 
-    public function test_each_request_or_job_builds_its_own_sections_and_stats(): void
+    public function test_each_request_or_job_builds_its_own_sections_and_stats_once(): void
     {
-        $built = 0;
-        $this->app->bind('counted-section', static function () use (&$built): ProfileSectionInterface {
-            $built++;
+        $built = new class
+        {
+            public int $section = 0;
+
+            public int $stat = 0;
+        };
+        $this->app->bind('counted-section', static function () use ($built): ProfileSectionInterface {
+            $built->section++;
 
             return new class extends FakeProfileSection
             {
@@ -185,15 +190,63 @@ final class ProfileRendererTest extends TestCase
                 }
             };
         });
-        $this->sections(['counted-section']);
-        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+        $this->app->bind('counted-stat', static function () use ($built): ProfileStatInterface {
+            $built->stat++;
 
+            return new class extends FakeProfileStat
+            {
+                public function key(): string
+                {
+                    return 'forum.counted';
+                }
+            };
+        });
+        $this->sections(['counted-section']);
+        $this->stats(['counted-stat']);
+        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+        $other = UserModel::factory()->create(['display_name' => 'Luis']);
+
+        // Two profiles in one request: built once, after the registry's own check
         $this->render($user, null);
+        $this->render($other, null);
+        $this->assertSame([2, 2], [$built->section, $built->stat]);
+
+        // A later request or job builds its own
         $this->app->forgetScopedInstances();
         $this->render($user, null);
+        $this->assertSame([3, 3], [$built->section, $built->stat]);
+    }
 
-        // Once to check it, then once per render scope
-        $this->assertSame(3, $built);
+    public function test_what_is_off_is_never_built_to_draw_it(): void
+    {
+        $built = 0;
+        $this->app->bind('quiet-section', static function () use (&$built): ProfileSectionInterface {
+            if (++$built > 1) {
+                throw new RuntimeException('Built to draw something that is off');
+            }
+
+            return new class extends FakeProfileSection
+            {
+                public function key(): string
+                {
+                    return 'forum.quiet';
+                }
+
+                public function enabledByDefault(): bool
+                {
+                    return false;
+                }
+            };
+        });
+        $this->sections(['quiet-section', $this->section('forum.turned_off')]);
+        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+        $this->profileOf($user)->update(['layout' => ProfileLayout::fromArray(['sections' => [['key' => 'forum.turned_off', 'enabled' => false]]])]);
+        $log = Log::spy();
+
+        $this->assertSame([], $this->render($user, null)->main);
+        // Only the registry's check built it
+        $this->assertSame(1, $built);
+        $log->shouldNotHaveReceived('warning');
     }
 
     public function test_a_section_built_with_another_key_than_it_registered_with_is_left_out(): void

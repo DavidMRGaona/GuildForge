@@ -47,7 +47,7 @@ final readonly class ResolvedProfileDTO
     }
 
     /**
-     * What `@/types/profiles` calls `ResolvedProfile`.
+     * What `@/types/profileSections` calls `ResolvedProfile`.
      *
      * @return array{header: array<string, mixed>, stats: list<array<string, mixed>>, sections: array{main: list<array<string, mixed>>, aside: list<array<string, mixed>>}}
      */

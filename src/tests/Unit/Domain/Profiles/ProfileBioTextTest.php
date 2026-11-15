@@ -164,13 +164,23 @@ final class ProfileBioTextTest extends TestCase
 
     public function test_control_characters_are_dropped(): void
     {
-        $this->assertSame([[['text' => "Hola\tmundo", 'href' => null]]], ProfileBioText::lines("Hola\tmun\x00\x07do"));
+        $this->assertSame([[['text' => "Hola\tmundo", 'href' => null]]], ProfileBioText::lines("Hola\tmun\x00\x07\u{0085}\u{009B}do"));
     }
 
-    public function test_an_address_past_the_limit_is_cut_with_the_text(): void
+    public function test_an_address_the_cut_splits_stays_text(): void
     {
-        $url = 'https://example.com/'.str_repeat('a', 600);
+        // The cut falls right after `bank.example`: linked, it would be another host
+        $prefix = str_repeat('a', ProfileBioText::MAX_LENGTH - strlen('https://bank.example') - 1).' ';
+        $lines = ProfileBioText::lines($prefix.'https://bank.example.evil.com/login');
 
-        $this->assertSame(substr($url, 0, ProfileBioText::MAX_LENGTH), ProfileBioText::lines($url)[0][0]['href']);
+        $this->assertSame([[['text' => $prefix.'https://bank.example', 'href' => null]]], $lines);
+    }
+
+    public function test_an_address_that_ends_before_the_cut_still_links(): void
+    {
+        $prefix = str_repeat('a', 100).' ';
+        $line = ProfileBioText::lines($prefix.'https://example.com/ '.str_repeat('b', 600))[0];
+
+        $this->assertSame('https://example.com/', $line[1]['href']);
     }
 }

@@ -39,9 +39,4 @@ final class ProfileSectionRegistry extends ProfileContributionRegistry implement
 
         return null;
     }
-
-    protected function orderOf(object $item): int
-    {
-        return $item->order();
-    }
 }

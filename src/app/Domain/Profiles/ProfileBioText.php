@@ -10,8 +10,8 @@ namespace App\Domain\Profiles;
  * (letters, digits, dots and hyphens; international names in their `xn--` form), never a user name
  * before it (`https://bank.example@evil.example` would pass for the bank) nor a backslash; what the
  * owner wrote stays text whatever it looks like, so the page escapes it like any other text. Control
- * and direction-override characters are dropped (they could make a link read as another), and the
- * text is cut to MAX_LENGTH.
+ * characters (C0 and C1) and direction marks are dropped (they could make a link read as another),
+ * and the text is cut to MAX_LENGTH; an address the cut splits stays text.
  */
 final class ProfileBioText
 {
@@ -25,7 +25,7 @@ final class ProfileBioText
     private const string TRAILING_PATTERN = '/[.,;:!?…]+$/u';
 
     /** Controls other than tabs and line breaks, and the invisible marks that turn text around */
-    private const string INVISIBLE_PATTERN = '/[\x00-\x08\x0B-\x1F\x7F\x{061C}\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}]/u';
+    private const string INVISIBLE_PATTERN = '/[\x00-\x08\x0B-\x1F\x7F-\x{009F}\x{061C}\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}]/u';
 
     /** Letters, digits and hyphens in dot-separated labels: an international name only as `xn--` */
     private const string HOST_PATTERN = '/^[a-z0-9-]+(?:\.[a-z0-9-]+)*$/i';
@@ -41,8 +41,11 @@ final class ProfileBioText
     {
         $text = str_replace(["\r\n", "\r"], "\n", $text);
         // Invalid UTF-8 makes preg_replace() answer null: nothing is drawn then
-        $text = (string) preg_replace(self::INVISIBLE_PATTERN, '', $text);
-        $text = trim(mb_substr(trim($text), 0, self::MAX_LENGTH));
+        $text = trim((string) preg_replace(self::INVISIBLE_PATTERN, '', $text));
+        $cut = mb_substr($text, 0, self::MAX_LENGTH);
+        // An address the cut splits would link somewhere else (`bank.example.evil.com` → `bank.example`)
+        $tailIsSplit = $cut !== $text && self::splitsAnAddress($text, strlen($cut));
+        $text = rtrim($cut);
 
         if ($text === '') {
             return [];
@@ -50,8 +53,10 @@ final class ProfileBioText
 
         $lines = [];
         $blank = false;
+        $rows = explode("\n", $text);
+        $last = count($rows) - 1;
 
-        foreach (explode("\n", $text) as $line) {
+        foreach ($rows as $index => $line) {
             $line = trim($line, " \t");
 
             if ($line === '') {
@@ -64,16 +69,33 @@ final class ProfileBioText
             }
 
             $blank = false;
-            $lines[] = self::segments($line);
+            $lines[] = self::segments($line, $tailIsSplit && $index === $last);
         }
 
         return $lines;
     }
 
     /**
+     * Whether an address runs across a byte offset of the text, so cutting there would split it.
+     */
+    private static function splitsAnAddress(string $text, int $offset): bool
+    {
+        preg_match_all(self::URL_PATTERN, $text, $matches, PREG_OFFSET_CAPTURE);
+
+        foreach ($matches[0] as [$candidate, $position]) {
+            if ($position < $offset && $position + strlen($candidate) > $offset) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  bool  $endIsSplit  the line ends where the text was cut through an address: that one stays text
      * @return list<array{text: string, href: string|null}>
      */
-    private static function segments(string $line): array
+    private static function segments(string $line, bool $endIsSplit = false): array
     {
         $segments = [];
         $text = '';
@@ -85,8 +107,9 @@ final class ProfileBioText
             $url = self::withoutTrailingPunctuation($candidate);
             $text .= substr($line, $offset, $position - $offset);
             $offset = $position + strlen($url);
+            $split = $endIsSplit && $position + strlen($candidate) === strlen($line);
 
-            if (! self::isLink($url)) {
+            if ($split || ! self::isLink($url)) {
                 $text .= $url;
 
                 continue;

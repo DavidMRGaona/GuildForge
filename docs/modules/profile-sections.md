@@ -20,7 +20,7 @@ Requires core ≥ the release with #742; set `requires.core` to it.
 
 Implement `App\Application\Profiles\Contracts\ProfileSectionInterface` and return the class from the provider's `registerProfileSections()`. Sections are built from the container, so they may take dependencies in their constructor.
 
-The registry keeps only the class and what it read when checking it (key, owner, default order), never an instance. The core builds the section again from the container every time it draws profiles in a request or a job, so a constructor dependency (a request-scoped service, a row read once) is always the current one. Never keep state across requests yourself: no static properties or caches inside the section.
+The registry keeps only the class and what it read when checking it (key, owner, default order, on by default), never an instance. The core builds the section again from the container once in each request or job that draws profiles, and only when it is on (a section the owner turned off is never built), so a constructor dependency (a request-scoped service, a row read once) is always the current one. Never keep state across requests yourself: no static properties or caches inside the section.
 
 ```php
 use App\Application\Profiles\Contracts\ProfileSectionInterface;
@@ -268,7 +268,7 @@ A section or stat never breaks the profile around it:
 | Situation | What happens |
 |---|---|
 | The class cannot be built, is not a `ProfileSectionInterface` / `ProfileStatInterface`, its key is invalid, or (sections) its component path is invalid or `region()` throws | Left out of the registry, warning |
-| Built again when drawing, it cannot be built, has another key than when it was registered or (sections) an invalid component path | Not drawn, warning |
+| Built again when drawing (once per request or job, only when on), it cannot be built, has another key than when it was registered or (sections) an invalid component path | Not drawn, warning |
 | The same class registered by a second owner | The second registration is ignored, warning |
 | The key does not start with the module's own name (`core.` for the core), or a module called `core` | Left out, warning |
 | Two sections (or two stats) with the same key | Both left out, warning (once per key) |
@@ -280,11 +280,11 @@ A section or stat never breaks the profile around it:
 | The Vue component fails to load or render | `ProfileSection.vue` drops it, title included (`onErrorCaptured`, like `SiteBlock.vue`) |
 | The profile row or the account cannot be read, or the membership check throws | The header is drawn without what failed (no badge), the layout takes the defaults, warning |
 
-Every request builds the registries and the renderer again, so warnings are kept apart for a day in the cache (`App\Infrastructure\Support\DailyWarnings`, prefix `profiles:warned:`, the same mechanism as site blocks): the registries' per class and reason (a duplicated key, per key), the renderer's per key and reason. Warnings carry the class, the module, the key and the reason; props, counts and exception messages are never logged, and an exception is named only by its class.
+Under php-fpm every web request builds the registries and the renderer again; a queue worker keeps the registries (singletons, holding only classes and what was read from them) for its whole life and gets a fresh renderer, with freshly built sections and stats, for each job. Either way warnings are kept apart for a day in the cache, not in memory (`App\Infrastructure\Support\DailyWarnings`, prefix `profiles:warned:`, the same mechanism as site blocks): the registries' per class and reason (a duplicated key, per key), the renderer's per key and reason. Warnings carry the class, the module, the key and the reason; props, counts and exception messages are never logged, and an exception is named only by its class.
 
 ## The core's section
 
-`core.about` («Sobre mí», `App\Infrastructure\Profiles\Sections\AboutProfileSection`): the owner's bio, in the aside, on by default. It is plain text: the server cuts it into lines and pieces of text and links (`App\Domain\Profiles\ProfileBioText`), and `AboutSection.vue` draws every piece as text, so nothing the owner wrote is ever drawn as HTML. At most 500 characters are drawn (`ProfileBioText::MAX_LENGTH`, the editor's limit). Line breaks are kept (a run of blank lines counts as one); control characters and the invisible direction marks (U+202A–U+202E, U+2066–U+2069, U+200E, U+200F, U+061C) are dropped, so a link cannot be made to read as another. Only `http` and `https` addresses become links: the host is letters, digits, dots and hyphens (an international name only in its `xn--` form), with no user name before it and no backslash anywhere; quotes of any kind (`«»“”‘’`) end an address, and the sentence's punctuation, an ellipsis or an unbalanced bracket at its end stay out. Links are drawn with `rel="nofollow ugc noopener"`. An empty bio draws nothing.
+`core.about` («Sobre mí», `App\Infrastructure\Profiles\Sections\AboutProfileSection`): the owner's bio, in the aside, on by default. It is plain text: the server cuts it into lines and pieces of text and links (`App\Domain\Profiles\ProfileBioText`), and `AboutSection.vue` draws every piece as text, so nothing the owner wrote is ever drawn as HTML. At most 500 characters are drawn (`ProfileBioText::MAX_LENGTH`, the editor's limit). Line breaks are kept (a run of blank lines counts as one); control characters (C0 and C1) and the invisible direction marks (U+202A–U+202E, U+2066–U+2069, U+200E, U+200F, U+061C) are dropped, so a link cannot be made to read as another. Only `http` and `https` addresses become links: the host is letters, digits, dots and hyphens (an international name only in its `xn--` form), with no user name before it and no backslash anywhere; quotes of any kind (`«»“”‘’`) end an address, and the sentence's punctuation, an ellipsis or an unbalanced bracket at its end stay out. An address the 500-character cut splits stays text, since cut short it could name another host (`https://bank.example.evil.com` → `https://bank.example`). Links are drawn with `rel="nofollow ugc noopener"`. An empty bio draws nothing.
 
 ## Testing
 

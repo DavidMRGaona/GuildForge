@@ -35,24 +35,27 @@ use Throwable;
 
 /**
  * Draws a public profile for one person and fails closed (see the interface). Bound scoped, it builds
- * every section and stat from the container itself, at most once per request or job, from what the
- * registries keep (a class, never an instance): nothing a section read in one request reaches the
- * next. A profile is drawn on
+ * every section and stat from the container itself, from what the registries keep (a class, never an
+ * instance), at most once per request or job and only when it is on: nothing a section read in one
+ * request reaches the next, and what is off is never built. A profile is drawn on
  * every visit, so a section or stat that keeps failing would log on every request: each key and
  * reason is warned about once a day (DailyWarnings). Warnings carry the key, the reason and an
  * exception only by its class; never props, counts or exception messages.
  */
-final readonly class ProfileRenderer implements ProfileRendererInterface
+final class ProfileRenderer implements ProfileRendererInterface
 {
-    private DailyWarnings $warnings;
+    private readonly DailyWarnings $warnings;
+
+    /** @var array<string, ProfileSectionInterface|ProfileStatInterface|null> 'section|key' or 'stat|key' => built instance, null when it could not be */
+    private array $built = [];
 
     public function __construct(
-        private ProfileSectionRegistryInterface $sections,
-        private ProfileStatRegistryInterface $stats,
-        private StoredProfiles $profiles,
-        private AssociationMembershipServiceInterface $membership,
-        private TimezoneServiceInterface $timezone,
-        private Container $container,
+        private readonly ProfileSectionRegistryInterface $sections,
+        private readonly ProfileStatRegistryInterface $stats,
+        private readonly StoredProfiles $profiles,
+        private readonly AssociationMembershipServiceInterface $membership,
+        private readonly TimezoneServiceInterface $timezone,
+        private readonly Container $container,
         Cache $cache,
     ) {
         $this->warnings = new DailyWarnings(ProfileContributionRegistry::WARNING_PREFIX, static fn (): Cache => $cache);
@@ -92,17 +95,14 @@ final readonly class ProfileRenderer implements ProfileRendererInterface
 
     private function resolveSection(string $key, ProfileRegistrationDTO $registration, ProfileLayout $layout, ProfileOwnerDTO $owner, ?Authenticatable $viewer): ?ResolvedProfileSectionDTO
     {
+        if (! ($layout->sectionEnabled($key) ?? $registration->enabledByDefault)) {
+            return null;
+        }
+
         try {
-            $section = $this->container->make($registration->class);
+            $section = $this->build('section', $registration);
 
-            // The registry checked an instance built for that; this one is checked again
-            if (! $section instanceof ProfileSectionInterface || $section->key() !== $key || preg_match(ProfileSectionRegistry::COMPONENT_PATTERN, $section->component()) !== 1) {
-                $this->warnOnce('section', $key, 'build', 'A profile section was built differently from when it was registered; it is not drawn.');
-
-                return null;
-            }
-
-            if (! ($layout->sectionEnabled($key) ?? $section->enabledByDefault()) || ! $section->isAvailable()) {
+            if (! $section instanceof ProfileSectionInterface || ! $section->isAvailable()) {
                 return null;
             }
 
@@ -144,16 +144,14 @@ final readonly class ProfileRenderer implements ProfileRendererInterface
 
     private function resolveStat(string $key, ProfileRegistrationDTO $registration, ProfileLayout $layout, ProfileOwnerDTO $owner, ?Authenticatable $viewer): ?ResolvedProfileStatDTO
     {
+        if (! ($layout->statEnabled($key) ?? $registration->enabledByDefault)) {
+            return null;
+        }
+
         try {
-            $stat = $this->container->make($registration->class);
+            $stat = $this->build('stat', $registration);
 
-            if (! $stat instanceof ProfileStatInterface || $stat->key() !== $key) {
-                $this->warnOnce('stat', $key, 'build', 'A profile stat was built differently from when it was registered; it is not drawn.');
-
-                return null;
-            }
-
-            if (! ($layout->statEnabled($key) ?? $stat->enabledByDefault()) || ! $stat->isAvailable()) {
+            if (! $stat instanceof ProfileStatInterface || ! $stat->isAvailable()) {
                 return null;
             }
 
@@ -188,6 +186,44 @@ final readonly class ProfileRenderer implements ProfileRendererInterface
         }
 
         return null;
+    }
+
+    /**
+     * The section or stat of a registration, built once in this request or job and checked again
+     * against what the registry read (an instance built only for that): the same key and, for a
+     * section, a valid component path. Null, with a warning, when it cannot be built or differs.
+     *
+     * @param  'section'|'stat'  $kind
+     */
+    private function build(string $kind, ProfileRegistrationDTO $registration): ProfileSectionInterface|ProfileStatInterface|null
+    {
+        $id = $kind.'|'.$registration->key;
+
+        if (array_key_exists($id, $this->built)) {
+            return $this->built[$id];
+        }
+
+        $built = null;
+
+        try {
+            $instance = $this->container->make($registration->class);
+
+            $valid = $kind === 'section'
+                ? $instance instanceof ProfileSectionInterface && $instance->key() === $registration->key && preg_match(ProfileSectionRegistry::COMPONENT_PATTERN, $instance->component()) === 1
+                : $instance instanceof ProfileStatInterface && $instance->key() === $registration->key;
+
+            if ($valid) {
+                $built = $instance;
+            } else {
+                $this->warnOnce($kind, $registration->key, 'build', sprintf('A profile %s was built differently from when it was registered; it is not drawn.', $kind));
+            }
+        } catch (Throwable $exception) {
+            $this->warnOnce($kind, $registration->key, 'build', sprintf('A profile %s could not be built; it is not drawn.', $kind), [
+                'exception' => $exception::class,
+            ]);
+        }
+
+        return $this->built[$id] = $built;
     }
 
     /**
