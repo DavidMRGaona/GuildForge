@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace App\Filament\SiteBlocks;
 
 use App\Application\Footer\Services\FooterLayoutServiceInterface;
+use App\Application\Media\Services\MediaFileIdResolverInterface;
+use App\Application\SiteBlocks\Exceptions\NothingToDrawException;
 use App\Domain\Footer\FooterLogos;
-use App\Domain\SiteBlocks\LinkTargetRule;
+use App\Domain\Media\ValueObjects\MediaFileId;
 use App\Filament\Forms\Components\MediaLibraryPicker;
+use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaFileModel;
+use App\Infrastructure\Seo\CloudinaryImageUrlBuilder;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\TextInput;
@@ -24,6 +28,14 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
  */
 final class LogosFooterBlock extends CoreFooterBlock
 {
+    /** Height, in CSS pixels, the logos are drawn at at most (`h-10`) */
+    public const int DRAWN_HEIGHT = 40;
+
+    public function __construct(
+        private readonly MediaFileIdResolverInterface $resolver,
+        private readonly CloudinaryImageUrlBuilder $urls,
+    ) {}
+
     public function key(): string
     {
         return FooterLogos::BLOCK_KEY;
@@ -76,23 +88,76 @@ final class LogosFooterBlock extends CoreFooterBlock
 
     public function props(array $settings, ?Authenticatable $user): array
     {
-        $disk = Storage::disk('images');
+        $items = array_values(array_filter(FooterLogos::itemsIn($settings), static fn (array $item): bool => $item['alt'] !== ''));
+
+        // Nothing usable: only the block's title would be left
+        if ($items === []) {
+            throw NothingToDrawException::make();
+        }
+
+        $known = $this->knownFiles($items);
         $logos = [];
 
-        foreach (FooterLogos::itemsIn($settings) as $item) {
-            if ($item['alt'] === '') {
-                continue;
-            }
-
-            $logos[] = [
-                'src' => $disk->url($item['image']),
-                'alt' => mb_substr($item['alt'], 0, FooterLogos::MAX_ALT_LENGTH),
-                'url' => self::link($item, 'url'),
-                'external' => ($url = self::link($item, 'url')) !== null && LinkTargetRule::isExternal($url),
-            ];
+        foreach ($items as $item) {
+            $url = self::link($item, 'url');
+            $logos[] = [...$this->image($item['image'], $known), 'alt' => mb_substr($item['alt'], 0, FooterLogos::MAX_ALT_LENGTH), 'url' => $url];
         }
 
         return ['logos' => $logos];
+    }
+
+    /**
+     * The image to draw: a Cloudinary file of the library comes scaled to twice the drawn height (sharp on
+     * dense screens) in the best format and quality, with the size it is drawn at so the page does not
+     * jump while it loads; anything else is the file as stored, without a size.
+     *
+     * @param  array<string, MediaFileModel>  $known
+     * @return array{src: string, width: int|null, height: int|null}
+     */
+    private function image(string $path, array $known): array
+    {
+        $id = $this->resolver->fromStoredPath($path);
+        $file = $id instanceof MediaFileId ? ($known[$id->value] ?? null) : null;
+        $scaled = $file instanceof MediaFileModel
+            ? $this->urls->mediaHeightLimited($file->file_id, self::DRAWN_HEIGHT * 2, $file->format)
+            : null;
+
+        if (! $file instanceof MediaFileModel || $scaled === null) {
+            return ['src' => Storage::disk('images')->url($path), 'width' => null, 'height' => null];
+        }
+
+        $width = $file->width;
+        $height = $file->height;
+        $drawn = $height !== null && $height > 0 && $width !== null && $width > 0
+            ? min(self::DRAWN_HEIGHT, $height)
+            : null;
+
+        return [
+            'src' => $scaled,
+            'width' => $drawn === null ? null : (int) round($width * $drawn / $height),
+            'height' => $drawn,
+        ];
+    }
+
+    /**
+     * The library's record of each logo, in one query.
+     *
+     * @param  list<array{image: string, alt: string, url: string}>  $items
+     * @return array<string, MediaFileModel>
+     */
+    private function knownFiles(array $items): array
+    {
+        $ids = [];
+
+        foreach ($items as $item) {
+            $id = $this->resolver->fromStoredPath($item['image']);
+
+            if ($id instanceof MediaFileId) {
+                $ids[] = $id->value;
+            }
+        }
+
+        return $ids === [] ? [] : MediaFileModel::query()->whereIn('file_id', array_unique($ids))->get()->keyBy('file_id')->all();
     }
 
     /**

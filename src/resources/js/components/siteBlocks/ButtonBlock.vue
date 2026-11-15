@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
+import { isInertiaPage } from '@/utils/inertiaLinks';
 
 /**
  * Footer block `core.button`: a link drawn as a button (core#698). The server only sends an `https`
@@ -9,7 +10,6 @@ import { Link } from '@inertiajs/vue3';
 const props = defineProps<{
     label: string;
     url: string;
-    external: boolean;
     // Not `style`: Vue reads a prop of that name as the element's inline style
     variant: 'primary' | 'secondary';
 }>();
@@ -25,6 +25,6 @@ const classes = computed(() => [
 </script>
 
 <template>
-    <a v-if="external" :href="url" :class="classes">{{ label }}</a>
-    <Link v-else :href="url" :class="classes">{{ label }}</Link>
+    <Link v-if="isInertiaPage(url)" :href="url" :class="classes">{{ label }}</Link>
+    <a v-else :href="url" :class="classes">{{ label }}</a>
 </template>

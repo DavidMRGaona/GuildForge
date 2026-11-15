@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\SiteBlocks;
 
-use App\Domain\SiteBlocks\LinkTargetRule;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ToggleButtons;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -70,7 +69,6 @@ final class ButtonFooterBlock extends CoreFooterBlock
         return [
             'label' => mb_substr($label, 0, self::MAX_LABEL_LENGTH),
             'url' => $url,
-            'external' => LinkTargetRule::isExternal($url),
             'variant' => ($settings['style'] ?? null) === self::STYLE_SECONDARY ? self::STYLE_SECONDARY : self::STYLE_PRIMARY,
         ];
     }

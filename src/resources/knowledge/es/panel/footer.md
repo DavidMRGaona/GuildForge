@@ -38,7 +38,7 @@ Debajo de las columnas siempre sale una barra con el copyright y los enlaces a l
 
 ## Próximos eventos
 
-Muestra los siguientes eventos publicados por fecha de inicio. Los eventos de hoy siguen saliendo hasta que acaba el día, y las fechas y horas se ven en la zona horaria de la web. Los borradores nunca salen. Si no hay eventos próximos, el bloque lo dice y deja el enlace a todos los eventos, si lo has dejado activado.
+Muestra los siguientes eventos publicados, igual que el resto de la web: los que aún no han terminado, ordenados por fecha de inicio. Un evento que ya ha empezado pero dura todavía (una jornada de varios días, por ejemplo) sigue saliendo hasta que acaba. Las fechas y horas se ven en la zona horaria de la web y los borradores nunca salen. Si no hay eventos próximos, el bloque lo dice y deja el enlace a todos los eventos; si además has desactivado ese enlace, el bloque no se muestra, ni su título.
 
 ## Botón
 
@@ -53,7 +53,7 @@ No se admiten otras direcciones (por ejemplo `http://`, `mailto:` o `javascript:
 
 Pulsa **Añadir logotipo** (hasta 8) y sube una imagen o pulsa **Elegir de la biblioteca** para usar una que ya está en la biblioteca de medios. Cada logotipo necesita un **Texto alternativo** (obligatorio: lo leen los lectores de pantalla; di a quién pertenece el logotipo) y puede tener un enlace con las mismas reglas que el botón.
 
-Los logotipos salen sobre un fondo claro para que se vean bien tengan el color que tengan.
+Los logotipos salen sobre un fondo claro para que se vean bien tengan el color que tengan. Se sirven reducidos (a unos 40 píxeles de alto) y en el mejor formato para cada navegador, así que no hace falta subirlos con un tamaño exacto. Si ningún logotipo se puede mostrar (por ejemplo, ninguno tiene texto alternativo), el bloque no se muestra, ni su título.
 
 ## Las imágenes del pie en la biblioteca de medios
 

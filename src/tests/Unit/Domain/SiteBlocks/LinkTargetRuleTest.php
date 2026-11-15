@@ -59,10 +59,4 @@ final class LinkTargetRuleTest extends TestCase
         $this->assertNull(LinkTargetRule::normalize('javascript:alert(1)', allowInsecure: true));
         $this->assertNull(LinkTargetRule::normalize('//evil.example', allowInsecure: true));
     }
-
-    public function test_it_tells_external_addresses_from_paths(): void
-    {
-        $this->assertTrue(LinkTargetRule::isExternal('https://example.com'));
-        $this->assertFalse(LinkTargetRule::isExternal('/eventos'));
-    }
 }

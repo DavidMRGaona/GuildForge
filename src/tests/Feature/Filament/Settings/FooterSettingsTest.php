@@ -201,7 +201,7 @@ final class FooterSettingsTest extends TestCase
     {
         $this->actingAs(UserModel::factory()->admin()->create());
 
-        foreach (['javascript:alert(1)', '//evil.example', 'ftp://example.com'] as $url) {
+        foreach (['javascript:alert(1)', 'JAVASCRIPT:alert(1)', 'data:text/html;base64,PHNjcmlwdD4=', '//evil.example', '/\\evil.example', 'https://example.com\\@evil.example', 'ftp://example.com'] as $url) {
             Livewire::test(FooterSettings::class)
                 ->fillForm(['columns' => [['blocks' => [
                     ['type' => 'core.button', 'data' => ['title' => null, 'settings' => ['label' => 'Entrar', 'url' => $url, 'style' => 'primary']]],
@@ -221,7 +221,7 @@ final class FooterSettingsTest extends TestCase
             ->fillForm(['columns' => [['blocks' => [
                 ['type' => 'core.button', 'data' => ['title' => null, 'settings' => ['label' => 'Únete', 'url' => 'https://example.com/unete', 'style' => 'secondary']]],
                 ['type' => 'core.button', 'data' => ['title' => null, 'settings' => ['label' => 'Eventos', 'url' => '/eventos', 'style' => 'primary']]],
-                ['type' => 'core.upcoming_events', 'data' => ['title' => 'Próximos', 'settings' => ['limit' => 4, 'show_all_link' => true]]],
+                ['type' => 'core.upcoming_events', 'data' => ['title' => 'Próximos', 'settings' => ['limit' => 5, 'show_all_link' => true]]],
             ]]]])
             ->call('save')
             ->assertHasNoFormErrors();
@@ -230,7 +230,7 @@ final class FooterSettingsTest extends TestCase
 
         $this->assertSame(['core.button', 'core.button', 'core.upcoming_events'], array_map(static fn (FooterBlock $b): string => $b->key, $blocks));
         $this->assertSame('/eventos', $blocks[1]->settings['url']);
-        $this->assertSame(4, $blocks[2]->settings['limit']);
+        $this->assertSame(5, $blocks[2]->settings['limit']);
     }
 
     public function test_a_logo_without_alternative_text_is_refused_and_a_bad_link_too(): void

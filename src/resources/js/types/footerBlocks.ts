@@ -15,5 +15,7 @@ export interface FooterLogo {
     src: string;
     alt: string;
     url: string | null;
-    external: boolean;
+    /** Size the image is drawn at, when known, so the page does not jump while it loads */
+    width: number | null;
+    height: number | null;
 }

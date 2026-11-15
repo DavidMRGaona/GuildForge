@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import type { FooterLogo } from '@/types/footerBlocks';
+import { isInertiaPage } from '@/utils/inertiaLinks';
 
 /**
  * Footer block `core.logos`: a row of logos, each with its alternative text and an optional link
@@ -18,30 +19,20 @@ const chipClasses =
 <template>
     <ul v-if="logos.length > 0" class="flex flex-wrap items-center gap-3">
         <li v-for="(logo, index) in logos" :key="`${index}-${logo.src}`">
-            <a v-if="logo.url && logo.external" :href="logo.url" :class="chipClasses">
+            <component
+                :is="logo.url && isInertiaPage(logo.url) ? Link : logo.url ? 'a' : 'span'"
+                :href="logo.url ?? undefined"
+                :class="chipClasses"
+            >
                 <img
                     :src="logo.src"
                     :alt="logo.alt"
+                    :width="logo.width ?? undefined"
+                    :height="logo.height ?? undefined"
                     loading="lazy"
                     class="max-h-10 w-auto max-w-32 object-contain"
                 />
-            </a>
-            <Link v-else-if="logo.url" :href="logo.url" :class="chipClasses">
-                <img
-                    :src="logo.src"
-                    :alt="logo.alt"
-                    loading="lazy"
-                    class="max-h-10 w-auto max-w-32 object-contain"
-                />
-            </Link>
-            <span v-else :class="chipClasses">
-                <img
-                    :src="logo.src"
-                    :alt="logo.alt"
-                    loading="lazy"
-                    class="max-h-10 w-auto max-w-32 object-contain"
-                />
-            </span>
+            </component>
         </li>
     </ul>
 </template>

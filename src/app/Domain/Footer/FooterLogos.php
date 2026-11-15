@@ -14,7 +14,7 @@ final class FooterLogos
 
     public const string FIELD = 'logos';
 
-    /** Folder the block uploads to, with its trailing slash */
+    /** Folder the block uploads to, without trailing slash (FooterMediaSource claims `footer/`, which covers it) */
     public const string DIRECTORY = 'footer/logos';
 
     public const int MAX_LOGOS = 8;

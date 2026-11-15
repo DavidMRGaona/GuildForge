@@ -15,6 +15,14 @@ interface EventQueryServiceInterface
     public function getUpcomingEvents(int $limit = 10): array;
 
     /**
+     * The next published events that have not ended yet (one already under way counts), soonest start
+     * first, in one query: tags are not loaded, so each DTO's `tags` is empty.
+     *
+     * @return array<int, EventResponseDTO>
+     */
+    public function getNextEvents(int $limit = 5): array;
+
+    /**
      * Published events starting from now until the end of the criteria's last display day,
      * soonest first (ties by creation, then id), with any of its tags when it has some.
      *

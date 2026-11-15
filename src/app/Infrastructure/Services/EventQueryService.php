@@ -32,6 +32,18 @@ final readonly class EventQueryService implements EventQueryServiceInterface
         return $events->map(fn (EventModel $event) => $this->dtoFactory->createEventDTO($event))->all();
     }
 
+    public function getNextEvents(int $limit = 5): array
+    {
+        $events = EventModel::query()
+            ->where('is_published', true)
+            ->where('end_date', '>=', now())
+            ->orderedByStart('asc')
+            ->limit($limit)
+            ->get();
+
+        return $events->map(fn (EventModel $event) => $this->dtoFactory->createEventDTO($event))->all();
+    }
+
     public function getUpcomingEventsWithin(UpcomingEventsCriteriaDTO $criteria): array
     {
         // Bindings bypass the storage-zone cast: bind both bounds as storage-zone wall times.

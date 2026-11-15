@@ -248,13 +248,12 @@ describe('UpcomingEventsBlock', () => {
 describe('ButtonBlock', () => {
     it('draws a path of the site with Inertia and an address as a plain link', () => {
         const internal = mount(ButtonBlock, {
-            props: { label: 'Eventos', url: '/eventos', external: false, variant: 'primary' },
+            props: { label: 'Eventos', url: '/eventos', variant: 'primary' },
         });
         const external = mount(ButtonBlock, {
             props: {
                 label: 'Únete',
                 url: 'https://example.com/unete',
-                external: true,
                 variant: 'primary',
             },
         });
@@ -268,10 +267,10 @@ describe('ButtonBlock', () => {
 
     it('tells the main style from the secondary one', () => {
         const primary = mount(ButtonBlock, {
-            props: { label: 'A', url: '/a', external: false, variant: 'primary' },
+            props: { label: 'A', url: '/a', variant: 'primary' },
         });
         const secondary = mount(ButtonBlock, {
-            props: { label: 'A', url: '/a', external: false, variant: 'secondary' },
+            props: { label: 'A', url: '/a', variant: 'secondary' },
         });
 
         expect(primary.get('a').classes().join(' ')).toContain('--button-primary-bg');
@@ -281,16 +280,72 @@ describe('ButtonBlock', () => {
     });
 });
 
+describe('links that are not Inertia pages', () => {
+    it('draws the panel, files and health checks as plain links in the button', () => {
+        for (const url of [
+            '/admin',
+            '/admin/eventos',
+            '/up',
+            '/normas.pdf',
+            '/storage/a.png',
+            '/livewire/update',
+        ]) {
+            const wrapper = mount(ButtonBlock, { props: { label: 'A', url, variant: 'primary' } });
+
+            expect(wrapper.get('a').attributes('data-inertia'), url).toBeUndefined();
+            expect(wrapper.get('a').attributes('href')).toBe(url);
+        }
+    });
+
+    it('draws them as plain links in the menu links and in the logos', () => {
+        const links = mount(LinksBlock, {
+            global: { plugins: [i18n] },
+            props: {
+                items: [
+                    item({ id: '1', label: 'Panel', href: '/admin' }),
+                    item({ id: '2', label: 'Normas', href: '/normas.pdf' }),
+                ],
+            },
+        });
+        const logos = mount(LogosBlock, {
+            props: {
+                logos: [
+                    {
+                        src: 'https://img.example/a.png',
+                        alt: 'Panel',
+                        url: '/admin/x',
+                        width: null,
+                        height: null,
+                    },
+                ],
+            },
+        });
+
+        expect(links.findAll('a').map((link) => link.attributes('data-inertia'))).toEqual([
+            undefined,
+            undefined,
+        ]);
+        expect(logos.get('a').attributes('data-inertia')).toBeUndefined();
+    });
+});
+
 describe('LogosBlock', () => {
     const logos = [
         {
             src: 'https://img.example/a.png',
             alt: 'Federación',
             url: 'https://example.com',
-            external: true,
+            width: 160,
+            height: 40,
         },
-        { src: 'https://img.example/b.png', alt: 'Club', url: '/nosotros', external: false },
-        { src: 'https://img.example/c.png', alt: 'Local', url: null, external: false },
+        {
+            src: 'https://img.example/b.png',
+            alt: 'Club',
+            url: '/nosotros',
+            width: null,
+            height: null,
+        },
+        { src: 'https://img.example/c.png', alt: 'Local', url: null, width: null, height: null },
     ];
 
     it('draws every logo with its alternative text, linked only when it has a link', () => {

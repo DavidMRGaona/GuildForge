@@ -4,6 +4,7 @@ import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { FOOTER_BLOCK_TITLE_ID } from '@/components/siteBlocks/footerBlockTitle';
 import type { MenuItem } from '@/types/navigation';
+import { isInertiaPage } from '@/utils/inertiaLinks';
 
 /**
  * Footer block `core.links`: the links of one footer menu, already filtered for the person viewing
@@ -21,8 +22,9 @@ const titleId = inject(FOOTER_BLOCK_TITLE_ID, null);
 const linkClasses =
     'text-sm text-neutral-300 transition-colors hover:text-primary dark:text-neutral-400 dark:hover:text-primary';
 
+// Absolute addresses, the panel and files are plain links: only Inertia pages are visited client-side
 function isExternal(item: MenuItem): boolean {
-    return /^https?:\/\//.test(item.href);
+    return !isInertiaPage(item.href);
 }
 </script>
 

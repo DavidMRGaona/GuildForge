@@ -8,13 +8,17 @@ use App\Application\SiteBlocks\DTOs\ResolvedSiteBlockDTO;
 use App\Application\SiteBlocks\Services\SiteBlockRegistryInterface;
 use App\Application\SiteBlocks\Services\SiteBlockRendererInterface;
 use App\Domain\SiteBlocks\SiteBlockPlacement;
+use App\Filament\SiteBlocks\UpcomingEventsFooterBlock;
+use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaFileModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Carbon\CarbonImmutable;
+use Filament\Forms\Components\Select;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\Time\UsesUtcStorage;
 use Tests\TestCase;
 
@@ -35,9 +39,25 @@ final class FooterActionBlocksTest extends TestCase
 
     // ---- core.upcoming_events ----
 
-    public function test_upcoming_events_are_the_next_published_ones_soonest_first(): void
+    /**
+     * @return array<string, array{0: bool}>
+     */
+    public static function storageZones(): array
     {
-        $this->useUtcStorage();
+        return ['UTC storage' => [true], 'Madrid storage' => [false]];
+    }
+
+    private function storeAs(bool $utc): void
+    {
+        if ($utc) {
+            $this->useUtcStorage();
+        }
+    }
+
+    #[DataProvider('storageZones')]
+    public function test_upcoming_events_are_the_next_published_ones_soonest_first(bool $utc): void
+    {
+        $this->storeAs($utc);
         $this->travelTo(CarbonImmutable::parse('2026-06-15 10:00:00', 'UTC'));
 
         $this->event('Tercero', '2026-06-20 18:00:00');
@@ -53,13 +73,49 @@ final class FooterActionBlocksTest extends TestCase
         // Three by default
         $this->assertSame(['Primero', 'Segundo', 'Tercero'], array_column($block->props['events'], 'title'));
         $this->assertSame('Local de la asociación', $block->props['events'][0]['location']);
-        $this->assertNull($block->props['events'][1]['location'] ?? null);
+        $this->assertNull($block->props['events'][1]['location']);
         $this->assertSame('/eventos', $block->props['allUrl']);
     }
 
-    public function test_upcoming_events_follow_the_chosen_number_within_one_to_five(): void
+    #[DataProvider('storageZones')]
+    public function test_an_event_under_way_counts_and_one_that_ended_does_not(bool $utc): void
     {
-        $this->useUtcStorage();
+        $this->storeAs($utc);
+        $this->travelTo(CarbonImmutable::parse('2026-06-15 10:00:00', 'UTC'));
+
+        $this->event('Terminó hace un minuto', '2026-06-15 06:59:00', end: '2026-06-15 09:59:00');
+        $this->event('Termina ahora', '2026-06-15 07:00:00', end: '2026-06-15 10:00:00');
+        $this->event('Jornada de varios días', '2026-06-13 08:00:00', end: '2026-06-16 20:00:00');
+        $this->event('Mañana', '2026-06-16 18:00:00');
+
+        $titles = array_column($this->resolve('core.upcoming_events', [])->props['events'], 'title');
+
+        // Soonest start first: the multi-day one began before
+        $this->assertSame(['Jornada de varios días', 'Termina ahora', 'Mañana'], $titles);
+    }
+
+    #[DataProvider('storageZones')]
+    public function test_the_dates_are_the_display_zones_around_the_clock_change(bool $utc): void
+    {
+        $this->storeAs($utc);
+        // Madrid goes back from 03:00 to 02:00 on 25 October 2026 (01:00 UTC): it is 02:30 summer time
+        $this->travelTo(CarbonImmutable::parse('2026-10-25 00:30:00', 'UTC'));
+
+        $this->event('Ya terminó', '2026-10-24 21:00:00', end: '2026-10-25 00:29:00');
+        $this->event('Dos veces las 02:30', '2026-10-25 00:45:00');
+        $this->event('Después del cambio', '2026-10-25 11:00:00');
+
+        $events = $this->resolve('core.upcoming_events', [])->props['events'];
+
+        $this->assertSame(['Dos veces las 02:30', 'Después del cambio'], array_column($events, 'title'));
+        $this->assertSame('2026-10-25T02:45:00+02:00', $events[0]['startDate']);
+        $this->assertSame('2026-10-25T12:00:00+01:00', $events[1]['startDate']);
+    }
+
+    #[DataProvider('storageZones')]
+    public function test_upcoming_events_follow_the_chosen_number_within_one_to_five(bool $utc): void
+    {
+        $this->storeAs($utc);
         $this->travelTo(CarbonImmutable::parse('2026-06-15 10:00:00', 'UTC'));
 
         foreach (range(1, 7) as $day) {
@@ -77,22 +133,13 @@ final class FooterActionBlocksTest extends TestCase
         $this->assertSame(3, $count(null));
     }
 
-    public function test_today_and_the_dates_are_the_display_zones(): void
+    public function test_the_limit_options_are_one_to_five_and_three_is_the_default(): void
     {
-        $this->useUtcStorage();
-        // 00:30 on 16 June in the display zone (Madrid), still 15 June in UTC
-        $this->travelTo(CarbonImmutable::parse('2026-06-15 22:30:00', 'UTC'));
+        $field = app(UpcomingEventsFooterBlock::class)->settingsSchema()[0];
 
-        $this->event('Ayer en Madrid', '2026-06-15 21:59:00');
-        $this->event('Hoy a primera hora', '2026-06-15 22:00:00');
-        $this->event('Hoy por la tarde', '2026-06-16 16:00:00');
-
-        $events = $this->resolve('core.upcoming_events', [])->props['events'];
-
-        // Madrid's 16 June starts at 22:00 UTC: what started earlier that day still shows, the day before does not
-        $this->assertSame(['Hoy a primera hora', 'Hoy por la tarde'], array_column($events, 'title'));
-        $this->assertSame('2026-06-16T00:00:00+02:00', $events[0]['startDate']);
-        $this->assertSame('2026-06-16T18:00:00+02:00', $events[1]['startDate']);
+        $this->assertInstanceOf(Select::class, $field);
+        $this->assertSame([1 => '1', 2 => '2', 3 => '3', 4 => '4', 5 => '5'], $field->getOptions());
+        $this->assertSame(3, $field->getDefaultState());
     }
 
     public function test_upcoming_events_link_to_their_page_and_hide_the_all_events_link_when_switched_off(): void
@@ -107,22 +154,27 @@ final class FooterActionBlocksTest extends TestCase
         $this->assertNull($block->props['allUrl']);
     }
 
-    public function test_upcoming_events_cost_one_query_whatever_the_number_of_events(): void
+    public function test_upcoming_events_cost_the_same_queries_whatever_the_number_of_events(): void
     {
         $this->useUtcStorage();
         $this->travelTo(CarbonImmutable::parse('2026-06-15 10:00:00', 'UTC'));
-        foreach (range(1, 5) as $day) {
+        $this->event('Uno', '2026-06-16 18:00:00');
+        $queries = function (): int {
+            DB::flushQueryLog();
+            $this->resolve('core.upcoming_events', ['limit' => 5]);
+
+            return count(array_filter(DB::getQueryLog(), static fn (array $query): bool => str_contains($query['query'], 'events')));
+        };
+        $this->resolve('core.upcoming_events', ['limit' => 5]);
+        DB::enableQueryLog();
+        $one = $queries();
+
+        foreach (range(2, 5) as $day) {
             $this->event('Evento '.$day, sprintf('2026-06-%02d 18:00:00', 15 + $day));
         }
-        app(SiteBlockRendererInterface::class)->resolveBlock('core.upcoming_events', ['limit' => 5], SiteBlockPlacement::Footer, null);
 
-        DB::enableQueryLog();
-        DB::flushQueryLog();
-        $block = $this->resolve('core.upcoming_events', ['limit' => 5]);
-        $queries = array_filter(DB::getQueryLog(), static fn (array $query): bool => str_contains($query['query'], 'events'));
-
-        $this->assertCount(5, $block->props['events']);
-        $this->assertCount(1, $queries);
+        $this->assertSame(1, $one);
+        $this->assertSame(1, $queries());
     }
 
     public function test_the_block_is_the_same_for_everybody(): void
@@ -139,6 +191,17 @@ final class FooterActionBlocksTest extends TestCase
         $this->assertSame($guest, $member);
     }
 
+    public function test_without_events_and_without_the_link_the_block_is_dropped_quietly(): void
+    {
+        $this->useUtcStorage();
+        $log = Log::spy();
+
+        $this->assertNull($this->resolveOrNull('core.upcoming_events', ['show_all_link' => false]));
+        // With the link there is still something to say
+        $this->assertSame([], $this->resolve('core.upcoming_events', [])->props['events']);
+        $log->shouldNotHaveReceived('warning');
+    }
+
     // ---- core.button ----
 
     public function test_button_draws_its_text_link_and_style(): void
@@ -147,8 +210,8 @@ final class FooterActionBlocksTest extends TestCase
         $internal = $this->resolve('core.button', ['label' => 'Eventos', 'url' => '/eventos']);
 
         $this->assertSame('components/siteBlocks/ButtonBlock.vue', $external->component);
-        $this->assertSame(['label' => 'Únete', 'url' => 'https://example.com/unete', 'external' => true, 'variant' => 'secondary'], $external->props);
-        $this->assertSame(['label' => 'Eventos', 'url' => '/eventos', 'external' => false, 'variant' => 'primary'], $internal->props);
+        $this->assertSame(['label' => 'Únete', 'url' => 'https://example.com/unete', 'variant' => 'secondary'], $external->props);
+        $this->assertSame(['label' => 'Eventos', 'url' => '/eventos', 'variant' => 'primary'], $internal->props);
     }
 
     public function test_button_with_an_unknown_style_is_primary(): void
@@ -158,7 +221,7 @@ final class FooterActionBlocksTest extends TestCase
 
     public function test_button_with_a_link_that_is_not_allowed_is_not_drawn(): void
     {
-        Log::spy();
+        $log = Log::spy();
 
         foreach (['javascript:alert(1)', '//evil.example', '/\\evil.example', 'data:text/html,x', 'ftp://example.com', '', null, ['https://example.com']] as $url) {
             $this->assertNull($this->resolveOrNull('core.button', ['label' => 'Entrar', 'url' => $url]), var_export($url, true));
@@ -196,11 +259,34 @@ final class FooterActionBlocksTest extends TestCase
         $this->assertSame(['Federación', 'Club', 'Local'], array_column($block->props['logos'], 'alt'));
         $this->assertStringContainsString('footer/logos/a', $block->props['logos'][0]['src']);
         $this->assertSame('https://example.com', $block->props['logos'][0]['url']);
-        $this->assertTrue($block->props['logos'][0]['external']);
         $this->assertNull($block->props['logos'][1]['url']);
-        $this->assertFalse($block->props['logos'][1]['external']);
         $this->assertSame('/nosotros', $block->props['logos'][2]['url']);
-        $this->assertFalse($block->props['logos'][2]['external']);
+        // Not in the library's index: as stored, with no size
+        $this->assertNull($block->props['logos'][0]['width']);
+        $this->assertNull($block->props['logos'][0]['height']);
+    }
+
+    public function test_a_logo_of_the_library_comes_scaled_with_the_size_it_is_drawn_at(): void
+    {
+        config(['cloudinary.cloud_name' => 'demo']);
+        MediaFileModel::query()->create(['file_id' => 'footer/logos/wide', 'format' => 'png', 'width' => 800, 'height' => 200, 'resource_type' => 'image', 'folder' => 'footer/logos', 'bytes' => 1000, 'uploaded_at' => now(), 'last_seen_at' => now()]);
+        MediaFileModel::query()->create(['file_id' => 'footer/logos/tiny', 'format' => 'png', 'width' => 30, 'height' => 20, 'resource_type' => 'image', 'folder' => 'footer/logos', 'bytes' => 1000, 'uploaded_at' => now(), 'last_seen_at' => now()]);
+        MediaFileModel::query()->create(['file_id' => 'footer/logos/vector', 'format' => 'svg', 'width' => 100, 'height' => 50, 'resource_type' => 'image', 'folder' => 'footer/logos', 'bytes' => 1000, 'uploaded_at' => now(), 'last_seen_at' => now()]);
+
+        $logos = $this->resolve('core.logos', ['logos' => [
+            ['image' => 'footer/logos/wide.png', 'alt' => 'Ancho'],
+            ['image' => 'footer/logos/tiny.png', 'alt' => 'Pequeño'],
+            ['image' => 'footer/logos/vector.svg', 'alt' => 'Vector'],
+        ]])->props['logos'];
+
+        // Twice the drawn height, best format and quality
+        $this->assertStringContainsString('/h_80,c_limit,q_auto,f_auto/', $logos[0]['src']);
+        $this->assertSame(160, $logos[0]['width']);
+        $this->assertSame(40, $logos[0]['height']);
+        // Never drawn larger than it is
+        $this->assertSame([30, 20], [$logos[1]['width'], $logos[1]['height']]);
+        // A vector is served as uploaded
+        $this->assertStringNotContainsString('c_limit', $logos[2]['src']);
     }
 
     public function test_a_logo_without_alternative_text_or_image_is_left_out(): void
@@ -222,16 +308,19 @@ final class FooterActionBlocksTest extends TestCase
         ]])->props['logos'][0];
 
         $this->assertNull($logo['url']);
-        $this->assertFalse($logo['external']);
     }
 
-    public function test_logos_without_settings_have_nothing_to_draw(): void
+    public function test_logos_with_nothing_to_draw_are_dropped_quietly(): void
     {
-        $this->assertSame([], $this->resolve('core.logos', [])->props['logos']);
-        $this->assertSame([], $this->resolve('core.logos', ['logos' => 'x'])->props['logos']);
+        $log = Log::spy();
+
+        $this->assertNull($this->resolveOrNull('core.logos', []));
+        $this->assertNull($this->resolveOrNull('core.logos', ['logos' => 'x']));
+        $this->assertNull($this->resolveOrNull('core.logos', ['logos' => [['image' => 'footer/logos/a.png', 'alt' => '']]]));
+        $log->shouldNotHaveReceived('warning');
     }
 
-    private function event(string $title, string $start, bool $published = true, ?string $location = null, ?string $slug = null): EventModel
+    private function event(string $title, string $start, bool $published = true, ?string $location = null, ?string $slug = null, ?string $end = null): EventModel
     {
         $instant = CarbonImmutable::parse($start, 'UTC');
 
@@ -240,7 +329,7 @@ final class FooterActionBlocksTest extends TestCase
             'slug' => $slug ?? Str::slug($title).'-'.Str::random(4),
             'is_published' => $published,
             'start_date' => $instant,
-            'end_date' => $instant->addHours(3),
+            'end_date' => $end !== null ? CarbonImmutable::parse($end, 'UTC') : $instant->addHours(3),
             'location' => $location,
         ]);
     }

@@ -49,12 +49,4 @@ final class LinkTargetRule
 
         return $url;
     }
-
-    /**
-     * Whether the link points to another site (an absolute address), not to a path of this one.
-     */
-    public static function isExternal(string $normalized): bool
-    {
-        return $normalized !== '' && $normalized[0] !== '/';
-    }
 }

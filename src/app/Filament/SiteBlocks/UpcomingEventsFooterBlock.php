@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace App\Filament\SiteBlocks;
 
+use App\Application\DTOs\Response\EventResponseDTO;
+use App\Application\Services\EventQueryServiceInterface;
 use App\Application\Services\TimezoneServiceInterface;
-use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
+use App\Application\SiteBlocks\Exceptions\NothingToDrawException;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
 use Illuminate\Contracts\Auth\Authenticatable;
 
 /**
- * The next published events (core#698), one query for the whole block. «Today» and every date are the
- * site's display zone's: an event that starts later today still shows until the day ends, and the
- * start travels as an ISO instant for the browser to draw in the same zone.
+ * The next published events that have not ended yet (core#698), like the rest of the site
+ * (EventQueryService::getNextEvents(), one query for the whole block): one already under way still
+ * shows. The start travels as an ISO instant in the display zone, for the browser to draw in it.
  *
  * Events have no audience of their own: what a visitor may see is what is published, which is all that
  * is read. The block is the same for everybody, so it reads nothing about the person.
@@ -25,6 +27,7 @@ final class UpcomingEventsFooterBlock extends CoreFooterBlock
     public const int MAX_LIMIT = 5;
 
     public function __construct(
+        private readonly EventQueryServiceInterface $events,
         private readonly TimezoneServiceInterface $timezone,
     ) {}
 
@@ -43,7 +46,7 @@ final class UpcomingEventsFooterBlock extends CoreFooterBlock
         return [
             Select::make('limit')
                 ->label(__('filament.footer.blocks.upcoming_events.limit'))
-                ->options(array_map(strval(...), range(1, self::MAX_LIMIT)))
+                ->options(array_combine(range(1, self::MAX_LIMIT), array_map(strval(...), range(1, self::MAX_LIMIT))))
                 ->default(self::DEFAULT_LIMIT)
                 ->required()
                 ->native(false),
@@ -60,27 +63,21 @@ final class UpcomingEventsFooterBlock extends CoreFooterBlock
 
     public function props(array $settings, ?Authenticatable $user): array
     {
-        // Bindings bypass the storage-zone cast: the bound is a storage-zone wall time
-        $from = $this->timezone->toStorage($this->timezone->displayDayRange($this->timezone->today())[0])->format('Y-m-d H:i:s');
+        $allUrl = self::enabled($settings, 'show_all_link') ? route('events.index', [], false) : null;
+        $events = array_map(fn (EventResponseDTO $event): array => [
+            'id' => $event->id,
+            'title' => $event->title,
+            'url' => route('events.show', ['slug' => $event->slug], false),
+            'startDate' => $this->timezone->iso($event->startDate),
+            'location' => self::text(['location' => $event->location], 'location'),
+        ], $this->events->getNextEvents($this->limit($settings)));
 
-        $events = EventModel::query()
-            ->select(['id', 'title', 'slug', 'start_date', 'location'])
-            ->where('is_published', true)
-            ->where('start_date', '>=', $from)
-            ->orderedByStart('asc')
-            ->limit($this->limit($settings))
-            ->get();
+        // Neither events nor the link to all of them: only the title would be left
+        if ($events === [] && $allUrl === null) {
+            throw NothingToDrawException::make();
+        }
 
-        return [
-            'events' => $events->map(fn (EventModel $event): array => [
-                'id' => (string) $event->getKey(),
-                'title' => (string) $event->getAttribute('title'),
-                'url' => route('events.show', ['slug' => $event->getAttribute('slug')], false),
-                'startDate' => $this->timezone->iso($event->start_date),
-                'location' => self::text(['location' => $event->getAttribute('location')], 'location'),
-            ])->values()->all(),
-            'allUrl' => self::enabled($settings, 'show_all_link') ? route('events.index', [], false) : null,
-        ];
+        return ['events' => $events, 'allUrl' => $allUrl];
     }
 
     /**
