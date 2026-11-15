@@ -30,12 +30,12 @@ describe('createEchoClient transports', () => {
         received.options = null;
     });
 
-    it('only tries wss on a site with TLS', async () => {
+    it('uses the WebSocket transport over TLS on a site with TLS', async () => {
         await createEchoClient(BASE);
 
         expect(received.options).toMatchObject({
             forceTLS: true,
-            enabledTransports: ['wss'],
+            enabledTransports: ['ws'],
             wsHost: 'example.test',
             wssPort: 443,
         });
