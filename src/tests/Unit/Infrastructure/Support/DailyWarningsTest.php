@@ -66,9 +66,10 @@ final class DailyWarningsTest extends TestCase
 
     public function test_building_it_never_asks_for_the_cache(): void
     {
-        new DailyWarnings('example:warned:', static fn (): Cache => throw new LogicException('The cache was asked for'));
+        $this->expectNotToPerformAssertions();
 
-        $this->addToAssertionCount(1);
+        $warnings = new DailyWarnings('example:warned:', static fn (): Cache => throw new LogicException('The cache was asked for'));
+        unset($warnings);
     }
 
     public function test_site_blocks_keep_remembering_their_warnings_where_they_did(): void
