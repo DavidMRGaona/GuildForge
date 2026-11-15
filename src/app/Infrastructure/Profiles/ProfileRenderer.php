@@ -18,6 +18,7 @@ use App\Application\Profiles\DTOs\ResolvedProfileStatDTO;
 use App\Application\Profiles\Services\ProfileRendererInterface;
 use App\Application\Profiles\Services\ProfileSectionRegistryInterface;
 use App\Application\Profiles\Services\ProfileStatRegistryInterface;
+use App\Application\Profiles\Services\ProfileSummaryRendererInterface;
 use App\Application\Services\TimezoneServiceInterface;
 use App\Domain\Profiles\ProfileRegion;
 use App\Domain\Profiles\ValueObjects\ProfileKey;
@@ -42,7 +43,7 @@ use Throwable;
  * reason is warned about once a day (DailyWarnings). Warnings carry the key, the reason and an
  * exception only by its class; never props, counts or exception messages.
  */
-final class ProfileRenderer implements ProfileRendererInterface
+final class ProfileRenderer implements ProfileRendererInterface, ProfileSummaryRendererInterface
 {
     private readonly DailyWarnings $warnings;
 
@@ -76,8 +77,41 @@ final class ProfileRenderer implements ProfileRendererInterface
             }
         }
 
+        return new ResolvedProfileDTO(
+            $this->header($owner, $profile, $user, $viewer),
+            $this->resolveStats($layout, $owner, $viewer, null),
+            $sections[ProfileRegion::Main->value],
+            $sections[ProfileRegion::Aside->value],
+        );
+    }
+
+    public function summary(ProfileOwnerDTO $owner, ?Authenticatable $viewer): ResolvedProfileDTO
+    {
+        $profile = $this->profileOf($owner);
+        $layout = $profile instanceof UserProfileModel ? $profile->layout : ProfileLayout::empty();
+
+        return new ResolvedProfileDTO(
+            $this->header($owner, $profile, $this->accountOf($owner), $viewer),
+            $this->resolveStats($layout, $owner, $viewer, ResolvedProfileDTO::CARD_STATS),
+            [],
+            [],
+        );
+    }
+
+    /**
+     * The stats that can be drawn, in the owner's order; with a limit, none is built or counted once
+     * that many are drawn.
+     *
+     * @return list<ResolvedProfileStatDTO>
+     */
+    private function resolveStats(ProfileLayout $layout, ProfileOwnerDTO $owner, ?Authenticatable $viewer, ?int $limit): array
+    {
         $stats = [];
         foreach ($this->ordered($this->registered('stat'), $layout->stats, 'stat') as $key => $registration) {
+            if ($limit !== null && count($stats) >= $limit) {
+                break;
+            }
+
             $resolved = $this->resolveStat($key, $registration, $layout, $owner, $viewer);
 
             if ($resolved instanceof ResolvedProfileStatDTO) {
@@ -85,12 +119,7 @@ final class ProfileRenderer implements ProfileRendererInterface
             }
         }
 
-        return new ResolvedProfileDTO(
-            $this->header($owner, $profile, $user, $viewer),
-            $stats,
-            $sections[ProfileRegion::Main->value],
-            $sections[ProfileRegion::Aside->value],
-        );
+        return $stats;
     }
 
     private function resolveSection(string $key, ProfileRegistrationDTO $registration, ProfileLayout $layout, ProfileOwnerDTO $owner, ?Authenticatable $viewer): ?ResolvedProfileSectionDTO

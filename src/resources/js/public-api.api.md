@@ -1280,6 +1280,17 @@ export interface ProfileTextSegment {
     text: string;
     href: string | null;
 }
+export interface ProfileCard {
+    handle: string;
+    publicName: string | null;
+    url: string;
+    avatarUrl: string | null;
+    bannerUrl: string | null;
+    memberSince: string | null;
+    showsMembership: boolean;
+    isOwner: boolean;
+    stats: ResolvedProfileStat[];
+}
 ```
 
 ## resources/js/types/realtime.ts

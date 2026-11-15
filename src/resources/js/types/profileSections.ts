@@ -62,3 +62,29 @@ export interface ProfileTextSegment {
     text: string;
     href: string | null;
 }
+
+/**
+ * The summary card of a public profile (core#744): what `GET /miembros/{handle}/tarjeta` answers for
+ * whoever may see the profile (`PublicProfileServiceInterface::card()` on the server). Never the
+ * account id, the account name, the email or the roles.
+ */
+export interface ProfileCard {
+    /** The current address, as in `/miembros/<handle>` (an old address answers the current card) */
+    handle: string;
+    /** Null only on the owner's own card, before they choose a public name */
+    publicName: string | null;
+    /** The profile page, absolute */
+    url: string;
+    /** `https` image, 128 × 128 cropped around the face; null for the initials */
+    avatarUrl: string | null;
+    /** `https` image, 600 × 200; null when there is none */
+    bannerUrl: string | null;
+    /** When the account was created, ISO 8601 with the display zone's offset */
+    memberSince: string | null;
+    /** The «Socio» badge: the owner chose to show it and holds the association role */
+    showsMembership: boolean;
+    /** Whether the person asking is the owner */
+    isOwner: boolean;
+    /** At most four, in the owner's order */
+    stats: ResolvedProfileStat[];
+}

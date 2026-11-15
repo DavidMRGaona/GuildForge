@@ -16,6 +16,7 @@ use App\Application\Profiles\DTOs\ResolvedProfileStatDTO;
 use App\Application\Profiles\Services\ProfileRendererInterface;
 use App\Application\Profiles\Services\ProfileSectionRegistryInterface;
 use App\Application\Profiles\Services\ProfileStatRegistryInterface;
+use App\Application\Profiles\Services\ProfileSummaryRendererInterface;
 use App\Application\Services\TimezoneServiceInterface;
 use App\Application\SiteBlocks\Exceptions\NothingToDrawException as SiteBlockNothingToDrawException;
 use App\Domain\Profiles\ProfileRegion;
@@ -509,6 +510,73 @@ final class ProfileRendererTest extends TestCase
         $this->assertSame('{"header":{"handle":"ana","publicName":"Ana","avatarPublicId":null,"bannerPublicId":null,"memberSince":'.json_encode($this->app->make(TimezoneServiceInterface::class)->iso($user->created_at)).',"showsMembership":false,"isOwner":false},"stats":[],"sections":{"main":[],"aside":[]}}', json_encode($this->render($user, null)->toArray()));
     }
 
+    public function test_the_summary_renderer_is_the_request_s_renderer(): void
+    {
+        $this->assertSame(
+            $this->app->make(ProfileRendererInterface::class),
+            $this->app->make(ProfileSummaryRendererInterface::class),
+        );
+    }
+
+    public function test_a_summary_has_the_header_and_the_first_stats_on_in_the_owner_s_order(): void
+    {
+        $counted = new class
+        {
+            /** @var list<string> */
+            public array $keys = [];
+        };
+        $this->stats(array_map(
+            fn (string $key, int $order): string => $this->stat($key, order: $order, stat: static function () use ($counted, $key): ProfileStatDTO {
+                $counted->keys[] = $key;
+
+                return new ProfileStatDTO(1);
+            }),
+            ['forum.a', 'forum.b', 'forum.c', 'forum.d', 'forum.e', 'forum.f'],
+            [10, 20, 30, 40, 50, 60],
+        ));
+        $this->stats([$this->stat('forum.none', order: 1, stat: static fn (): ?ProfileStatDTO => null)]);
+        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+        $this->profileOf($user)->update(['layout' => ProfileLayout::fromArray(['stats' => [
+            ['key' => 'forum.e', 'enabled' => true],
+            ['key' => 'forum.a', 'enabled' => false],
+        ]])]);
+
+        $summary = $this->summary($user, null);
+
+        $this->assertSame(['forum.e', 'forum.b', 'forum.c', 'forum.d'], array_map(static fn (ResolvedProfileStatDTO $stat): string => $stat->key, $summary->stats));
+        $this->assertCount(ResolvedProfileDTO::CARD_STATS, $summary->stats);
+        // Once the card is full, nothing more is counted
+        $this->assertSame(['forum.e', 'forum.b', 'forum.c', 'forum.d'], $counted->keys);
+        $this->assertSame('Ana', $summary->header->publicName);
+    }
+
+    public function test_a_summary_never_builds_a_section(): void
+    {
+        $built = 0;
+        $this->app->bind('watched-section', static function () use (&$built): ProfileSectionInterface {
+            $built++;
+
+            return new class extends FakeProfileSection
+            {
+                public function key(): string
+                {
+                    return 'forum.watched';
+                }
+            };
+        });
+        $this->sections(['watched-section']);
+        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+        $this->profileOf($user)->update(['bio' => 'Juego a rol desde 1998.']);
+
+        $summary = $this->summary($user, null);
+
+        $this->assertSame([[], []], [$summary->main, $summary->aside]);
+        // Not even listed, so not even the registry's own check built it
+        $this->assertSame(0, $built);
+        $this->assertNotSame([], $this->render($user, null)->main);
+        $this->assertGreaterThan(0, $built);
+    }
+
     public function test_warnings_are_remembered_under_the_profiles_prefix(): void
     {
         $this->sections([$this->section('forum.broken', props: static fn (): never => throw new RuntimeException('Down'))]);
@@ -525,6 +593,16 @@ final class ProfileRendererTest extends TestCase
         $handle = UserProfileModel::query()->find($user->id)->handle ?? 'sin-perfil';
 
         return $this->app->make(ProfileRendererInterface::class)->render(
+            new ProfileOwnerDTO($user->id, $handle, $user->display_name),
+            $viewer,
+        );
+    }
+
+    private function summary(UserModel $user, ?Authenticatable $viewer): ResolvedProfileDTO
+    {
+        $handle = UserProfileModel::query()->find($user->id)->handle ?? 'sin-perfil';
+
+        return $this->app->make(ProfileSummaryRendererInterface::class)->summary(
             new ProfileOwnerDTO($user->id, $handle, $user->display_name),
             $viewer,
         );

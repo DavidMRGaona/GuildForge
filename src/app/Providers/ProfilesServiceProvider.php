@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Application\Profiles\Services\ProfileRendererInterface;
 use App\Application\Profiles\Services\ProfileSectionRegistryInterface;
 use App\Application\Profiles\Services\ProfileStatRegistryInterface;
+use App\Application\Profiles\Services\ProfileSummaryRendererInterface;
 use App\Application\Profiles\Services\PublicProfileServiceInterface;
 use App\Application\Profiles\Services\UserProfileServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -46,7 +47,11 @@ final class ProfilesServiceProvider extends ServiceProvider
         });
         $this->app->singleton(ProfileStatRegistryInterface::class, static fn ($app): ProfileStatRegistry => new ProfileStatRegistry($app));
         $this->app->scoped(StoredProfiles::class);
-        $this->app->scoped(ProfileRendererInterface::class, ProfileRenderer::class);
+        // One renderer per request or job draws both the page and the card (core#744), so what it
+        // built and read is shared; each interface asks for it, so replacing one leaves the other
+        $this->app->scoped(ProfileRenderer::class);
+        $this->app->scoped(ProfileRendererInterface::class, static fn ($app): ProfileRenderer => $app->make(ProfileRenderer::class));
+        $this->app->scoped(ProfileSummaryRendererInterface::class, static fn ($app): ProfileRenderer => $app->make(ProfileRenderer::class));
         $this->app->bind(PublicProfileServiceInterface::class, PublicProfileService::class);
     }
 

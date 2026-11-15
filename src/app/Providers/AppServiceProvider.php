@@ -542,6 +542,18 @@ class AppServiceProvider extends ServiceProvider
             )
         );
 
+        // Public profile cards (core#744), fetched when someone opens one: per account when signed in,
+        // so people behind one network address do not share the limit, and per address otherwise.
+        // Unknown addresses count alike, so guessing them costs the same
+        RateLimiter::for(
+            'profile-card',
+            static fn (Request $request): Limit => Limit::perMinute(30)->by(
+                $request->user() !== null
+                    ? 'user:'.$request->user()->getAuthIdentifier()
+                    : 'ip:'.($request->ip() ?? 'unknown')
+            )
+        );
+
         // Personal calendar feeds: per address, since calendar services fetch everyone's feeds
         // from a few shared network addresses, plus a generous cap per address against guessing
         RateLimiter::for(

@@ -28,6 +28,17 @@ final class CloudinaryImageUrlBuilderTest extends TestCase
         $this->assertStringContainsString('/upload/e_trim/w_1200,', $url);
     }
 
+    public function test_banner_url_is_cropped_to_the_box_around_what_matters(): void
+    {
+        $builder = new CloudinaryImageUrlBuilder('demo', 'guildforge');
+
+        $this->assertSame(
+            'https://res.cloudinary.com/demo/image/upload/w_600,h_200,c_fill,g_auto,q_auto,f_auto/guildforge/profiles/banners/abc',
+            $builder->banner('profiles/banners/abc.webp', 600, 200),
+        );
+        $this->assertNull((new CloudinaryImageUrlBuilder('', ''))->banner('profiles/banners/abc.webp', 600, 200));
+    }
+
     public function test_avatar_url_matches_the_client_side_avatar_preset(): void
     {
         $builder = new CloudinaryImageUrlBuilder('demo', 'guildforge');
