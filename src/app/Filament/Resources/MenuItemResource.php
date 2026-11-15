@@ -287,12 +287,13 @@ class MenuItemResource extends BaseResource
                     }),
             ])
             ->reorderable('sort_order')
+            // Children right after their parent. No join: reordering runs an UPDATE on this
+            // same query, and a joined table makes `id` ambiguous there
             ->modifyQueryUsing(
                 fn (Builder $query) => $query
                     ->with('parent')
-                    ->selectRaw('menu_items.*, COALESCE(parent.sort_order, menu_items.sort_order) as parent_sort_order')
-                    ->leftJoin('menu_items as parent', 'menu_items.parent_id', '=', 'parent.id')
-                    ->orderBy('parent_sort_order')
+                    ->orderByRaw('COALESCE((SELECT parent.sort_order FROM menu_items AS parent WHERE parent.id = menu_items.parent_id), menu_items.sort_order)')
+                    ->orderByRaw('COALESCE(menu_items.parent_id, menu_items.id)')
                     ->orderByRaw('menu_items.parent_id IS NOT NULL')
                     ->orderBy('menu_items.sort_order')
             );
