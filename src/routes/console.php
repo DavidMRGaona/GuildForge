@@ -63,3 +63,8 @@ Schedule::command('site-notifications:prune')
 Schedule::command('proposals:purge-rejected')
     ->daily()
     ->withoutOverlapping();
+
+// Public profiles (core#740): accounts left without their row (older ones, a failed creation) get it
+Schedule::command('profiles:create-missing')
+    ->daily()
+    ->withoutOverlapping();

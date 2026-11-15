@@ -11,6 +11,7 @@ use App\Providers\KnowledgeServiceProvider;
 use App\Providers\LinkingServiceProvider;
 use App\Providers\MailPreferencesServiceProvider;
 use App\Providers\MediaServiceProvider;
+use App\Providers\ProfilesServiceProvider;
 use App\Providers\ProposalsServiceProvider;
 use App\Providers\PublicationServiceProvider;
 use App\Providers\RealtimeServiceProvider;
@@ -28,6 +29,7 @@ return [
     LinkingServiceProvider::class,
     MailPreferencesServiceProvider::class,
     MediaServiceProvider::class,
+    ProfilesServiceProvider::class,
     ProposalsServiceProvider::class,
     PublicationServiceProvider::class,
     RealtimeServiceProvider::class,

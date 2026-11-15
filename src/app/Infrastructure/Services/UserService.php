@@ -8,6 +8,7 @@ use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\RoleAuditLoggerInterface;
 use App\Application\Calendar\Services\CalendarFeedTokenServiceInterface;
 use App\Application\DTOs\AnonymizeUserDTO;
+use App\Application\Profiles\Services\UserProfileServiceInterface;
 use App\Application\Proposals\Services\ProposalServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\UserModelQueryServiceInterface;
@@ -41,6 +42,7 @@ final readonly class UserService implements UserServiceInterface
         private SiteNotificationServiceInterface $siteNotificationService,
         private MailDigestItemRepositoryInterface $mailDigestItems,
         private ProposalServiceInterface $proposals,
+        private UserProfileServiceInterface $profiles,
     ) {}
 
     public function canAccessPanel(string $userId): bool
@@ -76,6 +78,8 @@ final readonly class UserService implements UserServiceInterface
             $this->forgetSiteNotifications(UserId::fromString($userId));
             // Unpublished proposals go; what was published stays (core#570)
             $this->proposals->deleteUnpublishedOf($userId);
+            // The public profile goes; its addresses stay reserved as bare hashes (core#740)
+            $this->profiles->forget($userId);
 
             $userModel->update([
                 'name' => $anonymousName,
@@ -135,6 +139,7 @@ final readonly class UserService implements UserServiceInterface
             $this->calendarFeedTokens->revoke($dto->userId);
             $this->mailPreferences->deleteForUser(UserId::fromString($dto->userId));
             $this->forgetSiteNotifications(UserId::fromString($dto->userId));
+            $this->profiles->forget($dto->userId);
 
             $userModel->update([
                 'name' => $anonymousName,
