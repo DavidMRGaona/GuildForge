@@ -82,6 +82,7 @@ return [
             'delete' => 'Delete user',
             'assign_roles' => 'Assign roles to users',
             'impersonate' => 'Impersonate other people',
+            'reset_two_factor' => 'Reset the two-factor authentication of other accounts',
         ],
         'roles' => [
             'view_any' => 'View roles list',
@@ -169,6 +170,7 @@ return [
         'users' => [
             'assign_roles' => 'Can only give or remove roles whose permissions they hold.',
             'impersonate' => 'See the site and the panel as another person, without saving anything. Administrators only.',
+            'reset_two_factor' => 'Remove the two-factor authentication of an account that lost its phone and recovery codes. Administrators only.',
         ],
         'modules' => [
             'manage' => 'Install, enable and disable modules.',

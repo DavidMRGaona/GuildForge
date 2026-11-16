@@ -37,6 +37,20 @@ final class AdminOnlyPermissionRuleTest extends TestCase
         $this->assertTrue($rule->isAdminOnly('updates.apply'));
     }
 
+    public function test_resetting_two_factor_is_admin_only(): void
+    {
+        $rule = app(AdminOnlyPermissionRule::class);
+
+        // Core#771: handing it to another role would be a way to take over an account
+        $this->assertTrue($rule->isAdminOnly('users.reset_two_factor'));
+        $this->assertTrue($rule->mayHold('admin', 'users.reset_two_factor'));
+        $this->assertFalse($rule->mayHold('presidencia', 'users.reset_two_factor'));
+
+        // Fails closed without the registry's definitions
+        app(PermissionRegistryInterface::class)->clear();
+        $this->assertTrue($rule->isAdminOnly('users.reset_two_factor'));
+    }
+
     public function test_maintenance_module_settings_and_mail_are_not_admin_only(): void
     {
         $rule = app(AdminOnlyPermissionRule::class);

@@ -461,6 +461,16 @@ final class CorePermissionDefinitions
                 description: __('authorization.permission_descriptions.users.impersonate'),
             ),
 
+            // Resetting two-factor authentication (core#771): admin only (AdminOnlyPermissionRule::CORE_KEYS),
+            // since in other hands it would be a way to take over an account
+            new PermissionDefinitionDTO(
+                key: 'users.reset_two_factor',
+                label: __('authorization.permissions.users.reset_two_factor'),
+                resource: 'users',
+                action: 'reset_two_factor',
+                description: __('authorization.permission_descriptions.users.reset_two_factor'),
+            ),
+
             // Public profile moderation (core#746): no default role, granted by hand in the role editor
             new PermissionDefinitionDTO(
                 key: 'profiles.moderate',

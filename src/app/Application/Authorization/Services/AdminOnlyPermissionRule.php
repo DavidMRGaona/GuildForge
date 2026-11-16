@@ -9,7 +9,7 @@ use App\Domain\Enums\UserRole;
 /**
  * The one place that decides which permissions only the administrator role may hold: those
  * that run code on the server or change what it runs (installing modules, applying updates),
- * and impersonating another account.
+ * and those that open another account: impersonating it or taking away its two-factor authentication.
  * With them kept out of every other role, creating roles can be handed to people who are not
  * administrators: under "only grant what you hold" they can never build another administrator.
  *
@@ -22,7 +22,7 @@ use App\Domain\Enums\UserRole;
 final readonly class AdminOnlyPermissionRule
 {
     /** @var list<string> */
-    public const array CORE_KEYS = ['modules.manage', 'updates.apply', 'users.impersonate'];
+    public const array CORE_KEYS = ['modules.manage', 'updates.apply', 'users.impersonate', 'users.reset_two_factor'];
 
     public function __construct(
         private PermissionRegistryInterface $registry,

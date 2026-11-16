@@ -9,11 +9,13 @@ use App\Domain\TwoFactor\Events\RecoveryCodesRegenerated;
 use App\Domain\TwoFactor\Events\RecoveryCodeUsed;
 use App\Domain\TwoFactor\Events\TwoFactorDisabled;
 use App\Domain\TwoFactor\Events\TwoFactorEnabled;
+use App\Domain\TwoFactor\Events\TwoFactorReset;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Notifications\TwoFactor\RecoveryCodesRegeneratedNotification;
 use App\Notifications\TwoFactor\RecoveryCodeUsedNotification;
 use App\Notifications\TwoFactor\TwoFactorDisabledNotification;
 use App\Notifications\TwoFactor\TwoFactorEnabledNotification;
+use App\Notifications\TwoFactor\TwoFactorResetNotification;
 use App\Notifications\TwoFactor\TwoFactorSecurityNotification;
 use Closure;
 
@@ -35,6 +37,12 @@ final readonly class SendTwoFactorSecurityNotice
     public function disabled(TwoFactorDisabled $event): void
     {
         $this->send($event->userId, static fn (string $site, string $at): TwoFactorSecurityNotification => new TwoFactorDisabledNotification($site, $at));
+    }
+
+    public function reset(TwoFactorReset $event): void
+    {
+        // Never names who did it: the person is told the administration did, and that is all they need
+        $this->send($event->userId, static fn (string $site, string $at): TwoFactorSecurityNotification => new TwoFactorResetNotification($site, $at));
     }
 
     public function recoveryCodeUsed(RecoveryCodeUsed $event): void

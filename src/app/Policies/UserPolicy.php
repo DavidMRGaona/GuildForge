@@ -56,6 +56,20 @@ class UserPolicy
         return $this->authorize($user, 'profiles.moderate') && $this->canManage($user, $model);
     }
 
+    /**
+     * «Restablecer el doble factor» (core#771): only with `users.reset_two_factor`, which only the
+     * administrator role can hold, and on an account the person could edit. Never one's own (that is
+     * «Seguridad» in the account settings: otherwise a stolen session could drop the second factor)
+     * and never an anonymized one.
+     */
+    public function resetTwoFactor(UserModel $user, UserModel $model): bool
+    {
+        return $this->authorize($user, 'users.reset_two_factor')
+            && $user->id !== $model->id
+            && $model->anonymized_at === null
+            && $this->canManage($user, $model);
+    }
+
     private function canManage(UserModel $user, UserModel $model): bool
     {
         return app(RoleGrantPolicy::class)->canManageAccount($user, $model);
