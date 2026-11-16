@@ -5,8 +5,8 @@ summary: Crea roles con los permisos justos, limita cuántas personas pueden ten
 category: users-and-roles
 audience: panel
 order: 20
-keywords: [roles, rol, permisos, permiso, cargos, cargo, presidencia, junta, editor, acceso al panel, crear rol, máximo de personas, requiere ser socio, protegido, member, administración, administrador, solo para la administración, instalar módulos, actualizaciones]
-related: [core.panel.manage-users, core.panel.association-role, core.panel.modules]
+keywords: [roles, rol, permisos, permiso, cargos, cargo, presidencia, junta, editor, acceso al panel, crear rol, máximo de personas, requiere ser socio, exigir doble factor, requiere doble factor, rol en pausa, 2fa, protegido, member, administración, administrador, solo para la administración, instalar módulos, actualizaciones]
+related: [core.panel.manage-users, core.site.two-factor, core.panel.association-role, core.panel.modules]
 conditions:
   permissions:
     all: [roles.view_any]
@@ -52,6 +52,23 @@ Para cargos como la presidencia o la tesorería, el rol tiene dos opciones más:
 
 - **Requiere ser socio**: quien tenga el rol sin ser {{association_role}} lo tiene inactivo hasta que lo sea. Al activarlo, el formulario te dice a cuántas personas afecta.
 - **Máximo de personas**: cuántas personas pueden tenerlo a la vez. Vacío es sin límite. Cuando está lleno, no se puede dar a nadie más. Si bajas el máximo, nadie lo pierde.
+
+## Exigir doble factor a un rol
+
+Además de los requisitos de un cargo, un rol tiene la casilla **Requiere doble factor**, desmarcada en todos los roles. Con ella marcada, quien tenga el rol sin el doble factor activo lo tiene **en pausa**: el rol no da sus permisos ni en la web ni en el panel, y esto ocurre al instante, sin plazo de gracia. En cuanto la persona activa el doble factor en **Ajustes de la cuenta → Seguridad**, el rol vuelve a funcionar al momento.
+
+- **Dónde no se permite.** No se permite en `member` ni en el rol de {{association_role}}. En `admin` sí. El selector del rol de socio tampoco ofrece roles con la casilla marcada.
+- **El freno.** No puedes marcar la casilla en un rol que tú mismo tienes si aún no tienes el doble factor activo: te dejarías a ti sin ese rol. Actívalo primero en tus ajustes de la cuenta. Al marcarla, el formulario te dice a cuántas personas dejará en pausa.
+- **Avisos.** Cuando un rol pasa a estar en pausa, la persona recibe un correo y un aviso en la campana con un enlace a **Seguridad**. Si entra al panel con un rol en pausa por esto, ve el mensaje «Tu rol exige doble factor. Actívalo en Ajustes de la cuenta» en lugar de un acceso denegado genérico.
+- **Dónde lo ves tú.** En el panel, el widget **Roles inactivos** indica el motivo («sin doble factor»), el filtro **Con roles inactivos** del listado de usuarios permite elegir ese motivo, y la ficha de la persona muestra la insignia **Sin doble factor**. El historial de roles guarda cada cambio de la casilla.
+- **Con el sitio en mantenimiento.** Quien tiene el rol en pausa solo por el doble factor puede entrar igualmente a **Ajustes de la cuenta → Seguridad** para activarlo. Ninguna otra pestaña ni página de la web.
+- **Quien tiene un rol que lo exige no puede desactivarlo.** Su pestaña **Seguridad** no ofrece **Desactivar**; solo **Cambiar de app**.
+- **Sitios que ya funcionan.** La casilla empieza desmarcada en todos los roles, así que al activar esta función nadie queda en pausa.
+
+> [!IMPORTANT]
+> Te recomendamos marcarla en `admin` y en los roles que ven datos de socios o cuotas, como la tesorería o la secretaría. Antes de hacerlo, avisa a quienes los tienen para que activen el doble factor, o quedarán en pausa de golpe.
+
+Si alguien pierde el móvil y los códigos de recuperación, una persona administradora puede restablecer su doble factor desde su ficha (mira **Gestionar usuarios**).
 
 ## Roles protegidos
 

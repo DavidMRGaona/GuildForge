@@ -5,6 +5,7 @@ import { Link, router, useForm } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import BaseCard from '@/components/ui/BaseCard.vue';
 import BaseButton from '@/components/ui/BaseButton.vue';
+import HelpLink from '@/components/knowledge/HelpLink.vue';
 import TwoFactorDialog from '@/components/profile/twoFactor/TwoFactorDialog.vue';
 import { useNotifications } from '@/composables/useNotifications';
 import { useVerificationGate } from '@/composables/useVerificationGate';
@@ -125,6 +126,7 @@ function onDone(mode: TwoFactorMode): void {
                                 {{ t('auth.profile.twoFactor.title') }}
                             </h3>
                         </div>
+                        <HelpLink guide="core.site.two-factor" />
                     </div>
                 </template>
 
