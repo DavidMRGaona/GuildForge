@@ -4,6 +4,8 @@ import { useI18n } from 'vue-i18n';
 import { usePage } from '@inertiajs/vue3';
 import { useAppStore } from '@/stores/useAppStore';
 import { useFavicons } from '@/composables/useFavicons';
+import { useNotifications } from '@/composables/useNotifications';
+import type { FlashMessages } from '@/types';
 import type { ThemeSettings } from '@/types/inertia';
 import TheHeader from '@/components/layout/TheHeader.vue';
 import TheFooter from '@/components/layout/TheFooter.vue';
@@ -30,6 +32,20 @@ appStore.setThemeSettings(theme.value);
 onMounted(() => {
     appStore.initTheme(theme.value);
 });
+
+// A warning flashed by the server is shown on whatever page comes next: for instance how many
+// recovery codes are left after signing in with one (core#770). It lasts longer than a notice
+const notifications = useNotifications();
+const WARNING_TIMEOUT = 12000;
+watch(
+    () => (page.props.flash as FlashMessages | undefined)?.warning,
+    (warning) => {
+        if (warning) {
+            notifications.warning(warning, WARNING_TIMEOUT);
+        }
+    },
+    { immediate: true }
+);
 
 // Watch for theme changes (e.g., after admin update)
 watch(theme, (newTheme) => {

@@ -33,4 +33,13 @@ return [
     'welcome_action' => 'Sign in',
     'welcome_preferences' => 'In your account settings you can choose which emails you want to receive.',
     'welcome_line3' => 'We hope to see you soon at our events!',
+
+    // Sign-in challenge (core#770)
+    'two_factor' => [
+        'invalid_code' => 'The code is not valid or has already been used.',
+        'unavailable' => 'We cannot check the code right now. Please try again in a few minutes.',
+        'sign_in_again' => 'Please sign in again.',
+        'too_many_failures' => 'Too many wrong codes. Please sign in again.',
+        'recovery_codes_left' => '{0} You have used your last recovery code: generate new ones in your account settings.|{1} You have :count recovery code left.|[2,*] You have :count recovery codes left.',
+    ],
 ];

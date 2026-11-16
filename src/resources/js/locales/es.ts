@@ -717,6 +717,17 @@ export default {
             registerLink: 'Regístrate',
             error: 'Error al iniciar sesión. Por favor, revisa tus credenciales.',
         },
+        twoFactorChallenge: {
+            title: 'Verificación en dos pasos',
+            subtitleApp: 'Escribe el código que muestra tu app de autenticación',
+            subtitleRecovery: 'Escribe uno de tus códigos de recuperación',
+            appCode: 'Código de la app',
+            recoveryCode: 'Código de recuperación',
+            useRecoveryCode: 'Usar un código de recuperación',
+            useAppCode: 'Usar el código de la app',
+            submit: 'Verificar',
+            back: 'Volver a iniciar sesión',
+        },
         forgotPassword: {
             title: 'Recuperar contraseña',
             subtitle: 'Te enviaremos un enlace para restablecer tu contraseña',

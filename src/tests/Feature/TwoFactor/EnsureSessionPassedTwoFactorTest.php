@@ -389,12 +389,13 @@ final class EnsureSessionPassedTwoFactorTest extends TestCase
         $user = UserModel::factory()->create(['password' => self::PASSWORD]);
         $this->enable($user);
 
-        // The password step with «remember me»: today it issues Laravel's cookie with the password alone
+        // The password step with «remember me» issues no cookie at all (core#770)
         $login = $this->post('/iniciar-sesion', ['email' => $user->email, 'password' => self::PASSWORD, 'remember' => true]);
-        $recaller = $login->getCookie(Auth::guard()->getRecallerName(), false);
-        $this->assertNotNull($recaller);
+        $this->assertNull($login->getCookie(Auth::guard()->getRecallerName(), false));
 
-        $this->restartWith([Auth::guard()->getRecallerName() => (string) $recaller->getValue()])
+        // And Laravel's cookie on its own, however it was obtained, does not sign in
+        $fresh = $this->fresh($user);
+        $this->restartWith([Auth::guard()->getRecallerName() => $fresh->id.'|'.$fresh->getRememberToken().'|'.$fresh->getAuthPassword()])
             ->get(route('profile.show'))
             ->assertRedirect(route('login'));
 

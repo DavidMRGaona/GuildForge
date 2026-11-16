@@ -41,4 +41,12 @@ return [
         'nothing' => 'The account :email has no two-factor authentication on: nothing to remove.',
         'done' => 'Two-factor authentication removed from :email. Its sessions were closed and the person was mailed.',
     ],
+
+    // The panel's sign-in challenge (core#770)
+    'panel' => [
+        'label' => 'Authenticator app',
+        'app_code' => 'App code',
+        'recovery_code' => 'Recovery code',
+        'use_recovery_code' => 'Use a recovery code',
+    ],
 ];

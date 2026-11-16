@@ -17,6 +17,7 @@ use App\Http\Controllers\Auth\ProfileController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\StopImpersonationController;
+use App\Http\Controllers\Auth\TwoFactorChallengeController;
 use App\Http\Controllers\CalendarEntryICalendarController;
 use App\Http\Controllers\CalendarPageController;
 use App\Http\Controllers\ContactController;
@@ -194,6 +195,15 @@ Route::middleware('guest')->group(function (): void {
         ->name('password.email');
     Route::get('/restablecer-contrasena/{token}', [ResetPasswordController::class, 'create'])->name('password.reset');
     Route::post('/restablecer-contrasena', [ResetPasswordController::class, 'store'])->name('password.update');
+});
+
+// The second step of signing in (core#770): outside `guest`, since an account already signed in
+// is sent where it was going, and closed with the login
+Route::middleware('login.enabled')->group(function (): void {
+    Route::get('/iniciar-sesion/verificacion', [TwoFactorChallengeController::class, 'create'])->name('login.two-factor');
+    Route::post('/iniciar-sesion/verificacion', [TwoFactorChallengeController::class, 'store'])
+        ->middleware('throttle:two-factor-challenge')
+        ->name('login.two-factor.store');
 });
 
 // Authenticated routes

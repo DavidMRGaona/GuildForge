@@ -41,4 +41,12 @@ return [
         'nothing' => 'La cuenta :email no tiene el doble factor activado: no hay nada que quitar.',
         'done' => 'Doble factor quitado de la cuenta :email. Se han cerrado sus sesiones y se le ha avisado por correo.',
     ],
+
+    // The panel's sign-in challenge (core#770)
+    'panel' => [
+        'label' => 'App de autenticación',
+        'app_code' => 'Código de la app',
+        'recovery_code' => 'Código de recuperación',
+        'use_recovery_code' => 'Usar un código de recuperación',
+    ],
 ];

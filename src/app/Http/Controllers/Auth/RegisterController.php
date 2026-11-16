@@ -49,10 +49,8 @@ final class RegisterController extends Controller
         $dto = CreateUserDTO::fromArray($validated);
         $this->authService->register($dto, $request->registrationFieldValues());
 
-        $this->authService->attemptLogin(
-            $validated['email'],
-            $validated['password'],
-        );
+        // A new account never has two-factor authentication on, so this signs it in
+        $this->authService->attemptLogin($validated['email'], $validated['password']);
 
         $request->session()->regenerate();
 

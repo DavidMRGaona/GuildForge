@@ -13,6 +13,8 @@ use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\SiteNotifications\Services\SiteNotificationServiceInterface;
 use App\Domain\Impersonation\Enums\ImpersonationMode;
 use App\Domain\ValueObjects\NeutralPalette;
+use App\Filament\Auth\PanelLogin;
+use App\Filament\Auth\TwoFactorAuthenticationProvider;
 use App\Filament\Pages\KnowledgeBasePage;
 use App\Filament\Pages\ModulesPage;
 use App\Filament\Pages\SiteSettings;
@@ -70,7 +72,9 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
+            // The core's login page: Filament's own second-factor step, backed by the core service (core#770)
+            ->login(PanelLogin::class)
+            ->multiFactorAuthentication([new TwoFactorAuthenticationProvider], isRequired: false)
             ->brandName(fn (): string => app(SiteBrandingServiceInterface::class)->siteName().' Admin')
             ->brandLogo(fn (): ?string => $this->getBrandLogo('site_logo_light'))
             ->darkModeBrandLogo(fn (): ?string => $this->getBrandLogo('site_logo_dark'))

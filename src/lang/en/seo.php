@@ -21,6 +21,7 @@ return [
         'search' => 'Search',
         'about' => 'About :name',
         'login' => 'Sign in',
+        'two_factor_challenge' => 'Two-step verification',
         'register' => 'Create account',
         'forgot_password' => 'Forgot password',
         'reset_password' => 'Reset password',

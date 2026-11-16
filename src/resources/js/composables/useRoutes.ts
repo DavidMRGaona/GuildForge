@@ -46,6 +46,7 @@ export interface RouteDefinitions {
     // Auth
     auth: {
         login: string;
+        twoFactorChallenge: string;
         register: string;
         logout: string;
         forgotPassword: string;
@@ -142,6 +143,7 @@ const routes: RouteDefinitions = {
     // Auth
     auth: {
         login: '/iniciar-sesion',
+        twoFactorChallenge: '/iniciar-sesion/verificacion',
         register: '/registro',
         logout: '/cerrar-sesion',
         forgotPassword: '/olvide-contrasena',

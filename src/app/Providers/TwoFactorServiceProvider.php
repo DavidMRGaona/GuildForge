@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Application\TwoFactor\Services\TwoFactorResetInterface;
+use App\Application\TwoFactor\Services\PendingTwoFactorLoginInterface;
+use App\Application\TwoFactor\Services\TwoFactorChallengeInterface;
 use App\Application\TwoFactor\Services\TwoFactorServiceInterface;
 use App\Application\TwoFactor\Services\TwoFactorSessionSealInterface;
 use App\Application\TwoFactor\Services\TwoFactorStatusReaderInterface;
@@ -19,6 +21,8 @@ use App\Infrastructure\QrCodes\TotpQrCodeRendererInterface;
 use App\Infrastructure\TwoFactor\Listeners\SendTwoFactorSecurityNotice;
 use App\Infrastructure\TwoFactor\Listeners\StampSessionSealOnLogin;
 use App\Infrastructure\TwoFactor\TwoFactorResetService;
+use App\Infrastructure\TwoFactor\SignIn\SessionPendingTwoFactorLogin;
+use App\Infrastructure\TwoFactor\SignIn\TwoFactorChallenge;
 use App\Infrastructure\TwoFactor\TwoFactorService;
 use App\Infrastructure\TwoFactor\TwoFactorSessionSeal;
 use Illuminate\Auth\Events\Login;
@@ -41,6 +45,9 @@ final class TwoFactorServiceProvider extends ServiceProvider
             $app->make(CookieJar::class),
             (string) config('app.key'),
         ));
+
+        $this->app->bind(TwoFactorChallengeInterface::class, TwoFactorChallenge::class);
+        $this->app->bind(PendingTwoFactorLoginInterface::class, SessionPendingTwoFactorLogin::class);
 
         $this->app->bind(TotpQrCodeRendererInterface::class, static fn ($app): TotpQrCodeRendererInterface => new TotpQrCodeRenderer(
             new QrCodeContentPolicy((string) config('app.url'), $app->environment('local', 'testing')),
