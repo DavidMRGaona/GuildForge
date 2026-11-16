@@ -16,6 +16,6 @@ return [
         'terms_and_conditions' => 'Términos y condiciones',
         'login' => 'Inicio de sesión',
         'register' => 'Registro',
-        'profile' => 'Perfil de usuario',
+        'profile' => 'Ajustes de la cuenta',
     ],
 ];

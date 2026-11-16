@@ -30,7 +30,7 @@ return [
     ],
     'user_menu' => [
         'visit_site' => 'Visit site',
-        'profile' => 'My profile',
+        'profile' => 'Account settings',
         'help' => 'Help',
     ],
     'topbar' => [

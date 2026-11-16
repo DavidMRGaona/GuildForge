@@ -10,7 +10,7 @@ related: [core.account.complete-profile, core.account.verify-email]
 ---
 Tu email no cambia hasta que confirmas la nueva dirección. Así sabemos que es tuya.
 
-1. Pulsa tu nombre en la cabecera y elige **Mi perfil**.
+1. Pulsa tu nombre en la cabecera y elige **Ajustes de la cuenta**.
 2. En **Información personal**, escribe la nueva dirección en **Correo electrónico**.
 3. Pulsa **Guardar**.
 4. Abre el correo «Verifica tu nuevo correo electrónico» que llega a la nueva dirección.
@@ -19,7 +19,7 @@ Tu email no cambia hasta que confirmas la nueva dirección. Así sabemos que es 
 Verás el aviso «Tu correo electrónico ha sido actualizado correctamente». Desde entonces, inicia sesión con la nueva dirección.
 
 > [!IMPORTANT]
-> El enlace caduca en una hora. Mientras no lo pulses, tu email sigue siendo el de antes y tu perfil muestra un aviso con el cambio pendiente.
+> El enlace caduca en una hora. Mientras no lo pulses, tu email sigue siendo el de antes y los ajustes de tu cuenta muestran un aviso con el cambio pendiente.
 
 ## Si algo no sale bien
 
@@ -29,6 +29,6 @@ Verás el aviso «Tu correo electrónico ha sido actualizado correctamente». De
 - **Sale un error al guardar**: puede que esa dirección ya la use otra cuenta.
 
 > [!WARNING]
-> Mientras el cambio está pendiente, el campo **Correo electrónico** muestra tu email de antes. Si guardas el perfil así, el cambio pendiente se cancela. También pasa al cambiar tu nombre o tu foto: después, vuelve a escribir la nueva dirección y guarda.
+> Mientras el cambio está pendiente, el campo **Correo electrónico** muestra tu email de antes. Si guardas los ajustes así, el cambio pendiente se cancela. También pasa al cambiar tu nombre o tu foto: después, vuelve a escribir la nueva dirección y guarda.
 
-[[action:profile.show|Ir a mi perfil]]
+[[action:profile.show|Ir a los ajustes de la cuenta]]

@@ -12,7 +12,7 @@ related: [core.account.change-email, core.account.complete-profile, core.account
 
 ## Dónde se elige
 
-1. Pulsa tu nombre en la cabecera y elige **Mi perfil**.
+1. Pulsa tu nombre en la cabecera y elige **Ajustes de la cuenta**.
 2. Abre la pestaña **Avisos**.
 3. Activa o desactiva los interruptores de cada tipo de correo. Algunos tipos ofrecen tres opciones en lugar del interruptor (lo explicamos más abajo).
 4. Pulsa **Guardar cambios**.

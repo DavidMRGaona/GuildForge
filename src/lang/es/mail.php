@@ -48,7 +48,7 @@ return [
         'choose' => 'Elegir qué correos recibes',
         'mandatory' => 'Este correo siempre se envía. Puedes elegir qué otros recibes :profile.',
         'without_category' => 'Puedes elegir qué correos recibes :profile.',
-        'profile_link' => 'en tu perfil',
+        'profile_link' => 'en los ajustes de tu cuenta',
         'mute_subject' => 'No recibir más avisos de «:subject»',
         'digest' => 'Recibes este resumen porque elegiste recibir una vez al día los avisos de estas categorías.',
     ],

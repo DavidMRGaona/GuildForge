@@ -738,7 +738,7 @@ export default {
             sentToPending:
                 'We sent the link to {email}, the new address you entered. Confirming it also verifies your account.',
             wrongEmail: 'Wrong email address?',
-            changeEmail: 'Change it in your profile',
+            changeEmail: 'Change it in your account settings',
             logout: 'Sign out',
         },
         verificationBanner: {
@@ -768,8 +768,8 @@ export default {
             },
         },
         profile: {
-            title: 'My profile',
-            navigation: 'Profile sections',
+            title: 'Account settings',
+            navigation: 'Account settings sections',
             information: 'Personal information',
             name: 'Name',
             displayName: 'Display name',
@@ -786,11 +786,14 @@ export default {
             newPassword: 'New password',
             confirmPassword: 'Confirm password',
             updatePassword: 'Update password',
-            profileUpdated: 'Profile updated successfully',
+            profileUpdated: 'Settings updated successfully',
             passwordUpdated: 'Password updated successfully',
-            profileError: 'Error updating profile. Please check your information and try again.',
+            profileError:
+                'Error updating your settings. Please check your information and try again.',
             passwordError: 'Error changing password. Please check your information and try again.',
             memberSince: 'Member since {date}',
+            viewPublicProfile: 'View my public profile',
+            publicProfileHelp: 'Help about your public profile',
             security: 'Security',
             calendarFeed: {
                 title: 'My calendar',
@@ -902,6 +905,7 @@ export default {
         userMenu: {
             openMenu: 'Open user menu',
             profile: 'My profile',
+            accountSettings: 'Account settings',
             admin: 'Admin panel',
             help: 'Help',
             logout: 'Sign out',

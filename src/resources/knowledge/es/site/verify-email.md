@@ -16,7 +16,7 @@ Algunas cuentas antiguas no tienen que hacerlo.
 
 ## Qué pasa mientras no lo verificas
 
-Puedes ver las páginas públicas y tu perfil. Lo que pide tener cuenta queda en espera: por ejemplo, inscribirte, enviar formularios o cambiar la contraseña. Arriba de la página verás un aviso con tu dirección.
+Puedes ver las páginas públicas y los ajustes de tu cuenta. Lo que pide tener cuenta queda en espera: por ejemplo, inscribirte, enviar formularios o cambiar la contraseña. Arriba de la página verás un aviso con tu dirección.
 
 ## Cómo verificarlo
 
@@ -28,9 +28,9 @@ Puedes ver las páginas públicas y tu perfil. Lo que pide tener cuenta queda en
 
 1. Revisa la carpeta de spam.
 2. Pulsa **Reenviar enlace** en el aviso, o **Reenviar correo de verificación** en la página de verificación.
-3. Si la dirección está mal, pulsa **Cámbialo en tu perfil** y guarda la correcta. El enlace que llega a la nueva dirección también verifica tu cuenta.
+3. Si la dirección está mal, pulsa **Cámbialo en los ajustes de tu cuenta** y guarda la correcta. El enlace que llega a la nueva dirección también verifica tu cuenta.
 
 > [!TIP]
 > El enlace caduca en una hora: si ha caducado, pide otro. Si pides varios seguidos, espera un minuto antes de volver a intentarlo.
 
-[[action:profile.show|Ir a mi perfil]]
+[[action:profile.show|Ir a los ajustes de la cuenta]]

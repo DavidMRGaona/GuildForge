@@ -17,7 +17,7 @@ Si la asociación lo permite, puedes proponer eventos y artículos desde la web.
 
 ## Seguir tus propuestas
 
-En tu perfil, la pestaña **Mis propuestas** muestra el estado de cada una:
+En los ajustes de tu cuenta, la pestaña **Mis propuestas** muestra el estado de cada una:
 
 - **Borrador**: solo la ves tú. Puedes editarla, enviarla o eliminarla.
 - **En revisión**: la administración la está mirando. Puedes retirarla para volver a editarla.

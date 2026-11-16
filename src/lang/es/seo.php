@@ -26,7 +26,7 @@ return [
         'forgot_password' => 'Recuperar contraseña',
         'reset_password' => 'Restablecer contraseña',
         'verify_email' => 'Verificar correo',
-        'profile' => 'Mi perfil',
+        'profile' => 'Ajustes de la cuenta',
         'notifications' => 'Avisos',
         'public_profile' => 'Perfil de @:handle',
         'mail_unsubscribe' => 'Darte de baja de un tipo de correo',

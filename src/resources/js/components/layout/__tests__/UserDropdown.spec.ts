@@ -31,6 +31,7 @@ function userWith(roles: string[], permissions: string[]): User {
         createdAt: '2026-01-01T00:00:00Z',
         roles,
         permissions,
+        publicProfilePath: '/miembros/ana-ejemplo',
     };
 }
 
@@ -79,6 +80,68 @@ describe('UserDropdown', () => {
         expect(wrapper.text()).not.toContain('auth.userMenu.help');
         expect(wrapper.find('a[href="/ayuda"]').exists()).toBe(true);
         expect(en.auth.userMenu.help).toBe('Help');
+    });
+
+    describe('profile entries (core#745)', () => {
+        it('sends «Mi perfil» to the public profile address the server shared', async () => {
+            const wrapper = await openMenuFor(userWith(['member'], []));
+
+            const item = wrapper.get('a[href="/miembros/ana-ejemplo"]');
+            expect(item.text()).toBe('Mi perfil');
+            expect(item.attributes('role')).toBe('menuitem');
+        });
+
+        it('sends «Ajustes de la cuenta» to /perfil, whose address does not change', async () => {
+            const wrapper = await openMenuFor(userWith(['member'], []));
+
+            const item = wrapper.get('a[href="/perfil"]');
+            expect(item.text()).toBe('Ajustes de la cuenta');
+            expect(item.attributes('role')).toBe('menuitem');
+        });
+
+        it('shows the public profile entry before the account settings', async () => {
+            const wrapper = await openMenuFor(userWith(['member'], []));
+
+            const labels = wrapper.findAll('[role="menuitem"]').map((item) => item.text());
+            expect(labels.indexOf('Mi perfil')).toBeGreaterThanOrEqual(0);
+            expect(labels.indexOf('Mi perfil')).toBeLessThan(
+                labels.indexOf('Ajustes de la cuenta')
+            );
+        });
+
+        it.each(['null', 'absent'])(
+            'leaves «Mi perfil» out when the account has no profile (%s)',
+            async (kind) => {
+                const account = userWith(['member'], []);
+                if (kind === 'null') {
+                    account.publicProfilePath = null;
+                } else {
+                    delete account.publicProfilePath;
+                }
+                const wrapper = await openMenuFor(account);
+
+                expect(wrapper.text()).not.toContain('Mi perfil');
+                expect(wrapper.find('a[href^="/miembros"]').exists()).toBe(false);
+                expect(wrapper.find('a[href="/perfil"]').exists()).toBe(true);
+            }
+        );
+
+        it('never builds the address in the browser: it is exactly what the server sent', async () => {
+            const wrapper = await openMenuFor({
+                ...userWith(['member'], []),
+                displayName: 'Otro Nombre',
+                publicProfilePath: '/miembros/direccion-elegida',
+            });
+
+            expect(wrapper.find('a[href="/miembros/direccion-elegida"]').exists()).toBe(true);
+            expect(wrapper.find('a[href="/miembros/otro-nombre"]').exists()).toBe(false);
+        });
+
+        it('translates both labels', () => {
+            expect(en.auth.userMenu.profile).toBe('My profile');
+            expect(en.auth.userMenu.accountSettings).toBe('Account settings');
+            expect(es.auth.userMenu.accountSettings).toBe('Ajustes de la cuenta');
+        });
     });
 
     it('shows the avatar beside the name, with an empty alt since the name says who it is', async () => {

@@ -25,7 +25,7 @@ return [
         'forgot_password' => 'Forgot password',
         'reset_password' => 'Reset password',
         'verify_email' => 'Verify email',
-        'profile' => 'My profile',
+        'profile' => 'Account settings',
         'notifications' => 'Notifications',
         'public_profile' => '@:handle\'s profile',
         'mail_unsubscribe' => 'Unsubscribe from a kind of email',

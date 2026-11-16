@@ -22,6 +22,12 @@ export interface User {
      * address when one awaits confirmation, otherwise `email`.
      */
     verificationEmail?: string;
+    /**
+     * Shared `auth.user` only (core#745): the path of the account's own public profile, worked out by
+     * the server; `null` when the account has no public profile. Use it as it comes, never build it.
+     * Absent from cores older than the release with #745.
+     */
+    publicProfilePath?: string | null;
 }
 
 export interface AuthSettings {

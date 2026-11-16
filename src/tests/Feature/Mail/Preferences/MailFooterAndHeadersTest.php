@@ -174,7 +174,7 @@ final class MailFooterAndHeadersTest extends TestCase
 
         $html = (string) (new WelcomeNotification('Asociación de ejemplo'))->toMail($user)->render();
 
-        $this->assertStringContainsString('En tu perfil puedes elegir qué correos quieres recibir.', $html);
+        $this->assertStringContainsString('En los ajustes de tu cuenta puedes elegir qué correos quieres recibir.', $html);
     }
 
     private function onlyMail(): Email

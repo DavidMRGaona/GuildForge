@@ -738,7 +738,7 @@ export default {
             sentToPending:
                 'Enviamos el enlace a {email}, la nueva dirección que indicaste. Al confirmarla, tu cuenta quedará verificada.',
             wrongEmail: '¿El correo no es correcto?',
-            changeEmail: 'Cámbialo en tu perfil',
+            changeEmail: 'Cámbialo en los ajustes de tu cuenta',
             logout: 'Cerrar sesión',
         },
         verificationBanner: {
@@ -769,8 +769,8 @@ export default {
             },
         },
         profile: {
-            title: 'Mi perfil',
-            navigation: 'Secciones del perfil',
+            title: 'Ajustes de la cuenta',
+            navigation: 'Secciones de los ajustes de la cuenta',
             information: 'Información personal',
             name: 'Nombre',
             displayName: 'Nombre para mostrar',
@@ -787,13 +787,15 @@ export default {
             newPassword: 'Nueva contraseña',
             confirmPassword: 'Confirmar contraseña',
             updatePassword: 'Actualizar contraseña',
-            profileUpdated: 'Perfil actualizado correctamente',
+            profileUpdated: 'Ajustes actualizados correctamente',
             passwordUpdated: 'Contraseña actualizada correctamente',
             profileError:
-                'Error al actualizar el perfil. Por favor, revisa los datos e inténtalo de nuevo.',
+                'Error al actualizar los ajustes. Por favor, revisa los datos e inténtalo de nuevo.',
             passwordError:
                 'Error al cambiar la contraseña. Por favor, revisa los datos e inténtalo de nuevo.',
             memberSince: 'Miembro desde {date}',
+            viewPublicProfile: 'Ver mi perfil público',
+            publicProfileHelp: 'Ayuda sobre tu perfil público',
             security: 'Seguridad',
             calendarFeed: {
                 title: 'Mi calendario',
@@ -905,6 +907,7 @@ export default {
         userMenu: {
             openMenu: 'Abrir menú de usuario',
             profile: 'Mi perfil',
+            accountSettings: 'Ajustes de la cuenta',
             admin: 'Panel de administración',
             help: 'Ayuda',
             logout: 'Cerrar sesión',

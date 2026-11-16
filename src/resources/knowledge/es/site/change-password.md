@@ -1,14 +1,14 @@
 ---
 id: core.account.change-password
 title: Cambiar tu contraseña
-summary: Pon una contraseña nueva desde tu perfil, con la actual a mano.
+summary: Pon una contraseña nueva desde los ajustes de tu cuenta, con la actual a mano.
 category: account
 audience: site
 order: 20
 keywords: [contraseña, clave, password, cambiar contraseña, nueva contraseña, seguridad, olvidé la contraseña, no recuerdo la contraseña, recuperar contraseña, restablecer]
 related: [core.account.complete-profile, core.account.verify-email]
 ---
-1. Pulsa tu nombre en la cabecera y elige **Mi perfil**.
+1. Pulsa tu nombre en la cabecera y elige **Ajustes de la cuenta**.
 2. En la tarjeta **Seguridad**, escribe tu **Contraseña actual**.
 3. Escribe la **Nueva contraseña**. Necesita al menos 8 caracteres.
 4. Repítela en **Confirmar contraseña**.
@@ -28,6 +28,6 @@ Verás el aviso «Contraseña actualizada correctamente». La próxima vez que i
 5. Escribe tu correo y la nueva contraseña dos veces, y pulsa **Restablecer contraseña**.
 
 > [!IMPORTANT]
-> Si la web te pide verificar tu email, no podrás cambiar la contraseña desde el perfil hasta hacerlo.
+> Si la web te pide verificar tu email, no podrás cambiar la contraseña desde los ajustes de la cuenta hasta hacerlo.
 
-[[action:profile.show|Ir a mi perfil]]
+[[action:profile.show|Ir a los ajustes de la cuenta]]
