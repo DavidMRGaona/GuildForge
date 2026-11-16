@@ -230,6 +230,7 @@ final class PanelTablesFitTest extends TestCase
             'users avatar' => [ListUsers::class, 'avatar_public_id', 'md'],
             'users roles' => [ListUsers::class, 'roles.display_name', 'xl'],
             'users verified' => [ListUsers::class, 'email_verified_at', 'xl'],
+            'users two factor' => [ListUsers::class, 'two_factor', 'xl'],
             'users display name' => [ListUsers::class, 'display_name', '2xl'],
 
             'menu label' => [ListMenuItems::class, 'label', null],

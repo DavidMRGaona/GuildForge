@@ -502,6 +502,7 @@ return [
     'users' => [
         'fields' => [
             'emailVerified' => 'Email verificado',
+            'twoFactor' => 'Doble factor',
             'roles' => 'Roles',
             'rolesHelp' => 'Toda cuenta tiene siempre el rol «member», el rol base: por eso aparece marcado y no se puede desmarcar.',
             'status' => 'Estado',
@@ -533,6 +534,16 @@ return [
                 'confirm' => 'Restablecer',
                 'done' => 'Perfil público restablecido',
                 'nothing' => 'El perfil público no tenía «Sobre mí» ni banner',
+            ],
+            'resetTwoFactor' => [
+                'label' => 'Restablecer el doble factor',
+                'heading' => 'Restablecer el doble factor de :name',
+                'description' => 'Se borran su app de autenticación y sus códigos de recuperación, se cierran todas sus sesiones abiertas y se le avisa por correo. Podrá entrar solo con su contraseña y volver a activarlo. Si alguno de sus roles lo exige, quedará en pausa hasta entonces.',
+                'confirmation' => 'Entiendo que la cuenta quedará sin doble factor',
+                'confirm' => 'Restablecer',
+                'done' => 'Doble factor restablecido',
+                'nothing' => 'La cuenta ya no tenía el doble factor activado',
+                'refused' => 'No se ha podido restablecer el doble factor',
             ],
             'sendPasswordResetEmail' => 'Enviar email de recuperación',
             'sendPasswordResetEmailConfirm' => '¿Enviar un correo para restablecer la contraseña de este usuario?',
@@ -572,6 +583,11 @@ return [
             'status' => 'Estado',
             'withTrashed' => 'Incluir desactivados',
             'inactiveRoles' => 'Con roles inactivos',
+            'twoFactor' => [
+                'label' => 'Doble factor',
+                'true' => 'Con doble factor',
+                'false' => 'Sin doble factor',
+            ],
         ],
         'roleBadges' => [
             'requiresMember' => 'Requiere socio',

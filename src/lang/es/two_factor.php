@@ -12,6 +12,11 @@ return [
             'subject' => 'Doble factor desactivado en :site',
             'body' => 'Se ha desactivado el doble factor de autenticación en tu cuenta de :site el :when. Para iniciar sesión vuelve a bastar con tu contraseña.',
         ],
+        'reset' => [
+            'subject' => 'La administración ha quitado el doble factor de tu cuenta de :site',
+            'body' => 'La administración de :site ha quitado el doble factor de autenticación de tu cuenta el :when. Hemos cerrado todas las sesiones abiertas de tu cuenta. Para iniciar sesión basta con tu contraseña; puedes volver a activar el doble factor desde los ajustes de la cuenta.',
+            'not_you' => 'Si no lo has pedido tú, cambia tu contraseña cuanto antes y avisa a la administración del sitio.',
+        ],
         'recovery_code_used' => [
             'subject' => 'Se ha usado un código de recuperación en :site',
             'body' => 'Se ha usado uno de tus códigos de recuperación para iniciar sesión en tu cuenta de :site el :when.',
@@ -24,5 +29,15 @@ return [
         ],
         'not_you' => 'Si no has sido tú, cambia tu contraseña cuanto antes y avisa a la administración del sitio.',
         'action' => 'Ir a los ajustes de la cuenta',
+    ],
+
+    'command' => [
+        'not_found' => 'No hay ninguna cuenta con ese correo.',
+        'confirm' => '¿Quitar el doble factor de la cuenta :email (:name, id :id)?',
+        'ambiguous' => 'Hay :count cuentas cuyo correo solo se distingue en las mayúsculas: escribe el correo exacto de la que quieres.',
+        'cancelled' => 'Cancelado: no se ha cambiado nada.',
+        'refused' => 'No se ha podido restablecer el doble factor.',
+        'nothing' => 'La cuenta :email no tiene el doble factor activado: no hay nada que quitar.',
+        'done' => 'Doble factor quitado de la cuenta :email. Se han cerrado sus sesiones y se le ha avisado por correo.',
     ],
 ];

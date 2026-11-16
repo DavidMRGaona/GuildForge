@@ -12,6 +12,7 @@ use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\DTOs\ImageOptimizationSettingsDTO;
 use App\Application\Services\ImageOptimizationServiceInterface;
 use App\Application\Services\UserServiceInterface;
+use App\Application\TwoFactor\Services\TwoFactorStatusReaderInterface;
 use App\Filament\Actions\ImpersonateAction;
 use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Resources\UserResource\Pages\CreateUser;
@@ -26,6 +27,7 @@ use App\Infrastructure\Authorization\Services\RoleHolderLimitGuard;
 use App\Infrastructure\Images\AvatarPath;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Infrastructure\Persistence\Eloquent\Models\UserTwoFactorModel;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\EditAction;
@@ -43,13 +45,16 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
@@ -217,6 +222,14 @@ class UserResource extends BaseResource
             return self::inactiveRoleDisplayNames($record, $associationRole);
         };
 
+        // The ids with two-factor authentication on among those the page lists: one query for all the rows
+        $twoFactorOn = null;
+        $hasTwoFactor = static function (UserModel $record, HasTable $livewire) use (&$twoFactorOn): bool {
+            $twoFactorOn ??= array_flip(app(TwoFactorStatusReaderInterface::class)->enabledAmong(self::pageUserIds($livewire)));
+
+            return isset($twoFactorOn[strtolower((string) $record->getKey())]);
+        };
+
         return $table
             ->columns([
                 ImageColumn::make('avatar_public_id')
@@ -261,6 +274,17 @@ class UserResource extends BaseResource
                     ->falseColor('danger')
                     ->getStateUsing(fn (UserModel $record): bool => $record->email_verified_at !== null)
                     ->visibleFrom('xl'),
+                // Core#771: a pending setup does not count, only a confirmed one
+                IconColumn::make('two_factor')
+                    ->label(__('filament.users.fields.twoFactor'))
+                    ->boolean()
+                    ->trueIcon('heroicon-o-shield-check')
+                    ->falseIcon('heroicon-o-minus')
+                    ->trueColor('success')
+                    ->falseColor('gray')
+                    ->getStateUsing($hasTwoFactor)
+                    // With the sidebar open, 1024 px leaves about 640: from `xl`, like the verified-email column
+                    ->visibleFrom('xl'),
                 TextColumn::make('status')
                     ->label(__('filament.users.fields.status'))
                     ->badge()
@@ -299,6 +323,15 @@ class UserResource extends BaseResource
                             ->query(app(AssociationMembershipServiceInterface::class)->roleName())
                             ->select('users.id'),
                     )),
+                TernaryFilter::make('two_factor')
+                    ->label(__('filament.users.filters.twoFactor.label'))
+                    ->trueLabel(__('filament.users.filters.twoFactor.true'))
+                    ->falseLabel(__('filament.users.filters.twoFactor.false'))
+                    ->queries(
+                        true: static fn (Builder $query): Builder => $query->whereIn('users.id', self::confirmedTwoFactorUserIds()),
+                        false: static fn (Builder $query): Builder => $query->whereNotIn('users.id', self::confirmedTwoFactorUserIds()),
+                        blank: static fn (Builder $query): Builder => $query,
+                    ),
                 TrashedFilter::make()
                     ->label(__('filament.users.filters.status'))
                     ->default('with'),
@@ -573,6 +606,33 @@ class UserResource extends BaseResource
         }
 
         return $descriptions;
+    }
+
+    /**
+     * The ids of the accounts the table page lists, so a column can ask once for all its rows.
+     *
+     * @return list<string>
+     */
+    private static function pageUserIds(HasTable $livewire): array
+    {
+        $records = $livewire->getTableRecords();
+        $items = $records instanceof Collection ? $records->all() : $records->items();
+
+        return array_values(array_map(
+            static fn (mixed $record): string => $record instanceof Model ? (string) $record->getKey() : '',
+            $items,
+        ));
+    }
+
+    /**
+     * The accounts whose two-factor authentication is on: a confirmed setup only, never one still
+     * being set up (core#771).
+     *
+     * @return Builder<UserTwoFactorModel>
+     */
+    private static function confirmedTwoFactorUserIds(): Builder
+    {
+        return UserTwoFactorModel::query()->select('user_id')->whereNotNull('confirmed_at');
     }
 
     /**

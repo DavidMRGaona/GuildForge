@@ -298,6 +298,16 @@ return [
             'cancelPendingEmail' => 'Withdraw the email change',
             'cancelPendingEmailConfirm' => 'Withdraw the pending change to :email? The account keeps its current email and the link sent to that address stops working.',
             'pendingEmailCancelled' => 'Email change withdrawn',
+            'resetTwoFactor' => [
+                'label' => 'Reset two-factor authentication',
+                'heading' => 'Reset the two-factor authentication of :name',
+                'description' => 'Their authenticator app and recovery codes are deleted, every open session is closed and they are told by email. They can sign in with their password alone and turn it on again. If one of their roles requires it, that role stays paused until then.',
+                'confirmation' => 'I understand the account will be left without two-factor authentication',
+                'confirm' => 'Reset',
+                'done' => 'Two-factor authentication reset',
+                'nothing' => 'The account no longer had two-factor authentication on',
+                'refused' => 'Two-factor authentication could not be reset',
+            ],
             'resetPublicProfile' => [
                 'label' => 'Reset public profile',
                 'heading' => 'Reset the public profile of :name',

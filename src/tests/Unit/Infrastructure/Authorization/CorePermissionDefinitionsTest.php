@@ -60,6 +60,17 @@ final class CorePermissionDefinitionsTest extends TestCase
         $this->assertNotEmpty($definition->description);
     }
 
+    public function test_resetting_two_factor_is_defined_for_no_default_role(): void
+    {
+        $definition = $this->findDefinition('users.reset_two_factor');
+
+        $this->assertSame([], $definition->defaultRoles);
+        $this->assertSame('users', $definition->resource);
+        $this->assertSame('reset_two_factor', $definition->action);
+        $this->assertNotSame('authorization.permissions.users.reset_two_factor', $definition->label);
+        $this->assertNotEmpty($definition->description);
+    }
+
     public function test_sensitive_core_permissions_have_a_description(): void
     {
         foreach (['settings.manage', 'users.assign_roles', 'modules.configure', 'modules.manage', 'pages.manage', 'admin.access'] as $key) {

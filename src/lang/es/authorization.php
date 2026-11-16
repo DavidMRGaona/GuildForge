@@ -92,6 +92,7 @@ return [
             'delete' => 'Eliminar usuario',
             'assign_roles' => 'Asignar roles a usuarios',
             'impersonate' => 'Impersonar a otras personas',
+            'reset_two_factor' => 'Restablecer el doble factor de otras cuentas',
         ],
         'roles' => [
             'view_any' => 'Ver listado de roles',
@@ -179,6 +180,7 @@ return [
         'users' => [
             'assign_roles' => 'Solo puede dar o quitar roles cuyos permisos tenga.',
             'impersonate' => 'Ver el sitio y el panel como otra persona, sin guardar nada. Solo para la administración.',
+            'reset_two_factor' => 'Quitar el doble factor de una cuenta que ha perdido el móvil y los códigos de recuperación. Solo para la administración.',
         ],
         'modules' => [
             'manage' => 'Instalar, habilitar y deshabilitar módulos.',

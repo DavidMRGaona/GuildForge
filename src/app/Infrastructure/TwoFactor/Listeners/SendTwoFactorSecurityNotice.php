@@ -9,11 +9,13 @@ use App\Domain\TwoFactor\Events\RecoveryCodesRegenerated;
 use App\Domain\TwoFactor\Events\RecoveryCodeUsed;
 use App\Domain\TwoFactor\Events\TwoFactorDisabled;
 use App\Domain\TwoFactor\Events\TwoFactorEnabled;
+use App\Domain\TwoFactor\Events\TwoFactorReset;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Notifications\TwoFactor\RecoveryCodesRegeneratedNotification;
 use App\Notifications\TwoFactor\RecoveryCodeUsedNotification;
 use App\Notifications\TwoFactor\TwoFactorDisabledNotification;
 use App\Notifications\TwoFactor\TwoFactorEnabledNotification;
+use App\Notifications\TwoFactor\TwoFactorResetNotification;
 use App\Notifications\TwoFactor\TwoFactorSecurityNotification;
 use Closure;
 
@@ -37,6 +39,12 @@ final readonly class SendTwoFactorSecurityNotice
         $this->send($event->userId, static fn (string $site, string $at): TwoFactorSecurityNotification => new TwoFactorDisabledNotification($site, $at));
     }
 
+    public function reset(TwoFactorReset $event): void
+    {
+        // Never names who did it: the person is told the administration did, and that is all they need
+        $this->send($event->userId, static fn (string $site, string $at): TwoFactorSecurityNotification => new TwoFactorResetNotification($site, $at));
+    }
+
     public function recoveryCodeUsed(RecoveryCodeUsed $event): void
     {
         $this->send($event->userId, static fn (string $site, string $at): TwoFactorSecurityNotification => new RecoveryCodeUsedNotification($site, $at, $event->remaining));
@@ -52,9 +60,11 @@ final readonly class SendTwoFactorSecurityNotice
      */
     private function send(string $userId, Closure $notification): void
     {
-        $user = UserModel::query()->find($userId);
+        // Deactivated accounts too (the administration may reset one, and its owner is still told);
+        // never an anonymized one, which has no address left to write to
+        $user = UserModel::query()->withTrashed()->find($userId);
 
-        if (! $user instanceof UserModel) {
+        if (! $user instanceof UserModel || $user->anonymized_at !== null) {
             return;
         }
 
