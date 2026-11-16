@@ -24,6 +24,7 @@
         "league/commonmark": "^2.10",
         "meilisearch/meilisearch-php": "^1.17",
         "mews/purifier": "^3.4",
+        "pragmarx/google2fa": "^9.1",
         "resend/resend-laravel": "^1.1",
         "symfony/yaml": "^8.1"
     },
