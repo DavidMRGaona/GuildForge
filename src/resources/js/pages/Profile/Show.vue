@@ -29,12 +29,15 @@ interface Props {
     mailPreferences?: MailPreferencesProps | null;
     /** «Mis propuestas» (core#579); the tab shows when `available`. */
     proposals?: ProfileProposals | null;
+    /** The banner of the own public profile (core#764); none without one. */
+    bannerPublicId?: string | null;
 }
 
 withDefaults(defineProps<Props>(), {
     calendarFeed: () => ({ available: false, issuedAt: null }),
     mailPreferences: null,
     proposals: null,
+    bannerPublicId: null,
 });
 
 const { t } = useI18n();
@@ -49,7 +52,7 @@ const hasModuleTabs = computed(() => hasSlotComponents('profile-sections'));
 
 <template>
     <!-- Hero header -->
-    <ProfileHeader :user="user" />
+    <ProfileHeader :user="user" :banner-public-id="bannerPublicId" />
 
     <!-- Flash messages -->
     <div v-if="successMessage || errorMessage" class="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">

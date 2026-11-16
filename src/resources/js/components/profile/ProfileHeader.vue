@@ -3,7 +3,7 @@ import { Calendar, Camera, Eye, UserRound } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { Link, useForm } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
-import { buildAvatarUrl } from '@/utils/cloudinary';
+import { buildAvatarUrl, buildImageUrl } from '@/utils/cloudinary';
 import { useAuth } from '@/composables/useAuth';
 import { useNotifications } from '@/composables/useNotifications';
 import HelpLink from '@/components/knowledge/HelpLink.vue';
@@ -12,9 +12,11 @@ import { VENUE_TIMEZONE } from '@/utils/datetime';
 
 interface Props {
     user: User;
+    /** The banner of the own public profile (core#764): the band's background, as on the profile page */
+    bannerPublicId?: string | null;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), { bannerPublicId: null });
 const { t, locale } = useI18n();
 const notifications = useNotifications();
 const { user: authUser } = useAuth();
@@ -28,6 +30,18 @@ const avatarPreview = ref<string | null>(null);
 const currentAvatarUrl = computed(() => buildAvatarUrl(props.user.avatarPublicId, 128));
 const displayAvatarUrl = computed(() => avatarPreview.value ?? currentAvatarUrl.value);
 const displayName = computed(() => props.user.displayName ?? props.user.name);
+
+// Same crop as the band of the public profile, so both pages show the same picture
+const bannerUrl = computed(() =>
+    buildImageUrl(props.bannerPublicId, {
+        width: 1500,
+        height: 500,
+        crop: 'fill',
+        gravity: 'auto',
+    })
+);
+// Over the banner's veil the help links get the surface colour: their grey alone was unreadable there
+const helpLinkClass = computed(() => (bannerUrl.value ? 'bg-surface' : undefined));
 
 const memberSinceDate = computed(() => {
     const date = new Date(props.user.createdAt);
@@ -75,8 +89,23 @@ function uploadAvatar(): void {
 </script>
 
 <template>
-    <div class="bg-muted py-8 sm:py-12">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div class="relative overflow-hidden bg-muted py-8 sm:py-12">
+        <template v-if="bannerUrl">
+            <img
+                :src="bannerUrl"
+                alt=""
+                class="absolute inset-0 h-full w-full object-cover"
+                fetchpriority="high"
+                data-testid="profile-banner"
+            />
+            <div
+                class="absolute inset-0 bg-black/55"
+                aria-hidden="true"
+                data-testid="profile-banner-veil"
+            />
+        </template>
+
+        <div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div class="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
                 <!-- Avatar (clickable) -->
                 <button
@@ -131,12 +160,21 @@ function uploadAvatar(): void {
                 <div class="text-center sm:text-left">
                     <!-- Inline so the help link sits beside the name, centred or left-aligned with it -->
                     <h1
-                        class="inline align-middle text-2xl font-bold text-base-primary sm:text-3xl"
+                        class="inline align-middle text-2xl font-bold sm:text-3xl"
+                        :class="bannerUrl ? 'text-white' : 'text-base-primary'"
                     >
                         {{ displayName }}
                     </h1>
-                    <HelpLink guide="core.account.complete-profile" class="ml-2 align-middle" />
-                    <p class="mt-1 text-base-secondary">
+                    <HelpLink
+                        guide="core.account.complete-profile"
+                        class="ml-2 align-middle"
+                        :class="helpLinkClass"
+                    />
+                    <p
+                        class="mt-1"
+                        :class="bannerUrl ? 'text-white' : 'text-base-secondary'"
+                        data-testid="profile-email"
+                    >
                         {{ user.email }}
                     </p>
                     <div
@@ -152,7 +190,10 @@ function uploadAvatar(): void {
                         <span v-if="publicProfilePath" class="inline-flex items-center gap-2">
                             <Link
                                 :href="publicProfilePath"
-                                class="inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+                                class="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+                                :class="
+                                    bannerUrl ? 'rounded-full bg-surface px-3 py-1' : 'rounded-md'
+                                "
                             >
                                 <Eye class="h-4 w-4 shrink-0" aria-hidden="true" />
                                 {{ t('auth.profile.viewPublicProfile') }}
@@ -160,6 +201,7 @@ function uploadAvatar(): void {
                             <HelpLink
                                 guide="core.site.public-profile"
                                 :label="t('auth.profile.publicProfileHelp')"
+                                :class="helpLinkClass"
                             />
                         </span>
                     </div>

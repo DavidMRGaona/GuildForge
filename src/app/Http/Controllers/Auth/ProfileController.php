@@ -28,6 +28,7 @@ use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Http\Resources\OwnProposalResource;
 use App\Infrastructure\Mail\Preferences\MailSubjectTypeLabel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Infrastructure\Profiles\Services\OwnProfileBanner;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -51,6 +52,7 @@ final class ProfileController extends Controller
         private readonly MailDigestServiceInterface $mailDigests,
         private readonly ProposalQueryServiceInterface $proposalQueries,
         private readonly ProposalEligibilityServiceInterface $proposalAccess,
+        private readonly OwnProfileBanner $ownBanner,
     ) {}
 
     public function show(Request $request): Response
@@ -60,6 +62,8 @@ final class ProfileController extends Controller
 
         $props = [
             'user' => $this->dtoFactory->createUserDTO($user),
+            // The band shows the banner of the own public profile, as the profile page does (core#764)
+            'bannerPublicId' => $this->ownBanner->for($user),
             'seo' => $this->seo->forPage(new SeoPageDTO(
                 title: (string) __('seo.titles.profile'),
                 noindex: true,

@@ -40,7 +40,10 @@ const user: User = {
 const OWN_PATH = '/miembros/ana-ejemplo';
 
 /** `undefined` leaves the shared prop out, as an older core would */
-function mountHeader(publicProfilePath: string | null | undefined): ReturnType<typeof mount> {
+function mountHeader(
+    publicProfilePath: string | null | undefined,
+    bannerPublicId: string | null = null
+): ReturnType<typeof mount> {
     const shared: User = { ...user };
     if (publicProfilePath !== undefined) {
         shared.publicProfilePath = publicProfilePath;
@@ -49,7 +52,7 @@ function mountHeader(publicProfilePath: string | null | undefined): ReturnType<t
     const i18n = createI18n({ legacy: false, locale: 'es', messages: { es, en } });
 
     return mount(ProfileHeader, {
-        props: { user },
+        props: { user, bannerPublicId },
         global: { plugins: [i18n], stubs: { HelpLink: true } },
     });
 }
@@ -148,6 +151,57 @@ describe('ProfileHeader', () => {
         it('translates the link', () => {
             expect(en.auth.profile.viewPublicProfile).toBe('View my public profile');
             expect(es.auth.profile.viewPublicProfile).toBe('Ver mi perfil público');
+        });
+    });
+
+    describe('banner of the public profile (core#764)', () => {
+        const BANNER = 'profiles/banners/2026/11/b.jpg';
+
+        it('keeps the plain band without a banner', () => {
+            const wrapper = mountHeader(OWN_PATH);
+
+            expect(wrapper.find('[data-testid="profile-banner"]').exists()).toBe(false);
+            expect(classesOf(wrapper.get('h1').element)).toContain('text-base-primary');
+        });
+
+        it('puts the banner behind the band, cropped like the public profile, behind a veil', () => {
+            const wrapper = mountHeader(OWN_PATH, BANNER);
+
+            const banner = wrapper.get('[data-testid="profile-banner"]');
+            expect(banner.attributes('src')).toContain('w_1500,h_500,c_fill,g_auto');
+            expect(banner.attributes('src')).toContain('/profiles/banners/2026/11/b');
+            expect(banner.attributes('alt')).toBe('');
+            expect(wrapper.find('[data-testid="profile-banner-veil"]').exists()).toBe(true);
+        });
+
+        it('writes the name and the email in white over the banner', () => {
+            const wrapper = mountHeader(OWN_PATH, BANNER);
+
+            expect(classesOf(wrapper.get('h1').element)).toContain('text-white');
+            expect(classesOf(wrapper.get('h1').element)).not.toContain('text-base-primary');
+            const email = wrapper.get('[data-testid="profile-email"]').element;
+            expect(classesOf(email)).toContain('text-white');
+            expect(classesOf(email)).not.toContain('text-base-secondary');
+        });
+
+        it('sets the public profile link and the help links on the surface colour over the banner', () => {
+            const wrapper = mountHeader(OWN_PATH, BANNER);
+
+            expect(classesOf(wrapper.get(`a[href="${OWN_PATH}"]`).element)).toContain('bg-surface');
+            for (const stub of wrapper.findAll('help-link-stub')) {
+                expect(classesOf(stub.element)).toContain('bg-surface');
+            }
+        });
+
+        it('leaves the link and the help links as they were without a banner', () => {
+            const wrapper = mountHeader(OWN_PATH);
+
+            expect(classesOf(wrapper.get(`a[href="${OWN_PATH}"]`).element)).not.toContain(
+                'bg-surface'
+            );
+            for (const stub of wrapper.findAll('help-link-stub')) {
+                expect(classesOf(stub.element)).not.toContain('bg-surface');
+            }
         });
     });
 });
