@@ -28,6 +28,12 @@ export const CALENDAR_TAB = 'calendar';
  */
 export const MAIL_TAB = 'mail';
 
+/**
+ * Core tab with the password and two-factor authentication (core#769). Every account has it;
+ * `/perfil?tab=seguridad` is the address mails and notices link to.
+ */
+export const SECURITY_TAB = 'seguridad';
+
 /** Core tab with the person's proposals of events and articles; shown when they may propose or have any. */
 export const PROPOSALS_TAB = 'proposals';
 
@@ -94,6 +100,7 @@ export function useProfileTabs(): UseProfileTabsReturn {
         return proposals?.available === true;
     });
     const visibleTabIds = [
+        SECURITY_TAB,
         ...(hasCalendarTab.value ? [CALENDAR_TAB] : []),
         MAIL_TAB,
         ...(hasProposalsTab.value ? [PROPOSALS_TAB] : []),
@@ -112,6 +119,12 @@ export function useProfileTabs(): UseProfileTabsReturn {
                 icon: 'user' as ProfileTabIcon,
             },
         ];
+
+        baseTabs.push({
+            id: SECURITY_TAB,
+            label: t('auth.profile.tabs.security'),
+            icon: 'lock' as ProfileTabIcon,
+        });
 
         if (hasCalendarTab.value) {
             baseTabs.push({

@@ -811,6 +811,86 @@ export default {
             viewPublicProfile: 'Ver mi perfil público',
             publicProfileHelp: 'Ayuda sobre tu perfil público',
             security: 'Seguridad',
+            password: 'Contraseña',
+            twoFactor: {
+                title: 'Doble factor de autenticación',
+                intro: 'Añade un segundo paso al iniciar sesión: un código de seis cifras que genera una app de autenticación en tu móvil. Así, una contraseña robada no basta para entrar en tu cuenta.',
+                off: {
+                    status: 'Desactivado',
+                    enable: 'Activar doble factor',
+                },
+                on: {
+                    status: 'Activado',
+                    since: 'Activo desde el {date}.',
+                    codesLeft:
+                        'No te queda ningún código de recuperación sin usar. | Te queda un código de recuperación sin usar. | Te quedan {count} códigos de recuperación sin usar.',
+                    fewCodes:
+                        'Te quedan pocos códigos de recuperación. Genera códigos nuevos y guárdalos en un lugar seguro.',
+                    regenerate: 'Generar códigos nuevos',
+                    changeApp: 'Cambiar de app',
+                    disable: 'Desactivar',
+                    cannotDisable:
+                        'No puedes desactivarlo mientras tengas un rol que lo exige. Sí puedes cambiar de app.',
+                },
+                dialog: {
+                    step: 'Paso {current} de {total}',
+                    title: {
+                        enable: 'Activar doble factor',
+                        changeApp: 'Cambiar de app',
+                        recoveryCodes: 'Generar códigos nuevos',
+                        disable: 'Desactivar doble factor',
+                    },
+                    passwordIntro: 'Confirma tu contraseña para empezar.',
+                    scanIntro: {
+                        enable: 'Abre tu app de autenticación y escanea este código. Si no puedes escanearlo, escribe la clave a mano.',
+                        changeApp:
+                            'Escanea este código con la app nueva. Si no puedes escanearlo, escribe la clave a mano.',
+                    },
+                    qrAlt: 'Código QR para añadir tu cuenta a una app de autenticación. Si no puedes escanearlo, escribe la clave que aparece debajo.',
+                    manualKey: 'Clave para escribir a mano',
+                    copyKey: 'Copiar clave',
+                    codeIntro:
+                        'Escribe el código de seis cifras que muestra la app para comprobar que está bien configurada.',
+                    codeLabel: 'Código de 6 cifras',
+                    verifyIntro: {
+                        changeApp:
+                            'Para configurar una app nueva, confirma con tu contraseña y un código de la app que usas ahora, o uno de recuperación. La actual sigue valiendo hasta que confirmes la nueva.',
+                        recoveryCodes:
+                            'Los códigos nuevos sustituyen a los anteriores, que dejarán de servir. Confirma con tu contraseña y un código.',
+                        disable:
+                            'Volverá a bastar con tu contraseña para iniciar sesión. Confirma con tu contraseña y un código.',
+                    },
+                    anyCodeLabel: 'Código de tu app o de recuperación',
+                    codesTitle: 'Guarda tus códigos de recuperación',
+                    codesIntro:
+                        'Si pierdes el móvil, cada código te deja entrar una sola vez. Se muestran solo ahora: guárdalos en un lugar seguro.',
+                    savedCodes: 'He guardado los códigos',
+                    submit: {
+                        password: 'Continuar',
+                        scan: 'Ya la he añadido',
+                        codeEnable: 'Activar',
+                        codeChangeApp: 'Cambiar de app',
+                        recoveryCodes: 'Generar códigos',
+                        disable: 'Desactivar',
+                        codes: 'Terminar',
+                    },
+                },
+                done: {
+                    enable: 'Doble factor activado.',
+                    changeApp: 'App de autenticación cambiada.',
+                    recoveryCodes: 'Códigos de recuperación nuevos generados.',
+                    disable: 'Doble factor desactivado.',
+                },
+                copyCodes: 'Copiar códigos',
+                downloadCodes: 'Descargar .txt',
+                copied: 'Copiado',
+                copyError: 'No se ha podido copiar. Selecciónalo y cópialo a mano.',
+                codesFileName: 'codigos-de-recuperacion.txt',
+                codesFile:
+                    'Códigos de recuperación de {site}. Cada código sirve una sola vez; guárdalos en un lugar seguro.',
+                error: 'No se ha podido completar la operación. Inténtalo de nuevo.',
+                tooMany: 'Demasiados intentos. Espera un minuto e inténtalo de nuevo.',
+            },
             calendarFeed: {
                 title: 'Mi calendario',
                 intro: 'Suscríbete una sola vez desde Google Calendar, Apple Calendar, Outlook u otra aplicación de calendario y verás ahí todo aquello en lo que estás inscrito o que diriges. Se actualiza solo con las nuevas inscripciones, los cambios de hora y las cancelaciones.',
@@ -912,6 +992,7 @@ export default {
             },
             tabs: {
                 account: 'Cuenta',
+                security: 'Seguridad',
                 calendar: 'Mi calendario',
                 mail: 'Avisos',
                 proposals: 'Mis propuestas',

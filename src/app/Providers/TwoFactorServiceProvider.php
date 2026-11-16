@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Application\TwoFactor\Services\PendingTwoFactorLoginInterface;
+use App\Application\TwoFactor\Services\TwoFactorAppChangeInterface;
 use App\Application\TwoFactor\Services\TwoFactorChallengeInterface;
 use App\Application\TwoFactor\Services\TwoFactorResetInterface;
 use App\Application\TwoFactor\Services\TwoFactorServiceInterface;
@@ -13,6 +14,7 @@ use App\Application\TwoFactor\Services\TwoFactorStatusReaderInterface;
 use App\Domain\TwoFactor\Events\RecoveryCodesRegenerated;
 use App\Domain\TwoFactor\Events\RecoveryCodeUsed;
 use App\Domain\TwoFactor\Events\RepeatedTwoFactorCodeFailures;
+use App\Domain\TwoFactor\Events\TwoFactorAppChanged;
 use App\Domain\TwoFactor\Events\TwoFactorDisabled;
 use App\Domain\TwoFactor\Events\TwoFactorEnabled;
 use App\Domain\TwoFactor\Events\TwoFactorReset;
@@ -43,6 +45,7 @@ final class TwoFactorServiceProvider extends ServiceProvider
         $this->app->bind(TwoFactorServiceInterface::class, TwoFactorService::class);
         $this->app->bind(TwoFactorStatusReaderInterface::class, TwoFactorService::class);
         $this->app->bind(TwoFactorResetInterface::class, TwoFactorResetService::class);
+        $this->app->bind(TwoFactorAppChangeInterface::class, TwoFactorService::class);
         $this->app->bind(TwoFactorSessionSealInterface::class, static fn ($app): TwoFactorSessionSeal => new TwoFactorSessionSeal(
             $app->make(CookieJar::class),
             (string) config('app.key'),
@@ -66,6 +69,7 @@ final class TwoFactorServiceProvider extends ServiceProvider
         Event::listen(TwoFactorEnabled::class, [SendTwoFactorSecurityNotice::class, 'enabled']);
         Event::listen(TwoFactorDisabled::class, [SendTwoFactorSecurityNotice::class, 'disabled']);
         Event::listen(TwoFactorReset::class, [SendTwoFactorSecurityNotice::class, 'reset']);
+        Event::listen(TwoFactorAppChanged::class, [SendTwoFactorSecurityNotice::class, 'appChanged']);
         Event::listen(RecoveryCodeUsed::class, [SendTwoFactorSecurityNotice::class, 'recoveryCodeUsed']);
         Event::listen(RepeatedTwoFactorCodeFailures::class, [SendTwoFactorSecurityNotice::class, 'repeatedCodeFailures']);
         Event::listen(RecoveryCodesRegenerated::class, [SendTwoFactorSecurityNotice::class, 'recoveryCodesRegenerated']);

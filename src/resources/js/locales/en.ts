@@ -809,6 +809,86 @@ export default {
             viewPublicProfile: 'View my public profile',
             publicProfileHelp: 'Help about your public profile',
             security: 'Security',
+            password: 'Password',
+            twoFactor: {
+                title: 'Two-factor authentication',
+                intro: 'Add a second step to signing in: a six-digit code made by an authenticator app on your phone. A stolen password is then not enough to get into your account.',
+                off: {
+                    status: 'Off',
+                    enable: 'Turn on two-factor authentication',
+                },
+                on: {
+                    status: 'On',
+                    since: 'On since {date}.',
+                    codesLeft:
+                        'You have no unused recovery codes left. | You have one unused recovery code left. | You have {count} unused recovery codes left.',
+                    fewCodes:
+                        'You are running low on recovery codes. Make new ones and keep them somewhere safe.',
+                    regenerate: 'Make new codes',
+                    changeApp: 'Change app',
+                    disable: 'Turn off',
+                    cannotDisable:
+                        'You cannot turn it off while you hold a role that requires it. You can still change app.',
+                },
+                dialog: {
+                    step: 'Step {current} of {total}',
+                    title: {
+                        enable: 'Turn on two-factor authentication',
+                        changeApp: 'Change app',
+                        recoveryCodes: 'Make new codes',
+                        disable: 'Turn off two-factor authentication',
+                    },
+                    passwordIntro: 'Confirm your password to start.',
+                    scanIntro: {
+                        enable: 'Open your authenticator app and scan this code. If you cannot scan it, type the key by hand.',
+                        changeApp:
+                            'Scan this code with the new app. If you cannot scan it, type the key by hand.',
+                    },
+                    qrAlt: 'QR code to add your account to an authenticator app. If you cannot scan it, type the key shown below.',
+                    manualKey: 'Key to type by hand',
+                    copyKey: 'Copy key',
+                    codeIntro:
+                        'Type the six-digit code the app shows to check that it is set up correctly.',
+                    codeLabel: '6-digit code',
+                    verifyIntro: {
+                        changeApp:
+                            'To set up a new app, confirm with your password and a code from the app you use now, or a recovery code. The current one keeps working until you confirm the new one.',
+                        recoveryCodes:
+                            'The new codes replace the old ones, which will stop working. Confirm with your password and a code.',
+                        disable:
+                            'Your password will be enough to sign in again. Confirm with your password and a code.',
+                    },
+                    anyCodeLabel: 'Code from your app or a recovery code',
+                    codesTitle: 'Keep your recovery codes',
+                    codesIntro:
+                        'If you lose your phone, each code lets you in once. They are shown only now: keep them somewhere safe.',
+                    savedCodes: 'I have saved the codes',
+                    submit: {
+                        password: 'Continue',
+                        scan: 'I have added it',
+                        codeEnable: 'Turn on',
+                        codeChangeApp: 'Change app',
+                        recoveryCodes: 'Make codes',
+                        disable: 'Turn off',
+                        codes: 'Finish',
+                    },
+                },
+                done: {
+                    enable: 'Two-factor authentication turned on.',
+                    changeApp: 'Authenticator app changed.',
+                    recoveryCodes: 'New recovery codes made.',
+                    disable: 'Two-factor authentication turned off.',
+                },
+                copyCodes: 'Copy codes',
+                downloadCodes: 'Download .txt',
+                copied: 'Copied',
+                copyError: 'It could not be copied. Select it and copy it by hand.',
+                codesFileName: 'recovery-codes.txt',
+                codesFile:
+                    'Recovery codes of {site}. Each code works once; keep them somewhere safe.',
+                error: 'The operation could not be completed. Please try again.',
+                tooMany: 'Too many attempts. Wait a minute and try again.',
+            },
             calendarFeed: {
                 title: 'My calendar',
                 intro: 'Subscribe once from Google Calendar, Apple Calendar, Outlook or any other calendar app and you will see there everything you signed up for or run. It updates itself with new sign-ups, time changes and cancellations.',
@@ -910,6 +990,7 @@ export default {
             },
             tabs: {
                 account: 'Account',
+                security: 'Security',
                 calendar: 'My calendar',
                 mail: 'Notifications',
                 proposals: 'My proposals',

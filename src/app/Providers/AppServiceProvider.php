@@ -628,6 +628,15 @@ class AppServiceProvider extends ServiceProvider
                 Limit::perHour(60)->by('user-hour:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
             ]
         );
+        // Two-factor authentication from the account settings (core#769): six attempts a minute per
+        // account, since a code is typed on these routes too
+        RateLimiter::for(
+            'two-factor-manage',
+            static fn (Request $request): array => [
+                Limit::perMinute(6)->by('user:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
+                Limit::perHour(60)->by('user-hour:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
+            ]
+        );
         RateLimiter::for(
             'profile-banner',
             static fn (Request $request): array => [

@@ -8,6 +8,7 @@ use App\Application\Services\SiteBrandingServiceInterface;
 use App\Domain\TwoFactor\Events\RecoveryCodesRegenerated;
 use App\Domain\TwoFactor\Events\RecoveryCodeUsed;
 use App\Domain\TwoFactor\Events\RepeatedTwoFactorCodeFailures;
+use App\Domain\TwoFactor\Events\TwoFactorAppChanged;
 use App\Domain\TwoFactor\Events\TwoFactorDisabled;
 use App\Domain\TwoFactor\Events\TwoFactorEnabled;
 use App\Domain\TwoFactor\Events\TwoFactorReset;
@@ -15,6 +16,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Notifications\TwoFactor\RecoveryCodesRegeneratedNotification;
 use App\Notifications\TwoFactor\RecoveryCodeUsedNotification;
 use App\Notifications\TwoFactor\RepeatedTwoFactorCodeFailuresNotification;
+use App\Notifications\TwoFactor\TwoFactorAppChangedNotification;
 use App\Notifications\TwoFactor\TwoFactorDisabledNotification;
 use App\Notifications\TwoFactor\TwoFactorEnabledNotification;
 use App\Notifications\TwoFactor\TwoFactorResetNotification;
@@ -50,6 +52,11 @@ final readonly class SendTwoFactorSecurityNotice
     public function repeatedCodeFailures(RepeatedTwoFactorCodeFailures $event): void
     {
         $this->send($event->userId, static fn (string $site, string $at): TwoFactorSecurityNotification => new RepeatedTwoFactorCodeFailuresNotification($site, $at));
+    }
+
+    public function appChanged(TwoFactorAppChanged $event): void
+    {
+        $this->send($event->userId, static fn (string $site, string $at): TwoFactorSecurityNotification => new TwoFactorAppChangedNotification($site, $at));
     }
 
     public function recoveryCodeUsed(RecoveryCodeUsed $event): void

@@ -9,10 +9,12 @@ import ProfileAccountTab from '@/components/profile/ProfileAccountTab.vue';
 import ProfileCalendarTab from '@/components/profile/ProfileCalendarTab.vue';
 import ProfileMailTab from '@/components/profile/ProfileMailTab.vue';
 import ProfileProposalsTab from '@/components/profile/ProfileProposalsTab.vue';
+import ProfileSecurityTab from '@/components/profile/ProfileSecurityTab.vue';
 import {
     CALENDAR_TAB,
     MAIL_TAB,
     PROPOSALS_TAB,
+    SECURITY_TAB,
     useProfileTabs,
 } from '@/composables/useProfileTabs';
 import { useModuleSlots } from '@/composables/useModuleSlots';
@@ -21,6 +23,7 @@ import type { User } from '@/types/models';
 import type { CalendarFeedStatus } from '@/types/calendarFeed';
 import type { MailPreferencesProps } from '@/types/mailPreferences';
 import type { ProfileProposals } from '@/types/proposals';
+import type { SecurityProps } from '@/types/twoFactor';
 
 interface Props {
     user: User;
@@ -29,6 +32,8 @@ interface Props {
     mailPreferences?: MailPreferencesProps | null;
     /** «Mis propuestas» (core#579); the tab shows when `available`. */
     proposals?: ProfileProposals | null;
+    /** «Seguridad» (core#769): two-factor authentication state; numbers and dates only. */
+    security: SecurityProps;
     /** The banner of the own public profile (core#764); none without one. */
     bannerPublicId?: string | null;
 }
@@ -85,6 +90,9 @@ const hasModuleTabs = computed(() => hasSlotComponents('profile-sections'));
             <div class="min-w-0">
                 <!-- Account tab -->
                 <ProfileAccountTab v-if="activeTabId === 'account'" :user="user" />
+
+                <!-- Password and two-factor authentication -->
+                <ProfileSecurityTab v-if="activeTabId === SECURITY_TAB" :security="security" />
 
                 <!-- Personal calendar subscription -->
                 <ProfileCalendarTab

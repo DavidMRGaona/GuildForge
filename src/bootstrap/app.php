@@ -74,6 +74,10 @@ $app = Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // A wrong password sends the form back with its input flashed to the session: a code (also a
+        // valid recovery code) typed next to it must not be kept there (two-factor, core#769)
+        $exceptions->dontFlash(['code']);
+
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request): bool => $request->is('api/*') || $request->expectsJson(),
         );
