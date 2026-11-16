@@ -34,6 +34,7 @@ use App\Http\Controllers\MailSubjectMuteController;
 use App\Http\Controllers\MailUnsubscribeController;
 use App\Http\Controllers\OneClickMailUnsubscribeController;
 use App\Http\Controllers\PersonalCalendarFeedController;
+use App\Http\Controllers\Profiles\PublicProfileCardController;
 use App\Http\Controllers\Profiles\PublicProfileController;
 use App\Http\Controllers\Proposals\ArticleProposalController;
 use App\Http\Controllers\Proposals\EventProposalController;
@@ -45,6 +46,7 @@ use App\Http\Controllers\SearchSuggestionsController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SiteNotificationsController;
 use App\Http\Middleware\KeepOutOfSearchEngines;
+use App\Http\Middleware\ThrottleWhereListed;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Session\Middleware\StartSession;
@@ -141,6 +143,12 @@ Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 Route::get('/miembros/{handle}', [PublicProfileController::class, 'show'])
     ->middleware(KeepOutOfSearchEngines::class)
     ->name('profiles.show');
+// Its summary card (core#744), as JSON, under the same rule, the same 404 and a limit of its own. The
+// limit runs inside the web group (after the impersonation) and inside the robots header, so the 429
+// carries it; `throttle:` would be moved ahead of them (see ThrottleWhereListed)
+Route::get('/miembros/{handle}/tarjeta', PublicProfileCardController::class)
+    ->middleware([KeepOutOfSearchEngines::class, ThrottleWhereListed::class.':profile-card'])
+    ->name('profiles.card');
 
 Route::get('/{slug}', [LegalPageController::class, 'show'])
     ->where('slug', 'politica-de-privacidad|aviso-legal|politica-de-cookies|terminos-y-condiciones')

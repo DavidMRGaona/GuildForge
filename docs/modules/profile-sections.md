@@ -12,9 +12,10 @@ Requires core ≥ the release with #742; set `requires.core` to it.
 4. [Checklist for every section and stat](#checklist-for-every-section-and-stat)
 5. [The owner's layout](#the-owners-layout)
 6. [How the core draws a profile](#how-the-core-draws-a-profile)
-7. [Failing closed](#failing-closed)
-8. [The core's section](#the-cores-section)
-9. [Testing](#testing)
+7. [Profile card](#profile-card)
+8. [Failing closed](#failing-closed)
+9. [The core's section](#the-cores-section)
+10. [Testing](#testing)
 
 ## Offering a section
 
@@ -210,7 +211,7 @@ The owner's choices are stored with their profile (`user_profiles.layout`, `Prof
 
 ## How the core draws a profile
 
-**Modules never call `ProfileRendererInterface`.** Only the core draws a profile: its profile page (and the core's summary card), after `PublicProfileServiceInterface::findByHandle()` (core#741) has applied `ProfileAccessRule` to decide whether the person may see the profile at all. The renderer does not decide that, so a module calling it could draw a hidden profile. A module that wants to show a person's summary uses what the core offers for it (the card endpoint), never the renderer. This section is for reading what the page receives.
+**Modules never call `ProfileRendererInterface`.** Only the core draws a profile: its profile page (and the core's summary card), after `PublicProfileServiceInterface::findByHandle()` (core#741) has applied `ProfileAccessRule` to decide whether the person may see the profile at all. The renderer does not decide that, so a module calling it could draw a hidden profile. A module that wants to show a person's summary uses the [profile card](#profile-card) (`ProfileCardServiceInterface::card()` or `GET /miembros/{handle}/tarjeta`), never the renderer. This section is for reading what the page receives.
 
 1. **Access first.** `PublicProfileServiceInterface::findByHandle($handle, $viewer)` applies the access rule (and the redirect of an old address); only a visible profile goes on.
 2. **Render.** `ProfileRendererInterface::render(ProfileOwnerDTO $owner, ?Authenticatable $viewer): ResolvedProfileDTO` (scoped to the request; it never throws). Send `$dto->toArray()` to the page:
@@ -259,7 +260,82 @@ defineProps<{ profile: ResolvedProfile }>();
 </template>
 ```
 
-Types in `@/types/profileSections`: `ResolvedProfile`, `ProfileHeader`, `ResolvedProfileStat`, `ResolvedProfileSection`, `ProfileRegion` (`'main' | 'aside'`) and `ProfileTextSegment` (a piece of the «Sobre mí» text).
+Types in `@/types/profileSections`: `ResolvedProfile`, `ProfileHeader`, `ResolvedProfileStat`, `ResolvedProfileSection`, `ProfileRegion` (`'main' | 'aside'`), `ProfileTextSegment` (a piece of the «Sobre mí» text) and `ProfileCard` (the [profile card](#profile-card)).
+
+## Profile card
+
+A summary of a public profile for other parts of the site to show in a card: the forum opens one when someone clicks an author's name. Requires core ≥ the release with #744. It shows what the profile page shows the same person, and no more: the same `ProfileAccessRule`, the header, and the first four stats (`ResolvedProfileDTO::CARD_STATS`) that can be drawn, in the owner's order (turned off, unavailable, `null` or failing stats are skipped, and the next one takes their place). No section is built for a card, and once it holds four stats no further stat is counted.
+
+### From the browser: `GET /miembros/{handle}/tarjeta`
+
+Route `profiles.card`. A visible profile answers `200` with this JSON (`ProfileCardDTO::toArray()`):
+
+```json
+{
+    "handle": "ana-garcia",
+    "publicName": "Ana García",
+    "url": "https://example.org/miembros/ana-garcia",
+    "avatarUrl": "https://res.cloudinary.com/demo/image/upload/w_128,h_128,c_fill,g_face,q_auto,f_auto/avatars/ana",
+    "bannerUrl": null,
+    "memberSince": "2024-06-03T12:00:00+02:00",
+    "showsMembership": true,
+    "isOwner": false,
+    "stats": [{ "key": "forum.messages", "label": "Mensajes", "value": 394, "url": "/foro/buscar?autor=ana-garcia" }]
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `handle` | The profile's current address. |
+| `publicName` | The account's public name. `null` only on the owner's own card while they have none (nobody else gets a card then): draw the address or «sin nombre público», never anything else. |
+| `url` | The profile page, absolute. |
+| `avatarUrl` | `https` image, 128 × 128 cropped around the face (`ProfileCardDTO::AVATAR_SIZE`; an animated avatar stays animated), or `null`: draw the initials. |
+| `bannerUrl` | `https` image, 600 × 200 (`BANNER_WIDTH` × `BANNER_HEIGHT`, the page's 3:1), or `null`. |
+| `memberSince` | When the account was created, ISO 8601 with the display zone's offset (`TimezoneServiceInterface::iso()`); `null` if it could not be read. Show the month and year as written, without converting it again. |
+| `showsMembership` | Draw the «Socio» badge: true only when the owner chose to show it and holds the association role. |
+| `isOwner` | The person asking is the owner (hide «Ignorar», offer «Editar perfil»…). |
+| `stats` | At most four `{key, label, value, url}`, in the owner's order; `url` is a path or an `https` address of the site (`LinkTargetRule`), or `null`. |
+
+Nothing else travels: never the account id, the account name, the email, the roles or the bio.
+
+- **404.** A profile the person may not see, an unknown, malformed or reserved address, a deactivated or anonymized account, an account without a profile, or a card that could not be made all answer the same 404, so the card never tells whether an account exists: for the same request, the body, `Content-Type` and `X-Robots-Tag: noindex, nofollow` are the profile page's own, and it is private (`Cache-Control: no-cache, private`, like the page's 404). The only difference with the page is the limit's `X-RateLimit-Limit` and `X-RateLimit-Remaining`, which every answer of the card carries and which say nothing about the address. Ask with `Accept: application/json` to get it as JSON.
+- **An old address** (or the current one written differently) answers `200` with the card of the current address, not a redirect: `handle` and `url` already name it, the client needs one request, and a permanent redirect that depends on who asks is never left for a cache. It does so only once the access rule let the person see the profile, like the page's 301.
+- **Not cached.** A card depends on who asks: the `200` carries `Cache-Control: no-store, private`. Ask again when the card opens; do not keep it across page loads.
+- **Limit.** Its own limit, `profile-card`: 30 requests a minute per account when signed in, per network address otherwise; unknown addresses count alike. Over it answers `429` with `Retry-After` (and `X-Robots-Tag`, like every answer): say the card cannot be shown right now, never that the person does not exist. The limit runs inside the web group, so during an impersonation it counts for the account being impersonated and, like everything then, is never stored.
+- **During an impersonation** it is decided for the account being impersonated, like the page.
+
+```ts
+import type { ProfileCard } from '@/types/profileSections';
+
+const response = await fetch(`/miembros/${encodeURIComponent(handle)}/tarjeta`, {
+    headers: { Accept: 'application/json' },
+});
+// 404 and 429: no card (never «no existe»)
+const card = response.ok ? ((await response.json()) as ProfileCard) : null;
+```
+
+### From the server: `ProfileCardServiceInterface::card()`
+
+A module that builds its own answer (a JSON with the card and its own data, a page with authors' cards) asks the core by account id:
+
+```php
+use App\Application\Profiles\DTOs\ProfileCardDTO;
+use App\Application\Profiles\Services\ProfileCardServiceInterface;
+
+$card = $this->cards->card($authorId, $request->user()); // ProfileCardServiceInterface $cards
+
+return [
+    'card' => $card?->toArray(), // null: show the name the module already shows, without a link
+    'messages' => $count,
+];
+```
+
+- `ProfileCardServiceInterface` (`App\Application\Profiles\Services`), an interface of its own so a module's test doubles of it keep working when the core's other profile services grow; its only method is `card(string $userId, ?Authenticatable $viewer): ?ProfileCardDTO`. The id is read without regard to case. The viewer is the person who will see the card (the request's user, or `null` for a guest), never the author: the access rule decides for them.
+- `null` when the viewer may not see the profile, when the account has no profile (an id that is not a UUID, unknown, deactivated, anonymized, no profile row) or when anything fails (logged as a warning with the account id and the exception's class only). It never throws; an id that is not a UUID is not even looked up.
+- `ProfileCardDTO` holds the fields of the JSON above as properties (`$card->stats` is a list of `ResolvedProfileStatDTO`); `toArray()` is that JSON.
+- Ask it only for people the page actually shows as such (an author whose name the viewer sees), never for a hidden NPC author: `card()` decides who may see the profile, not whether showing that this account wrote something is allowed.
+- Each call reads the profile and counts up to four stats: for a list, ask when a card opens (the endpoint) rather than for every author at once.
+- It asks for the request's (or job's) profile rows and renderer on each call, so it can be injected anywhere, a singleton included.
 
 ## Failing closed
 
