@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\TwoFactor;
 
 use App\Application\TwoFactor\Services\TwoFactorSessionSealInterface;
+use App\Domain\TwoFactor\Exceptions\TwoFactorUnavailableException;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserTwoFactorModel;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -68,12 +69,13 @@ final readonly class TwoFactorSessionSeal implements TwoFactorSessionSealInterfa
                 return ! $this->twoFactorEnabled($userId);
             }
         } catch (Throwable $exception) {
-            Log::error('Session seal check failed; the session is signed out.', [
+            // Not knowing is not a mismatch: nobody is let through, nor is the session closed
+            Log::error('Session seal could not be read; the request is refused.', [
                 'user_id' => $userId,
                 'exception' => $exception::class,
             ]);
 
-            return false;
+            throw new TwoFactorUnavailableException;
         }
 
         $held = $session->get(self::SESSION_KEY);
@@ -116,6 +118,11 @@ final readonly class TwoFactorSessionSeal implements TwoFactorSessionSealInterfa
         $value = $id === null ? null : $this->rememberValue($id);
 
         if ($value === null) {
+            // Called before login($user, true) gave the account a remember token, or without a seal
+            Log::warning('Two-factor «remember me» cookie not issued: the account has no remember token or seal yet.', [
+                'user_id' => $id ?? $userId,
+            ]);
+
             return;
         }
 

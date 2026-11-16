@@ -150,6 +150,7 @@ final readonly class TwoFactorService implements TwoFactorServiceInterface
         $totp = TotpCode::tryFrom($code);
 
         return DB::transaction(function () use ($id, $totp, $currentSession): array {
+            $this->lockAccount($id);
             $row = UserTwoFactorModel::query()->lockForUpdate()->find($id);
 
             if (! $row instanceof UserTwoFactorModel) {
@@ -278,11 +279,22 @@ final readonly class TwoFactorService implements TwoFactorServiceInterface
         $id = $this->normalise($userId) ?? throw TwoFactorException::because(TwoFactorFailure::NotEnabled);
 
         DB::transaction(function () use ($id, $currentSession): void {
+            $this->lockAccount($id);
             $this->enabledRowOrFail($id)->delete();
 
             $this->seal->renew($id, $currentSession);
             $this->announceAfterCommit(new TwoFactorDisabled($id));
         });
+    }
+
+    /**
+     * Changes that also write the account's row (the session seal) lock it first, before the
+     * two-factor row, in the same order as beginSetup(): two requests taking them the other way
+     * round would deadlock. Must run inside a transaction.
+     */
+    private function lockAccount(string $id): void
+    {
+        UserModel::query()->withTrashed()->whereKey($id)->lockForUpdate()->first(['id']);
     }
 
     /**

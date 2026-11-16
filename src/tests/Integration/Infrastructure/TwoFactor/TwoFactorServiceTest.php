@@ -503,11 +503,55 @@ final class TwoFactorServiceTest extends TestCase
         try {
             $this->service()->confirmSetup((string) $user->id, '123456');
             $this->fail('Expected the computation to fail');
-        } catch (TwoFactorUnavailableException $exception) {
+        } catch (TwoFactorException $exception) {
+            // Caught with every other two-factor failure
+            $this->assertInstanceOf(TwoFactorUnavailableException::class, $exception);
+            $this->assertSame(TwoFactorFailure::Unavailable, $exception->reason);
             $this->assertNull($exception->getPrevious());
             $this->assertStringNotContainsString('not base32', $exception->getMessage());
             $this->assertStringNotContainsString($setup->secret, $exception->getTraceAsString());
         }
+    }
+
+    public function test_every_change_locks_the_account_before_its_two_factor_row(): void
+    {
+        $user = UserModel::factory()->create();
+        $setup = $this->service()->beginSetup((string) $user->id);
+
+        $order = $this->lockedTablesDuring(fn () => $this->service()->confirmSetup((string) $user->id, $this->codeAt($setup->secret, 0)));
+        $this->assertSame(['users', 'user_two_factor'], array_slice($order, 0, 2));
+
+        $order = $this->lockedTablesDuring(fn () => $this->service()->disable((string) $user->id));
+        $this->assertSame(['users', 'user_two_factor'], array_slice($order, 0, 2));
+
+        $order = $this->lockedTablesDuring(fn () => $this->service()->beginSetup((string) $user->id));
+        $this->assertSame(['users', 'user_two_factor'], array_slice($order, 0, 2));
+    }
+
+    /**
+     * The tables read, in order, by the selects that lock (FOR UPDATE on PostgreSQL; on SQLite, which
+     * has no row locks, every select inside the change's transaction).
+     *
+     * @return list<string>
+     */
+    private function lockedTablesDuring(Closure $change): array
+    {
+        $tables = [];
+        $base = DB::transactionLevel();
+        DB::listen(static function (QueryExecuted $query) use (&$tables, $base): void {
+            $sql = strtolower($query->sql);
+            $locks = DB::getDriverName() === 'sqlite' ? DB::transactionLevel() > $base : str_contains($sql, 'for update');
+
+            if ($locks && str_starts_with($sql, 'select') && preg_match('/from "([a-z_]+)"/', $sql, $matches) === 1) {
+                $tables[] = $matches[1];
+            }
+        });
+
+        $change();
+        DB::flushQueryLog();
+        $this->app['events']->forget(QueryExecuted::class);
+
+        return array_values(array_unique($tables));
     }
 
     /**

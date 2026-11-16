@@ -8,6 +8,7 @@ use App\Application\Impersonation\Services\ImpersonationContextInterface;
 use App\Application\Impersonation\Services\ImpersonationServiceInterface;
 use App\Application\TwoFactor\Services\TwoFactorSessionSealInterface;
 use App\Domain\Impersonation\Enums\ImpersonationEndReason;
+use App\Domain\TwoFactor\Exceptions\TwoFactorUnavailableException;
 use App\Infrastructure\TwoFactor\TwoFactorSessionSeal;
 use Closure;
 use Filament\Facades\Filament;
@@ -22,12 +23,14 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
 
 /**
  * Signs out a session that does not hold its account's current seal (TwoFactorSessionSealInterface):
  * one opened before two-factor authentication was turned on, off or reset, or one of an account
- * with it on that skipped the challenge. An account that never had a seal is left alone.
+ * with it on that skipped the challenge. An account that never had a seal is left alone. A seal
+ * that cannot be read (the database failing) answers 503 and closes nothing.
  *
  * In the web group and the panel's middleware. Not inside the AuthenticateSession subclasses: the
  * web group does not run AuthenticateSession, and adding it there would also start signing out
@@ -58,7 +61,14 @@ final readonly class EnsureSessionPassedTwoFactor
             return $next($request);
         }
 
-        if ($this->seal->passes($request->session(), $owner)) {
+        try {
+            $passes = $this->seal->passes($request->session(), $owner);
+        } catch (TwoFactorUnavailableException) {
+            // Unknown, not a mismatch: refused for now, with the session and its cookies left alone
+            throw new HttpException(503);
+        }
+
+        if ($passes) {
             return $next($request);
         }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\TwoFactor\Services;
 
+use App\Domain\TwoFactor\Exceptions\TwoFactorUnavailableException;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Http\Request;
@@ -33,8 +34,11 @@ interface TwoFactorSessionSealInterface
     public function stamp(Session $session, string $userId): void;
 
     /**
-     * Whether the session may stay signed in as its owner. Fails closed: a seal it cannot read
-     * keeps no session.
+     * Whether the session may stay signed in as its owner: false only for a seal read that does not
+     * match, or two-factor authentication on with no seal.
+     *
+     * @throws TwoFactorUnavailableException when the seal cannot be read: nobody is let through,
+     *                                       but the session is not closed for it either
      */
     public function passes(Session $session, Authenticatable $owner): bool;
 
@@ -48,9 +52,10 @@ interface TwoFactorSessionSealInterface
 
     /**
      * Queues the cookie that lets a «remember me» cookie of an account with two-factor
-     * authentication on sign in again: call it right after the challenge accepted the code, once
-     * the guard has issued its own cookie. Bound to the account's remember token and seal, so
-     * renew() invalidates it.
+     * authentication on sign in again. Call it right after the challenge accepted the code and
+     * after login($user, true): the account needs its remember token by then (without one, or
+     * without a seal, nothing is issued and a warning is logged). Bound to the account's remember
+     * token and seal, so renew() invalidates it.
      */
     public function rememberAfterChallenge(string $userId): void;
 

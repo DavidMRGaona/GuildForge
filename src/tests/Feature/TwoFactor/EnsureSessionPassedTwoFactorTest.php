@@ -10,6 +10,8 @@ use App\Application\TwoFactor\Services\TwoFactorServiceInterface;
 use App\Application\TwoFactor\Services\TwoFactorSessionSealInterface;
 use App\Domain\Impersonation\Enums\ImpersonationEndReason;
 use App\Domain\Impersonation\Enums\ImpersonationMode;
+use App\Filament\Resources\TagResource;
+use App\Filament\Resources\TagResource\Pages\CreateTag;
 use App\Http\Middleware\EnsureSessionPassedTwoFactor;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\TwoFactor\TwoFactorSessionSeal;
@@ -24,6 +26,7 @@ use Illuminate\Session\Store;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use PragmaRX\Google2FA\Google2FA;
@@ -127,6 +130,34 @@ final class EnsureSessionPassedTwoFactorTest extends TestCase
             ->assertSessionMissing(TwoFactorSessionSeal::SESSION_KEY);
 
         $this->get(route('profile.show'))->assertRedirect(route('login'));
+        $this->assertGuest();
+    }
+
+    public function test_a_database_failure_answers_503_and_closes_no_session(): void
+    {
+        // No seal, so the check must ask whether two-factor authentication is on, and that fails
+        $user = UserModel::factory()->create();
+        Schema::drop('user_two_factor');
+
+        $response = $this->actingAs($user)
+            ->withSession([TwoFactorSessionSeal::SESSION_KEY => 'kept'])
+            ->get(route('profile.show'));
+
+        $response->assertStatus(503)->assertSessionHas(TwoFactorSessionSeal::SESSION_KEY, 'kept');
+        $this->assertNull($response->getCookie(TwoFactorSessionSeal::REMEMBER_COOKIE, false));
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_two_factor_on_without_a_seal_signs_out(): void
+    {
+        $user = UserModel::factory()->create();
+        $this->enable($user);
+        UserModel::query()->whereKey($user->id)->update(['session_seal' => null]);
+
+        $this->actingAs($this->fresh($user))
+            ->get(route('profile.show'))
+            ->assertRedirect(route('login'));
+
         $this->assertGuest();
     }
 
@@ -267,6 +298,53 @@ final class EnsureSessionPassedTwoFactorTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('components.0.effects.redirect', Filament::getPanel('admin')->getLoginUrl())
             ->assertJsonPath('components.0.snapshot', html_entity_decode($matches[1], ENT_QUOTES));
+    }
+
+    public function test_the_redirect_answer_has_the_shape_of_livewires_own(): void
+    {
+        // A real Livewire redirect from the core's panel: creating a tag sends to its edit page
+        $admin = UserModel::factory()->admin()->create();
+        $this->enable($admin);
+        $this->actingAs($this->fresh($admin))->withSession([TwoFactorSessionSeal::SESSION_KEY => $this->sealOf($admin)]);
+        $html = (string) $this->get(TagResource::getUrl('create'))->assertOk()->getContent();
+        $snapshot = $this->snapshotOf($html, CreateTag::class);
+
+        $real = $this->withHeaders(['X-Livewire' => 'true'])->postJson(Livewire::getUpdateUri(), [
+            'components' => [[
+                'snapshot' => $snapshot,
+                'updates' => ['data.name' => 'Example tag', 'data.slug' => 'example-tag'],
+                'calls' => [['path' => '', 'method' => 'create', 'params' => []]],
+            ]],
+        ])->assertOk();
+        $this->assertIsString($real->json('components.0.effects.redirect'));
+
+        // Ours, for a session without the seal: the same keys where the client looks for them
+        $ours = $this->withSession([TwoFactorSessionSeal::SESSION_KEY => 'stale'])
+            ->withHeaders(['X-Livewire' => 'true'])
+            ->postJson(Livewire::getUpdateUri(), [
+                'components' => [['snapshot' => $snapshot, 'updates' => [], 'calls' => []]],
+            ])->assertOk();
+
+        $this->assertSame(array_keys((array) $real->json()), array_keys((array) $ours->json()));
+        $this->assertSame(['snapshot', 'effects'], array_keys((array) $ours->json('components.0')));
+        $this->assertSame(Filament::getPanel('admin')->getLoginUrl(), $ours->json('components.0.effects.redirect'));
+        $this->assertSame($real->json('components.0.effects.redirectUsingNavigate') ?? null, $ours->json('components.0.effects.redirectUsingNavigate'));
+    }
+
+    private function snapshotOf(string $html, string $component): string
+    {
+        preg_match_all('/wire:snapshot="([^"]+)"/', $html, $matches);
+
+        foreach ($matches[1] as $encoded) {
+            $snapshot = html_entity_decode($encoded, ENT_QUOTES);
+            $decoded = json_decode($snapshot, true);
+
+            if (is_array($decoded) && ($decoded['memo']['name'] ?? null) === $component) {
+                return $snapshot;
+            }
+        }
+
+        $this->fail('No Livewire component '.$component.' on the page');
     }
 
     public function test_signing_out_while_impersonating_closes_the_impersonation(): void

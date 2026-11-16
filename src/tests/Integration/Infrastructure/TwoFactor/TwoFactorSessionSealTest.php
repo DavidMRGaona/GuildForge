@@ -6,6 +6,8 @@ namespace Tests\Integration\Infrastructure\TwoFactor;
 
 use App\Application\TwoFactor\Services\TwoFactorServiceInterface;
 use App\Application\TwoFactor\Services\TwoFactorSessionSealInterface;
+use App\Domain\TwoFactor\Exceptions\TwoFactorUnavailableException;
+use App\Domain\TwoFactor\TwoFactorFailure;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\TwoFactor\TwoFactorSessionSeal;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -17,6 +19,7 @@ use Illuminate\Session\Store;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use PragmaRX\Google2FA\Google2FA;
 use RuntimeException;
@@ -165,15 +168,47 @@ final class TwoFactorSessionSealTest extends TestCase
         $this->assertTrue($this->seal()->passes($session, $owner));
     }
 
-    public function test_it_fails_closed_when_the_seal_cannot_be_read(): void
+    public function test_a_seal_it_cannot_read_is_unknown_not_a_mismatch(): void
     {
         $log = Log::spy();
         $owner = $this->createStub(Authenticatable::class);
         $owner->method('getAuthIdentifier')->willThrowException(new RuntimeException('Unreadable'));
 
-        $this->assertFalse($this->seal()->passes($this->newSession(), $owner));
+        try {
+            $this->seal()->passes($this->newSession(), $owner);
+            $this->fail('Expected the check to refuse without an answer');
+        } catch (TwoFactorUnavailableException $exception) {
+            $this->assertSame(TwoFactorFailure::Unavailable, $exception->reason);
+            $this->assertNull($exception->getPrevious());
+        }
+
         $log->shouldHaveReceived('error')->once()->withArgs(
             static fn (string $message, array $context): bool => $context['exception'] === RuntimeException::class,
+        );
+    }
+
+    public function test_a_failing_two_factor_lookup_is_unknown_too(): void
+    {
+        $user = UserModel::factory()->create();
+        Schema::drop('user_two_factor');
+
+        $this->expectException(TwoFactorUnavailableException::class);
+
+        $this->seal()->passes($this->newSession(), $this->fresh($user));
+    }
+
+    public function test_the_challenge_cookie_needs_the_remember_token_and_says_so(): void
+    {
+        $log = Log::spy();
+        $user = UserModel::factory()->create();
+        $this->enable($user);
+        UserModel::query()->whereKey($user->id)->update(['remember_token' => null]);
+
+        $this->seal()->rememberAfterChallenge((string) $user->id);
+
+        $this->assertNull($this->app->make(CookieJar::class)->queued(TwoFactorSessionSeal::REMEMBER_COOKIE));
+        $log->shouldHaveReceived('warning')->once()->withArgs(
+            static fn (string $message, array $context): bool => $context['user_id'] === (string) $user->id,
         );
     }
 

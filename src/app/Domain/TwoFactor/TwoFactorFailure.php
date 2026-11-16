@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\TwoFactor;
 
 /**
- * Why a change to someone's two-factor authentication was refused. The value travels with
+ * Why two-factor authentication refused or could not do something. The value travels with
  * TwoFactorException, so screens can tell people what to do without parsing messages.
  */
 enum TwoFactorFailure: string
@@ -27,4 +27,7 @@ enum TwoFactorFailure: string
 
     /** An administrator is impersonating the account: no secret or mail is made for it */
     case Impersonating = 'impersonating';
+
+    /** Something it relies on failed (computing a code, drawing the QR code, reading the seal); try again later */
+    case Unavailable = 'unavailable';
 }

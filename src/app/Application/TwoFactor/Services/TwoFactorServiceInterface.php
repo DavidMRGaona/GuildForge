@@ -7,6 +7,7 @@ namespace App\Application\TwoFactor\Services;
 use App\Application\TwoFactor\DTOs\TwoFactorSetupDTO;
 use App\Application\TwoFactor\DTOs\TwoFactorStatusDTO;
 use App\Domain\TwoFactor\Exceptions\TwoFactorException;
+use App\Domain\TwoFactor\Exceptions\TwoFactorUnavailableException;
 use Illuminate\Contracts\Session\Session;
 
 /**
@@ -25,7 +26,9 @@ use Illuminate\Contracts\Session\Session;
  *   events in App\Domain\TwoFactor\Events, dispatched after the commit).
  * - Changes are refused while an administrator impersonates the account.
  *
- * Methods that change something throw TwoFactorException with a TwoFactorFailure reason.
+ * Methods that change something throw TwoFactorException with a TwoFactorFailure reason. Any
+ * method may throw TwoFactorUnavailableException (a TwoFactorException, reason Unavailable) when
+ * computing a code, the secret or the QR code fails.
  * Resetting it from the panel (core#771) lives in an interface of its own, so test doubles of this
  * one keep working.
  */
@@ -36,7 +39,7 @@ interface TwoFactorServiceInterface extends TwoFactorStatusReaderInterface
     /**
      * Starts setting it up: a new secret, replacing a setup not confirmed yet, never one in use.
      *
-     * @throws TwoFactorException AlreadyEnabled, UnknownAccount, Impersonating
+     * @throws TwoFactorException AlreadyEnabled, UnknownAccount, Impersonating, Unavailable
      */
     public function beginSetup(string $userId): TwoFactorSetupDTO;
 
@@ -48,18 +51,22 @@ interface TwoFactorServiceInterface extends TwoFactorStatusReaderInterface
      * @param  Session|null  $currentSession  the session to keep signed in (the request's); null keeps none
      * @return list<string>
      *
-     * @throws TwoFactorException NoPendingSetup, AlreadyEnabled, InvalidCode, Impersonating
+     * @throws TwoFactorException NoPendingSetup, AlreadyEnabled, InvalidCode, Impersonating, Unavailable
      */
     public function confirmSetup(string $userId, #[\SensitiveParameter] string $code, ?Session $currentSession = null): array;
 
     /**
      * Checks a code from the app for an account with it on. False for a wrong, malformed, expired
      * or already used code, and when it is off. Accepting a code uses up its step.
+     *
+     * @throws TwoFactorUnavailableException when the code cannot be computed
      */
     public function verify(string $userId, #[\SensitiveParameter] string $code): bool;
 
     /**
      * Uses up a recovery code. False for a wrong, malformed or already used one, and when it is off.
+     *
+     * @throws TwoFactorUnavailableException never today; part of the contract with the rest
      */
     public function useRecoveryCode(string $userId, #[\SensitiveParameter] string $code): bool;
 

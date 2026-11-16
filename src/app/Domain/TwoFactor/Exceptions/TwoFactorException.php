@@ -8,15 +8,17 @@ use App\Domain\TwoFactor\TwoFactorFailure;
 use DomainException;
 
 /**
- * A change to someone's two-factor authentication was refused. The message names the reason
- * only: never a code, a secret or the account.
+ * Two-factor authentication refused or could not do something. The message names the reason
+ * only: never a code, a secret or the account. TwoFactorUnavailableException (reason Unavailable)
+ * is the one subclass, so catching this class catches every two-factor failure.
  */
-final class TwoFactorException extends DomainException
+class TwoFactorException extends DomainException
 {
-    private function __construct(
+    protected function __construct(
         public readonly TwoFactorFailure $reason,
+        string $message = '',
     ) {
-        parent::__construct(sprintf('Two-factor authentication change refused: %s', $reason->value));
+        parent::__construct($message !== '' ? $message : sprintf('Two-factor authentication change refused: %s', $reason->value));
     }
 
     public static function because(TwoFactorFailure $reason): self
