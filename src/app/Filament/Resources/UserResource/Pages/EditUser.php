@@ -8,6 +8,7 @@ use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\UserServiceInterface;
 use App\Domain\Events\UserProfileUpdated;
 use App\Filament\Actions\ImpersonateAction;
+use App\Filament\Actions\ResetPublicProfileAction;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Resources\UserResource;
 use App\Filament\Resources\UserResource\Concerns\SavesRolesThroughTheGrantRule;
@@ -180,6 +181,7 @@ class EditUser extends EditRecord
                         ->success()
                         ->send();
                 }),
+            ResetPublicProfileAction::make(static fn (): UserModel => $record),
             Action::make('deactivate')
                 ->authorize('delete')
                 ->label(__('filament.users.actions.deactivate'))

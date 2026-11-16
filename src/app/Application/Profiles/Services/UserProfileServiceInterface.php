@@ -101,4 +101,14 @@ interface UserProfileServiceInterface
      * Takes the banner away (the accent gradient shows again) and releases it to the media library.
      */
     public function removeBanner(string $userId): void;
+
+    /**
+     * Moderation from the panel (core#746): takes away what the owner wrote and uploaded, the «Sobre mí»
+     * text and the banner (released to the media library), in one transaction under the row lock. The
+     * address, the visibility, the badge and the layout stay as the owner left them. Whoever calls it has
+     * already decided that the person may moderate this account.
+     *
+     * @return bool whether there was anything to take away (false too for an account without a profile)
+     */
+    public function resetContent(string $userId): bool;
 }

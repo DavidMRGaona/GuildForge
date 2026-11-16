@@ -47,6 +47,15 @@ class UserPolicy
         return $this->authorize($user, 'users.delete') && $user->id !== $model->id && $this->canManage($user, $model);
     }
 
+    /**
+     * «Restablecer perfil público» (core#746): only with the permission, and only for an account the person
+     * could edit, so nobody moderates the profile of somebody holding more than they do.
+     */
+    public function resetPublicProfile(UserModel $user, UserModel $model): bool
+    {
+        return $this->authorize($user, 'profiles.moderate') && $this->canManage($user, $model);
+    }
+
     private function canManage(UserModel $user, UserModel $model): bool
     {
         return app(RoleGrantPolicy::class)->canManageAccount($user, $model);

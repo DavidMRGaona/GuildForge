@@ -5,7 +5,7 @@ summary: Busca cuentas, crea usuarios, dales roles, desactívalas y, si hace fal
 category: users-and-roles
 audience: panel
 order: 10
-keywords: [usuarios, usuario, cuentas, cuenta, crear usuario, dar rol, asignar rol, quitar rol, desactivar, bloquear, restaurar, anonimizar, borrar cuenta, rgpd, gdpr, contraseña olvidada, verificación, cambiar correo, cambiar email, correo verificado]
+keywords: [usuarios, usuario, cuentas, cuenta, crear usuario, dar rol, asignar rol, quitar rol, desactivar, bloquear, restaurar, anonimizar, borrar cuenta, rgpd, gdpr, contraseña olvidada, verificación, cambiar correo, cambiar email, correo verificado, perfil público, restablecer perfil, sobre mí, banner, moderar perfil]
 related: [core.panel.roles-and-permissions, core.panel.association-role]
 conditions:
   permissions:
@@ -77,6 +77,15 @@ Están en el mismo menú **⋯** de la fila del usuario:
 
 > [!WARNING]
 > Anonimizar no se puede deshacer. Úsalo cuando alguien pida que borren sus datos.
+
+## Restablecer un perfil público
+
+Si el «Sobre mí» o el banner del perfil público de alguien no son adecuados, abre la cuenta y pulsa **Restablecer perfil público** arriba. Confirma en el diálogo y marca la casilla.
+
+Se borran el «Sobre mí» y el banner. La dirección del perfil, quién puede verlo y el orden de sus secciones no cambian, y la persona puede volver a escribirlos. Queda registrado quién lo hizo.
+
+> [!IMPORTANT]
+> Necesitas el permiso «Restablecer perfiles públicos», que no tiene ningún rol de entrada: se concede en el editor de roles.
 
 ## Historial de roles
 

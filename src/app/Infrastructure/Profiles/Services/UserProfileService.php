@@ -368,6 +368,27 @@ final readonly class UserProfileService implements UserProfileServiceInterface
         $this->releaseBanner($previous);
     }
 
+    public function resetContent(string $userId): bool
+    {
+        $reset = DB::transaction(static function () use ($userId): array {
+            $profile = UserProfileModel::query()->lockForUpdate()->find($userId);
+
+            if (! $profile instanceof UserProfileModel || (blank($profile->bio) && blank($profile->banner_public_id))) {
+                return [false, null];
+            }
+
+            $banner = $profile->banner_public_id;
+            $profile->update(['bio' => null, 'banner_public_id' => null]);
+
+            return [true, $banner];
+        });
+
+        // Only once nothing points at it any more
+        $this->releaseBanner($reset[1]);
+
+        return $reset[0];
+    }
+
     private function releaseBanner(?string $banner): void
     {
         if (is_string($banner) && $banner !== '') {

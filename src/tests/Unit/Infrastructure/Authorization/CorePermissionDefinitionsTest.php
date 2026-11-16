@@ -49,6 +49,17 @@ final class CorePermissionDefinitionsTest extends TestCase
         $this->assertNotEmpty($definition->description);
     }
 
+    public function test_moderating_public_profiles_is_never_suggested_nor_seeded(): void
+    {
+        $definition = $this->findDefinition('profiles.moderate');
+
+        $this->assertSame([], $definition->defaultRoles);
+        $this->assertSame('profiles', $definition->resource);
+        $this->assertSame('moderate', $definition->action);
+        $this->assertNotSame('authorization.permissions.profiles.moderate', $definition->label);
+        $this->assertNotEmpty($definition->description);
+    }
+
     public function test_sensitive_core_permissions_have_a_description(): void
     {
         foreach (['settings.manage', 'users.assign_roles', 'modules.configure', 'modules.manage', 'pages.manage', 'admin.access'] as $key) {
