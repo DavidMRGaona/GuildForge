@@ -11,9 +11,12 @@ import type { ProfileEditor } from '@/types/profileEditor';
  * Type and size are checked here for a quick answer and again on the server, which stores it; the
  * 1500 × 500 crop is only how it is shown. The page reloads its props after each change, so the
  * preview behind shows the new banner, and the rest of the editor keeps what is being written.
+ * Closing the panel while a change is on its way cancels it (`cancelOnClose`, core#759).
  */
 const props = defineProps<{
     editor: ProfileEditor;
+    /** Hands the panel what cancels the request on its way; returns what to call once it finished */
+    cancelOnClose: (cancel: () => void) => () => void;
 }>();
 
 const { t } = useI18n();
@@ -25,6 +28,18 @@ const input = ref<HTMLInputElement | null>(null);
 const localPreview = ref<string | null>(null);
 const busy = ref(false);
 const error = ref<string | null>(null);
+/** The request on its way is done: closing the panel no longer has to cancel it */
+let finished: (() => void) | null = null;
+
+function track(cancel: () => void): void {
+    finished?.();
+    finished = props.cancelOnClose(cancel);
+}
+
+function untrack(): void {
+    finished?.();
+    finished = null;
+}
 
 const sizeMb = computed(() => Math.round(props.editor.limits.bannerKilobytes / 1024));
 const storedUrl = computed(() =>
@@ -81,10 +96,12 @@ function onChosen(event: Event): void {
             forceFormData: true,
             preserveScroll: true,
             preserveState: true,
+            onCancelToken: (token) => track(() => token.cancel()),
             onError: (errors) => {
                 error.value = errors.banner ?? t('publicProfile.editor.banner.failed');
             },
             onFinish: () => {
+                untrack();
                 busy.value = false;
                 forgetLocalPreview();
             },
@@ -99,7 +116,9 @@ function remove(): void {
     router.delete(props.editor.urls.banner, {
         preserveScroll: true,
         preserveState: true,
+        onCancelToken: (token) => track(() => token.cancel()),
         onFinish: () => {
+            untrack();
             busy.value = false;
         },
     });

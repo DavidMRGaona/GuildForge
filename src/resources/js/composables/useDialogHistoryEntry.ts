@@ -15,6 +15,13 @@ export interface DialogHistoryEntry {
      */
     keep(visit: { replace?: boolean }): void;
     /**
+     * A request `keep` marked, still on its way: cancelled as soon as the dialog's entry is left (closing,
+     * Back or Forward, saving, a visit elsewhere). Inertia writes the history with the `replace` it took
+     * when sending, so its answer would otherwise take the entry that is current by then, the page's.
+     * Pass what cancels it (`onCancelToken` gives it); call what this returns once the request finished.
+     */
+    cancelOnLeave(cancel: () => void): () => void;
+    /**
      * Goes back to the page's own entry before a request that answers with the page again (saving): that
      * page takes the page's entry, so nothing is left to go back to. Resolved once the browser is there.
      */
@@ -49,6 +56,8 @@ export interface DialogHistoryEntry {
  *
  * A request of the dialog's own that ends on another page (a session that expired sends the banner's
  * upload to the sign-in page) leaves the history as Inertia wrote it: nothing is copied or gone back.
+ * One still on its way when the dialog's entry is left is cancelled (`cancelOnLeave`, core#759), so
+ * its answer never replaces the page's entry and Back from the sign-in page skips the page.
  *
  * Known limits, which the History API leaves no way around:
  * - Reloading with the dialog open loads its entry as the page, so one Back stays on the same address.
@@ -59,6 +68,9 @@ export interface DialogHistoryEntry {
  * - Closing or saving through `back()` leaves the dialog's entry behind as a forward step, holding the
  *   page as it is when closing, and as it was before saving when saving: an entry cannot be taken
  *   out of the history.
+ * - Cancelling only stops the browser waiting for the answer: a request the server already got runs
+ *   there to the end. A banner uploaded or taken away just before closing is then stored all the same
+ *   (whole or not at all), and the page shows it on its next visit instead of at once.
  */
 export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): DialogHistoryEntry {
     let pageHref = '';
@@ -74,6 +86,15 @@ export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): Di
     /** Inertia is loading a document again (`location`): no entry is put back */
     let reloading = false;
     let stopListening: () => void = () => undefined;
+    /** Its own requests on their way, marked to replace the dialog's entry */
+    const inFlight = new Set<() => void>();
+
+    /** The dialog's entry was left: whatever it marked must not answer on another entry */
+    function cancelOwnRequests(): void {
+        const cancels = [...inFlight];
+        inFlight.clear();
+        cancels.forEach((cancel) => cancel());
+    }
 
     /** Whether an address is the page's: the fragment (`#main-content`, say) is not another page */
     function isPage(href: string): boolean {
@@ -112,6 +133,8 @@ export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): Di
             return;
         }
 
+        cancelOwnRequests();
+
         if (toPage) {
             event.stopImmediatePropagation();
             window.history.replaceState(pageState, '', pageHref);
@@ -134,6 +157,8 @@ export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): Di
         }
 
         current = false;
+        // Before going back: its answer would land on the page's entry
+        cancelOwnRequests();
 
         // A request of its own ended on another page: that page's entry is Inertia's now
         if (!isPage(window.location.href)) {
@@ -183,10 +208,23 @@ export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): Di
                 visit.replace = true;
             }
         },
+        cancelOnLeave(cancel): () => void {
+            // Only a request `keep` marked can take an entry that is not the dialog's
+            if (!current) {
+                return () => undefined;
+            }
+
+            inFlight.add(cancel);
+
+            return () => {
+                inFlight.delete(cancel);
+            };
+        },
         handOver(visit): void {
             if (current) {
                 visit.replace = true;
                 current = false;
+                cancelOwnRequests();
             }
         },
         release,

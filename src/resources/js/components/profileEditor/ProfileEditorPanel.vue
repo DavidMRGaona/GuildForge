@@ -24,7 +24,8 @@ import type { ProfileEditor, ProfileEditorForm } from '@/types/profileEditor';
  * A modal dialog: the whole page behind (`#app`, header and footer included) is inert and a veil over it
  * takes the clicks, Tab stays inside, and Escape, the veil, Back or a visit elsewhere ask first when
  * changes would be lost (so does leaving the site). Back closes it: it opens on an entry of its own in
- * the history (`useDialogHistoryEntry`). The page behind still scrolls, except on a phone-sized screen,
+ * the history (`useDialogHistoryEntry`), and leaving that entry (closing, Back, saving) cancels a banner
+ * change still on its way, whose answer would otherwise take the page's entry. The page behind still scrolls, except on a phone-sized screen,
  * where the panel covers it whole.
  */
 const props = defineProps<{
@@ -391,7 +392,10 @@ onBeforeUnmount(() => {
                     </p>
                 </div>
 
-                <ProfileBannerField :editor="editor" />
+                <ProfileBannerField
+                    :editor="editor"
+                    :cancel-on-close="historyEntry.cancelOnLeave"
+                />
 
                 <div v-if="editor.canShowMembership" data-field="show_membership">
                     <div class="flex items-start gap-3">

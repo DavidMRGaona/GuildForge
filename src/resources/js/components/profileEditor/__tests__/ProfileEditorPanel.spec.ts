@@ -374,6 +374,161 @@ describe('ProfileEditorPanel', () => {
         expect(inertia).toHaveBeenCalledTimes(1);
     });
 
+    interface UploadInFlight {
+        /** Inertia's answer on another page: written to the history unless the upload was cancelled */
+        answerOn(url: string): void;
+        cancelled(): boolean;
+    }
+
+    /**
+     * The banner's upload as Inertia 3 sends it: `before` first (where the panel marks it), then its cancel
+     * token. Inertia takes `replace` when sending and writes the history with it once the answer arrives.
+     */
+    function bannerUploadInFlight(): UploadInFlight {
+        let answerOn: (url: string) => void = () => undefined;
+        let cancelled = false;
+
+        vi.spyOn(router, 'post').mockImplementation((url, _data, options) => {
+            const visit: { url: URL; method: string; replace?: boolean } = {
+                url: new URL(
+                    typeof url === 'string' || url instanceof URL ? url : url.url,
+                    window.location.origin
+                ),
+                method: 'post',
+            };
+            document.dispatchEvent(
+                new CustomEvent('inertia:before', { cancelable: true, detail: { visit } })
+            );
+            const replace = visit.replace === true;
+
+            options?.onCancelToken?.({
+                cancel: () => {
+                    if (!cancelled) {
+                        cancelled = true;
+                        options?.onCancel?.();
+                        options?.onFinish?.({} as never);
+                    }
+                },
+            } as never);
+
+            answerOn = (to: string): void => {
+                if (cancelled) {
+                    return;
+                }
+                const state = { page: { url: to } };
+                if (replace) {
+                    window.history.replaceState(state, '', to);
+                } else {
+                    window.history.pushState(state, '', to);
+                }
+                options?.onFinish?.({} as never);
+                document.dispatchEvent(new CustomEvent('inertia:finish', { detail: { visit } }));
+            };
+        });
+
+        return { answerOn: (url) => answerOn(url), cancelled: () => cancelled };
+    }
+
+    async function chooseBanner(wrapper: VueWrapper): Promise<void> {
+        URL.createObjectURL = vi.fn(() => 'blob:banner');
+        URL.revokeObjectURL = vi.fn();
+        const input = wrapper.get('[data-testid="banner-input"]');
+        Object.defineProperty(input.element, 'files', {
+            value: [new File(['banner'], 'banner.png', { type: 'image/png' })],
+            configurable: true,
+        });
+        await input.trigger('change');
+    }
+
+    /** The profile in the history after another page, as it is when the panel opens on it */
+    function onTheProfile(): void {
+        window.history.pushState({ page: { url: '/eventos' } }, '', '/eventos');
+        window.history.pushState(
+            { page: { url: '/miembros/ana-prueba' } },
+            '',
+            '/miembros/ana-prueba'
+        );
+    }
+
+    it('closing it while the banner uploads cancels the upload, so its answer never takes the page’s entry', async () => {
+        onTheProfile();
+        const upload = bannerUploadInFlight();
+        const inertia = inertiaHearsPopstate();
+        const wrapper = mountPanel();
+        await chooseBanner(wrapper);
+
+        await wrapper.get('[data-testid="profile-editor"]').trigger('keydown', { key: 'Escape' });
+        expect(wrapper.emitted('close')).toHaveLength(1);
+        wrapper.unmount();
+
+        expect(upload.cancelled()).toBe(true);
+        // The session expired meanwhile: Inertia would send the upload's answer to the sign-in page
+        upload.answerOn('/login');
+        expect(window.location.pathname).toBe('/miembros/ana-prueba');
+        expect(window.history.state).not.toEqual({ page: { url: '/login' } });
+        expect(inertia).not.toHaveBeenCalled();
+    });
+
+    it('going back while the banner uploads cancels the upload too', async () => {
+        onTheProfile();
+        const upload = bannerUploadInFlight();
+        const inertia = inertiaHearsPopstate();
+        const wrapper = mountPanel();
+        await chooseBanner(wrapper);
+
+        window.history.back();
+        expect(wrapper.emitted('close')).toHaveLength(1);
+        expect(upload.cancelled()).toBe(true);
+        wrapper.unmount();
+
+        upload.answerOn('/login');
+        expect(window.location.pathname).toBe('/miembros/ana-prueba');
+        expect(inertia).not.toHaveBeenCalled();
+
+        // Back from the profile leaves it, as it would without the panel
+        window.history.back();
+        expect(window.location.pathname).toBe('/eventos');
+    });
+
+    it('saving while the banner uploads cancels the upload before leaving the panel’s entry', async () => {
+        onTheProfile();
+        const upload = bannerUploadInFlight();
+        const back = vi.spyOn(window.history, 'back');
+        let cancelledWhenGoingBack: boolean | undefined;
+        back.mockImplementationOnce(() => {
+            cancelledWhenGoingBack = upload.cancelled();
+            back.mockRestore();
+            window.history.back();
+        });
+        vi.spyOn(router, 'put').mockImplementation(() => undefined);
+        const wrapper = mountPanel();
+        await chooseBanner(wrapper);
+
+        await wrapper.get('[data-testid="bio-input"]').setValue('Hola');
+        await wrapper.get('form').trigger('submit');
+        await flushPromises();
+
+        expect(cancelledWhenGoingBack).toBe(true);
+        upload.answerOn('/login');
+        expect(window.location.pathname).toBe('/miembros/ana-prueba');
+        wrapper.unmount();
+    });
+
+    it('leaves alone an upload that already answered when it closes', async () => {
+        onTheProfile();
+        const upload = bannerUploadInFlight();
+        const wrapper = mountPanel();
+        await chooseBanner(wrapper);
+
+        // Answered on the profile itself, on the panel's entry
+        upload.answerOn('/miembros/ana-prueba');
+        await wrapper.get('[data-testid="profile-editor"]').trigger('keydown', { key: 'Escape' });
+        wrapper.unmount();
+
+        expect(upload.cancelled()).toBe(false);
+        expect(window.location.pathname).toBe('/miembros/ana-prueba');
+    });
+
     it('takes a new fragment in the address for the same page, still keeping its latest state', () => {
         window.history.pushState(
             { page: { url: '/miembros/ana-prueba' } },
