@@ -529,23 +529,17 @@ class AppServiceProvider extends ServiceProvider
             )
         );
 
-        // The sign-in challenge (core#770): per pending sign-in and address, and per account, so
-        // opening new pending sign-ins from other addresses does not give the attempts back (the
-        // panel's challenge is limited per account by Filament). A pending sign-in is dropped after
-        // ten wrong codes
+        // The site's sign-in challenge (core#770), per pending sign-in and address. The account's
+        // own limits, shared with the panel, are TwoFactorChallengeInterface::check()'s
         RateLimiter::for(
             'two-factor-challenge',
-            static function (Request $request): array {
+            static function (Request $request): Limit {
                 $pending = $request->hasSession()
                     ? app(PendingTwoFactorLoginInterface::class)->current($request->session())
                     : null;
 
-                return [
-                    Limit::perMinute(TwoFactorChallengeRule::ATTEMPTS_PER_MINUTE)
-                        ->by('pending:'.($pending->token ?? 'none').'|'.($request->ip() ?? 'unknown')),
-                    Limit::perMinute(TwoFactorChallengeRule::ATTEMPTS_PER_MINUTE)
-                        ->by('account:'.($pending->userId ?? 'none')),
-                ];
+                return Limit::perMinute(TwoFactorChallengeRule::ATTEMPTS_PER_MINUTE)
+                    ->by('pending:'.($pending->token ?? 'none').'|'.($request->ip() ?? 'unknown'));
             }
         );
 

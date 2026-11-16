@@ -30,4 +30,7 @@ enum TwoFactorFailure: string
 
     /** Something it relies on failed (computing a code, drawing the QR code, reading the seal); try again later */
     case Unavailable = 'unavailable';
+
+    /** Too many codes checked for the account in the last minute or hour, on the site and the panel together (core#770) */
+    case TooManyAttempts = 'too_many_attempts';
 }

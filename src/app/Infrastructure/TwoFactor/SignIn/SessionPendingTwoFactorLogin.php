@@ -6,6 +6,7 @@ namespace App\Infrastructure\TwoFactor\SignIn;
 
 use App\Application\TwoFactor\DTOs\PendingTwoFactorLoginDTO;
 use App\Application\TwoFactor\Services\PendingTwoFactorLoginInterface;
+use App\Application\TwoFactor\Services\TwoFactorStatusReaderInterface;
 use App\Domain\TwoFactor\TwoFactorChallengeRule;
 use App\Infrastructure\TwoFactor\TwoFactorSessionSeal;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -17,14 +18,19 @@ use Illuminate\Support\Str;
 /**
  * Keeps, next to the pending sign-in, a keyed fingerprint of the account's password hash as it was
  * when the password was given: a password changed or reset meanwhile (or the account gone) ends
- * it, as the panel's login, which checks the password again with the code.
+ * it, as the panel's login, which checks the password again with the code. So does two-factor
+ * authentication turned off or reset meanwhile: there is no code left to ask for.
  */
 final readonly class SessionPendingTwoFactorLogin implements PendingTwoFactorLoginInterface
 {
     public const string SESSION_KEY = 'two_factor_login';
 
+    /** Its own domain for the HMAC key, so it is never the same value as another use of the application key */
+    private const string KEY_DOMAIN = 'two-factor-pending|';
+
     public function __construct(
         private AuthFactory $auth,
+        private TwoFactorStatusReaderInterface $twoFactor,
         #[\SensitiveParameter] private string $key,
     ) {}
 
@@ -48,7 +54,8 @@ final readonly class SessionPendingTwoFactorLogin implements PendingTwoFactorLog
 
         if (! $pending instanceof PendingTwoFactorLoginDTO
             || TwoFactorChallengeRule::hasExpired($pending->startedAt, $this->now())
-            || ! $this->passwordUnchanged($pending->userId, $stored)) {
+            || ! $this->passwordUnchanged($pending->userId, $stored)
+            || ! $this->twoFactor->isEnabled($pending->userId)) {
             $this->forget($session);
 
             return null;
@@ -73,6 +80,8 @@ final readonly class SessionPendingTwoFactorLogin implements PendingTwoFactorLog
             return false;
         }
 
+        // Read and written in two steps: requests sent at once may count one failure less, but the
+        // route's limit per pending sign-in and the account's limit in the challenge bound that
         $session->put(self::SESSION_KEY.'.failures', $failures);
 
         return true;
@@ -108,7 +117,7 @@ final readonly class SessionPendingTwoFactorLogin implements PendingTwoFactorLog
         $user = $this->auth->guard('web')->getProvider()->retrieveById($userId);
 
         return $user instanceof Authenticatable
-            ? hash_hmac('sha256', $user->getAuthPassword(), $this->key)
+            ? hash_hmac('sha256', $user->getAuthPassword(), self::KEY_DOMAIN.$this->key)
             : null;
     }
 

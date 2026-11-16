@@ -38,6 +38,7 @@ return [
     'two_factor' => [
         'invalid_code' => 'The code is not valid or has already been used.',
         'unavailable' => 'We cannot check the code right now. Please try again in a few minutes.',
+        'too_many_attempts' => 'Too many codes in a row. Please try again in :seconds seconds.',
         'sign_in_again' => 'Please sign in again.',
         'too_many_failures' => 'Too many wrong codes. Please sign in again.',
         'recovery_codes_left' => '{0} You have used your last recovery code: generate new ones in your account settings.|{1} You have :count recovery code left.|[2,*] You have :count recovery codes left.',

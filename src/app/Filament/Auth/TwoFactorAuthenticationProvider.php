@@ -89,7 +89,11 @@ final class TwoFactorAuthenticationProvider implements MultiFactorAuthentication
             $result = $this->check($userId, is_string($value) ? $value : '', $usesRecoveryCode());
 
             if (! $result->passed) {
-                $fail(__($result->failure === TwoFactorFailure::Unavailable ? 'auth.two_factor.unavailable' : 'auth.two_factor.invalid_code'));
+                $fail(match ($result->failure) {
+                    TwoFactorFailure::TooManyAttempts => __('auth.two_factor.too_many_attempts', ['seconds' => $result->retryAfter]),
+                    TwoFactorFailure::Unavailable => __('auth.two_factor.unavailable'),
+                    default => __('auth.two_factor.invalid_code'),
+                });
             }
         };
     }

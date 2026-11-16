@@ -33,11 +33,13 @@ final class PanelLogin extends Login
 {
     private const string PENDING_CACHE_PREFIX = 'two_factor:panel_pending:';
 
+    private const string FAILURES_SUFFIX = ':failures';
+
     public function authenticate(): ?LoginResponse
     {
         $pendingKey = $this->pendingKey();
 
-        if ($pendingKey !== null && ! is_array(Cache::get($pendingKey))) {
+        if ($pendingKey !== null && ! is_int(Cache::get($pendingKey))) {
             $this->signInAgain('auth.two_factor.sign_in_again');
 
             return null;
@@ -65,14 +67,15 @@ final class PanelLogin extends Login
             $opened = $this->pendingKey();
 
             if (! $response instanceof LoginResponse && $opened !== null) {
-                Cache::put($opened, ['started_at' => Carbon::now()->getTimestamp(), 'failures' => 0], TwoFactorChallengeRule::PENDING_SECONDS);
+                Cache::put($opened, Carbon::now()->getTimestamp(), TwoFactorChallengeRule::PENDING_SECONDS);
+                Cache::put($opened.self::FAILURES_SUFFIX, 0, TwoFactorChallengeRule::PENDING_SECONDS);
             }
 
             return $response;
         }
 
         if ($response instanceof LoginResponse && Filament::auth()->check()) {
-            Cache::forget($pendingKey);
+            $this->forgetPending($pendingKey);
             app(TwoFactorChallengeInterface::class)->completeSignIn(
                 session()->driver(),
                 (string) Filament::auth()->id(),
@@ -84,33 +87,27 @@ final class PanelLogin extends Login
         return $response;
     }
 
+    /**
+     * Counts a wrong code with an atomic increment, so requests sent at once cannot both read the
+     * same count. False when that was the last one allowed, or the pending sign-in is gone.
+     */
     private function recordFailure(string $pendingKey): bool
     {
-        $state = Cache::get($pendingKey);
+        $failures = Cache::increment($pendingKey.self::FAILURES_SUFFIX);
 
-        if (! is_array($state) || ! is_int($state['started_at'] ?? null) || ! is_int($state['failures'] ?? null)) {
-            return false;
-        }
-
-        $failures = $state['failures'] + 1;
-
-        if (TwoFactorChallengeRule::isExhausted($failures)) {
-            Cache::forget($pendingKey);
+        if (! is_int($failures) || TwoFactorChallengeRule::isExhausted($failures)) {
+            $this->forgetPending($pendingKey);
 
             return false;
         }
-
-        $left = TwoFactorChallengeRule::PENDING_SECONDS - (Carbon::now()->getTimestamp() - $state['started_at']);
-
-        if ($left <= 0) {
-            Cache::forget($pendingKey);
-
-            return false;
-        }
-
-        Cache::put($pendingKey, ['started_at' => $state['started_at'], 'failures' => $failures], $left);
 
         return true;
+    }
+
+    private function forgetPending(string $pendingKey): void
+    {
+        Cache::forget($pendingKey);
+        Cache::forget($pendingKey.self::FAILURES_SUFFIX);
     }
 
     /**

@@ -41,6 +41,7 @@ return [
     'two_factor' => [
         'invalid_code' => 'El código no es válido o ya se ha usado.',
         'unavailable' => 'Ahora no podemos comprobar el código. Inténtalo de nuevo en unos minutos.',
+        'too_many_attempts' => 'Demasiados códigos seguidos. Vuelve a intentarlo en :seconds segundos.',
         'sign_in_again' => 'Vuelve a iniciar sesión.',
         'too_many_failures' => 'Demasiados códigos incorrectos. Vuelve a iniciar sesión.',
         'recovery_codes_left' => '{0} Has usado tu último código de recuperación: genera códigos nuevos en los ajustes de la cuenta.|{1} Te queda :count código de recuperación.|[2,*] Te quedan :count códigos de recuperación.',

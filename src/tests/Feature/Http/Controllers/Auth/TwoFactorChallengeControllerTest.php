@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature\Http\Controllers\Auth;
 
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\TwoFactor\Services\TwoFactorChallengeInterface;
+use App\Application\TwoFactor\Services\TwoFactorResetInterface;
 use App\Application\TwoFactor\Services\TwoFactorServiceInterface;
 use App\Domain\Events\UserLoggedIn;
 use App\Domain\TwoFactor\TwoFactorChallengeRule;
@@ -210,8 +212,57 @@ final class TwoFactorChallengeControllerTest extends TestCase
 
         $this->assertGuest();
         $log->shouldHaveReceived('warning')->withArgs(
-            fn (string $message, array $context): bool => $context === ['user_id' => (string) $user->id, 'reason' => 'invalid_code', 'recovery_code' => false]
+            fn (string $message, array $context): bool => $context === ['user_id' => (string) $user->id, 'reason' => 'invalid_code']
         );
+    }
+
+    public function test_a_wrong_recovery_code_is_logged_with_its_own_reason(): void
+    {
+        $log = Log::spy();
+        $user = $this->userWithTwoFactor();
+        $this->postPassword($user);
+
+        $this->post(self::CHALLENGE, ['code' => 'aaaaa-aaaaa', 'recovery' => true])->assertSessionHasErrors('code');
+
+        $log->shouldHaveReceived('warning')->withArgs(
+            fn (string $message, array $context): bool => $context === ['user_id' => (string) $user->id, 'reason' => 'invalid_recovery_code']
+        );
+    }
+
+    public function test_turning_it_off_meanwhile_ends_the_pending_sign_in(): void
+    {
+        $user = $this->userWithTwoFactor();
+        $this->postPassword($user);
+        $this->app->make(TwoFactorServiceInterface::class)->disable((string) $user->id);
+
+        $this->post(self::CHALLENGE, ['code' => $this->codeAt(1)])
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('warning', __('auth.two_factor.sign_in_again'));
+
+        $this->assertGuest();
+    }
+
+    public function test_a_reset_by_the_administration_meanwhile_ends_the_pending_sign_in(): void
+    {
+        $user = $this->userWithTwoFactor();
+        $this->postPassword($user);
+        $this->app->make(TwoFactorResetInterface::class)->reset((string) $user->id, null);
+
+        $this->get(self::CHALLENGE)->assertRedirect(route('login'));
+        $this->post(self::CHALLENGE, ['code' => $this->codeAt(1)])->assertRedirect(route('login'));
+
+        $this->assertGuest();
+    }
+
+    public function test_an_account_gone_after_the_code_signs_nobody_in(): void
+    {
+        $this->startSession();
+
+        $signedIn = $this->app->make(TwoFactorChallengeInterface::class)
+            ->signIn(session()->driver(), '01900000-0000-7000-8000-000000000000', remember: true);
+
+        $this->assertFalse($signedIn);
+        $this->assertGuest();
     }
 
     public function test_a_recovery_code_signs_in_and_says_how_many_are_left(): void

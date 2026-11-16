@@ -18,6 +18,11 @@ return [
             'body' => 'La administración de :site ha quitado el doble factor de autenticación de tu cuenta el :when. Hemos cerrado todas las sesiones abiertas de tu cuenta. Para iniciar sesión basta con tu contraseña; puedes volver a activar el doble factor desde los ajustes de la cuenta.',
             'not_you' => 'Si no lo has pedido tú, cambia tu contraseña cuanto antes y avisa a la administración del sitio.',
         ],
+        'repeated_code_failures' => [
+            'subject' => 'Intentos de entrar en tu cuenta de :site',
+            'body' => 'Alguien ha intentado entrar en tu cuenta de :site con tu contraseña y un código incorrecto varias veces seguidas (la última, el :when). El doble factor lo ha impedido.',
+            'not_you' => 'Si no has sido tú, alguien conoce tu contraseña: cámbiala cuanto antes.',
+        ],
         'recovery_code_used' => [
             'subject' => 'Se ha usado un código de recuperación en :site',
             'body' => 'Se ha usado uno de tus códigos de recuperación para iniciar sesión en tu cuenta de :site el :when.',

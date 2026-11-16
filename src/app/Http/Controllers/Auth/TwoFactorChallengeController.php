@@ -12,6 +12,7 @@ use App\Application\TwoFactor\Services\TwoFactorChallengeInterface;
 use App\Domain\TwoFactor\TwoFactorFailure;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\TwoFactorChallengeRequest;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -65,7 +66,10 @@ final class TwoFactorChallengeController extends Controller
 
         if ($check->passed) {
             $this->pendingLogins->forget($session);
-            $this->challenge->signIn($session, $pending->userId, $pending->remember);
+
+            if (! $this->challenge->signIn($session, $pending->userId, $pending->remember)) {
+                return $this->signInAgain();
+            }
 
             $redirect = redirect()->intended(route('home'));
 
@@ -74,6 +78,14 @@ final class TwoFactorChallengeController extends Controller
                 : $redirect->with('warning', trans_choice('auth.two_factor.recovery_codes_left', $check->recoveryCodesRemaining, [
                     'count' => $check->recoveryCodesRemaining,
                 ]));
+        }
+
+        if ($check->failure === TwoFactorFailure::TooManyAttempts) {
+            // The account's limit, shared with the panel: answered like the route's own throttle
+            throw new ThrottleRequestsException(
+                (string) __('auth.two_factor.too_many_attempts', ['seconds' => $check->retryAfter]),
+                headers: ['Retry-After' => (string) $check->retryAfter],
+            );
         }
 
         if ($check->failure === TwoFactorFailure::Unavailable) {

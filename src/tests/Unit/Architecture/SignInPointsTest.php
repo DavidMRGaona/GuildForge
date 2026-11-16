@@ -22,43 +22,55 @@ final class SignInPointsTest extends TestCase
     use ReadsFiles;
 
     /**
-     * Calls on the auth manager or a guard that sign in, check a password, or set the account of
-     * the request: Auth::x(), auth()->x(), app('auth')->x(), ...->guard(...)->x(), $guard->x().
+     * Methods that sign in or check a password, on any receiver ($this->auth->login(),
+     * $guard->attempt(), $auth->loginUsingId(), a static Auth::...); and setting the account of
+     * the request or validating credentials on the auth manager or a guard (on any receiver those
+     * names are too common: forms validate too).
      */
-    private const string PATTERN = '/(?:Auth::|auth\(\)->|app\([\'"]auth[\'"]\)->|guard\([^)]*\)->|\$guard->|Filament::auth\(\)->)'
-        .'(login|loginUsingId|attempt|attemptWhen|once|onceUsingId|onceBasic|basic|setUser|validate)\s*\(/';
+    private const string PATTERN = '/(?:->|::)(login|loginUsingId|attempt|attemptWhen|once|onceUsingId|onceBasic)\s*\('
+        .'|(?:Auth::|auth\(\)->|app\([\'"]auth[\'"]\)->|guard\([^)]*\)->|\$guard->|Filament::auth\(\)->)(setUser|validate|basic)\s*\(/';
+
+    /** Where application code lives: the code itself and the route files */
+    private const array DIRECTORIES = ['app', 'routes'];
 
     /**
-     * File (relative to app/) => the calls it may make, and why.
+     * File (relative to src/) => the calls it may make, and why.
      *
      * @var array<string, list<string>>
      */
     private const array ALLOWED = [
         // The password step: validate() checks without signing in; login() only for an account
         // with two-factor authentication off
-        'Infrastructure/Services/AuthService.php' => ['login', 'validate'],
+        'app/Infrastructure/Services/AuthService.php' => ['login', 'validate'],
         // After the challenge accepted the code (site); the panel's sign-in is Filament's, through PanelLogin
-        'Infrastructure/TwoFactor/SignIn/TwoFactorChallenge.php' => ['login'],
+        'app/Infrastructure/TwoFactor/SignIn/TwoFactorChallenge.php' => ['login'],
+        // Registers the panel's login page (PanelLogin, with the challenge), not a sign-in
+        'app/Providers/Filament/AdminPanelProvider.php' => ['login'],
+        // Its own private attempt() helper around the cache, not a guard
+        'app/Infrastructure/Modules/Services/CacheModuleChangeWindow.php' => ['attempt'],
         // Impersonation sets the account of each request and never signs anybody in
-        'Http/Middleware/ApplyImpersonation.php' => ['setUser'],
-        'Infrastructure/Impersonation/ImpersonationService.php' => ['setUser'],
+        'app/Http/Middleware/ApplyImpersonation.php' => ['setUser'],
+        'app/Infrastructure/Impersonation/ImpersonationService.php' => ['setUser'],
     ];
 
     public function test_only_the_known_places_sign_in(): void
     {
-        $app = dirname(__DIR__, 3).'/app';
+        $root = dirname(__DIR__, 3);
         $found = [];
-        $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($app, FilesystemIterator::SKIP_DOTS));
 
-        foreach ($files as $file) {
-            if (! $file instanceof SplFileInfo || $file->getExtension() !== 'php') {
-                continue;
-            }
+        foreach (self::DIRECTORIES as $directory) {
+            $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root.'/'.$directory, FilesystemIterator::SKIP_DOTS));
 
-            $calls = $this->callsIn(self::readFile($file->getPathname()));
+            foreach ($files as $file) {
+                if (! $file instanceof SplFileInfo || $file->getExtension() !== 'php') {
+                    continue;
+                }
 
-            if ($calls !== []) {
-                $found[substr($file->getPathname(), strlen($app) + 1)] = $calls;
+                $calls = $this->callsIn(self::readFile($file->getPathname()));
+
+                if ($calls !== []) {
+                    $found[substr($file->getPathname(), strlen($root) + 1)] = $calls;
+                }
             }
         }
 
@@ -96,6 +108,11 @@ final class SignInPointsTest extends TestCase
             'guard variable' => ['$guard->setUser($user);', 'setUser'],
             'container' => ["app('auth')->login(\$user);", 'login'],
             'panel guard' => ['Filament::auth()->login($user);', 'login'],
+            'injected auth manager' => ['$this->auth->login($user);', 'login'],
+            'injected guard property' => ['$this->guard->login($user, true);', 'login'],
+            'any guard variable' => ['$sessionGuard->attempt($credentials);', 'attempt'],
+            'auth variable by id' => ['$auth->loginUsingId($id);', 'loginUsingId'],
+            'guard in a route file' => ["Route::get('/x', fn () => Auth::onceUsingId(1));", 'onceUsingId'],
         ];
     }
 
@@ -108,7 +125,8 @@ final class SignInPointsTest extends TestCase
             'line comment' => ['// Never Auth::login() here'],
             'doc comment' => ['/** Auth::attempt() is not used */'],
             'string' => ["\$text = 'Auth::login(\$user)';"],
-            'own method' => ['$this->attempt("open", $callback);'],
+            'a form validating' => ['$this->form->validate();'],
+            'another login word' => ['$this->loginAttempts(); $user->loginCount();'],
             'reading the user' => ['Auth::user(); Auth::check(); $guard->viaRemember();'],
         ];
     }
@@ -141,7 +159,8 @@ final class SignInPointsTest extends TestCase
         }
 
         preg_match_all(self::PATTERN, $code, $matches);
-        $calls = array_values(array_unique($matches[1]));
+        // One group per branch of the pattern: the name is in whichever matched
+        $calls = array_values(array_unique(array_filter([...$matches[1], ...$matches[2]], static fn (string $call): bool => $call !== '')));
         sort($calls);
 
         return $calls;
