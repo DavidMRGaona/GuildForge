@@ -1,5 +1,6 @@
 import { onBeforeUnmount, onMounted } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { onHistoryPop } from '@/utils/historyPops';
 
 export interface DialogHistoryEntry {
     /**
@@ -20,7 +21,7 @@ export interface DialogHistoryEntry {
  * An entry of its own in the browser's history while a modal dialog is open (core#743), so going back,
  * the natural way to close a panel that fills a phone's screen, closes it instead of leaving the page.
  * Inertia 3 never fires `before` for Back or Forward and would swap the page under the dialog, so this
- * listens first (capture) and keeps the event from it whenever the dialog decides.
+ * hears them first (`onHistoryPop`) and keeps the event from it whenever the dialog decides.
  *
  * `onLeave(toPage)` is asked when the person goes back or forward from the dialog's entry: `toPage` is
  * true when it lands on the page under the dialog (close it then), false when it lands on another page
@@ -40,14 +41,11 @@ export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): Di
     let mounted = false;
     /** A Back the dialog asked for itself: the page under it must not hear of it */
     let ownBack: (() => void) | null = null;
+    let stopListening: () => void = () => undefined;
 
     function push(): void {
         window.history.pushState(pageState, '', pageHref);
         current = true;
-    }
-
-    function stopListening(): void {
-        window.removeEventListener('popstate', onPopState, true);
     }
 
     function onPopState(event: PopStateEvent): void {
@@ -107,7 +105,7 @@ export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): Di
         mounted = true;
         pageHref = window.location.href;
         pageState = window.history.state as unknown;
-        window.addEventListener('popstate', onPopState, true);
+        stopListening = onHistoryPop(onPopState);
         push();
     });
 

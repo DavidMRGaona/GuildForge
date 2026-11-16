@@ -6,7 +6,11 @@ import ProfileEditorPanel from '../ProfileEditorPanel.vue';
 import en from '@/locales/en';
 import es from '@/locales/es';
 import type { ProfileEditor, ProfileEditorForm } from '@/types/profileEditor';
+import { listenToHistoryFirst } from '@/utils/historyPops';
 import { editorFixture } from './fixtures';
+
+// As the app does before Inertia starts
+listenToHistoryFirst();
 
 function mountPanel(editor: ProfileEditor = editorFixture()): VueWrapper {
     const i18n = createI18n({ legacy: false, locale: 'es', messages: { es, en } });
@@ -121,10 +125,15 @@ describe('ProfileEditorPanel', () => {
 
     const listeners: Array<() => void> = [];
 
-    /** What Inertia would hear of the browser's Back and Forward: it must not swap the page under the panel */
+    /**
+     * What Inertia would hear of the browser's Back and Forward: it must not swap the page under the panel.
+     * Added before the panel, as Inertia adds its own when the app starts. Chrome runs the listeners of
+     * `window` in the order they were added, capture or not; happy-dom runs capture ones first, so this
+     * one captures to be run in Chrome's order.
+     */
     function inertiaHearsPopstate(): ReturnType<typeof vi.fn> {
         const heard = vi.fn();
-        window.addEventListener('popstate', heard);
+        window.addEventListener('popstate', heard, true);
         listeners.push(heard);
 
         return heard;
@@ -132,15 +141,15 @@ describe('ProfileEditorPanel', () => {
 
     afterEach(() => {
         listeners.splice(0).forEach((listener) => {
-            window.removeEventListener('popstate', listener);
+            window.removeEventListener('popstate', listener, true);
         });
     });
 
     it('opens on an entry of its own in the history, so going back closes it', () => {
         const before = window.history.length;
         const href = window.location.href;
-        const wrapper = mountPanel();
         const inertia = inertiaHearsPopstate();
+        const wrapper = mountPanel();
 
         expect(window.history.length).toBe(before + 1);
         expect(window.location.href).toBe(href);
@@ -158,8 +167,8 @@ describe('ProfileEditorPanel', () => {
     it('going back with changes asks first, and staying puts its entry back', async () => {
         const confirm = vi.fn<(message?: string) => boolean>(() => false);
         vi.stubGlobal('confirm', confirm);
-        const wrapper = mountPanel();
         const inertia = inertiaHearsPopstate();
+        const wrapper = mountPanel();
         await wrapper.get('[data-testid="bio-input"]').setValue('Hola');
 
         window.history.back();
@@ -183,8 +192,8 @@ describe('ProfileEditorPanel', () => {
     });
 
     it('closing it otherwise takes its entry away, leaving the page as it is now', async () => {
-        const wrapper = mountPanel();
         const inertia = inertiaHearsPopstate();
+        const wrapper = mountPanel();
         // Inertia keeps the page on the panel's entry (after a new banner, say): the page's own entry gets it
         window.history.replaceState({ page: { url: 'latest' } }, '');
         const back = vi.spyOn(window.history, 'back');
@@ -226,8 +235,8 @@ describe('ProfileEditorPanel', () => {
             '',
             '/miembros/ana-prueba'
         );
-        const wrapper = mountPanel();
         const inertia = inertiaHearsPopstate();
+        const wrapper = mountPanel();
         await wrapper.get('[data-testid="bio-input"]').setValue('Hola');
 
         window.history.go(-2);
@@ -252,8 +261,8 @@ describe('ProfileEditorPanel', () => {
             options?.onError?.({ handle: 'No disponible.' });
             options?.onFinish?.({} as never);
         });
-        const wrapper = mountPanel();
         const inertia = inertiaHearsPopstate();
+        const wrapper = mountPanel();
 
         await wrapper.get('[data-testid="bio-input"]').setValue('Hola');
         await wrapper.get('form').trigger('submit');

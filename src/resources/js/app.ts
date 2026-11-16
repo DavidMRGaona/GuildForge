@@ -19,6 +19,10 @@ import { setCloudinaryConfig, type CloudinaryConfig } from '@/utils/cloudinary';
 import { removeServerSeoTags, useServerSeo } from '@/composables/useSeo';
 import { useBellVisible } from '@/composables/useSiteNotifications';
 import { useUnreadTitle } from '@/composables/useUnreadTitle';
+import { listenToHistoryFirst } from '@/utils/historyPops';
+
+// Before Inertia adds its own listener: a dialog may then keep Back from swapping the page under it
+listenToHistoryFirst();
 
 const i18n = createI18n({
     legacy: false,
