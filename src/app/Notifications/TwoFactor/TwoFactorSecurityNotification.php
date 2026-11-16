@@ -31,7 +31,8 @@ abstract class TwoFactorSecurityNotification extends Notification implements Has
     ) {}
 
     /**
-     * Key under two_factor.mail: enabled, disabled, reset, recovery_code_used, recovery_codes_regenerated.
+     * Key under two_factor.mail: enabled, disabled, reset, recovery_code_used, recovery_codes_regenerated,
+     * repeated_code_failures.
      */
     abstract protected function type(): string;
 

@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Tests\Feature\Http\Middleware;
 
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\TwoFactor\Services\TwoFactorServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use Livewire\Livewire;
+use PragmaRX\Google2FA\Google2FA;
 use Tests\TestCase;
 
 final class EnsureSiteIsNotInMaintenanceTest extends TestCase
@@ -107,6 +109,25 @@ final class EnsureSiteIsNotInMaintenanceTest extends TestCase
         $editor = UserModel::factory()->editor()->create();
 
         $this->post('/iniciar-sesion', ['email' => $editor->email, 'password' => 'password'])
+            ->assertRedirect();
+
+        $this->assertAuthenticatedAs($editor);
+    }
+
+    public function test_editor_with_two_factor_completes_the_challenge_during_maintenance(): void
+    {
+        $this->enableMaintenance();
+        $editor = UserModel::factory()->editor()->create();
+        $twoFactor = app(TwoFactorServiceInterface::class);
+        $secret = $twoFactor->beginSetup((string) $editor->id)->secret;
+        $twoFactor->confirmSetup((string) $editor->id, (new Google2FA)->getCurrentOtp($secret));
+
+        $this->post('/iniciar-sesion', ['email' => $editor->email, 'password' => 'password'])
+            ->assertRedirect('/iniciar-sesion/verificacion');
+
+        // The second step is not the maintenance page, before or after the code
+        $this->get('/iniciar-sesion/verificacion')->assertOk();
+        $this->post('/iniciar-sesion/verificacion', ['code' => (new Google2FA)->oathTotp($secret, intdiv(time(), 30) + 1)])
             ->assertRedirect();
 
         $this->assertAuthenticatedAs($editor);

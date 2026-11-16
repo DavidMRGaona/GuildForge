@@ -18,6 +18,11 @@ return [
             'body' => 'The administrators of :site removed two-factor authentication from your account on :when. Every open session of your account has been closed. Your password is enough to sign in; you can turn two-factor authentication on again from your account settings.',
             'not_you' => 'If you did not ask for this, change your password as soon as possible and tell the site\'s administrators.',
         ],
+        'repeated_code_failures' => [
+            'subject' => 'Attempts to sign in to your :site account',
+            'body' => 'Someone tried to sign in to your :site account with your password and a wrong code several times in a row (the last one on :when). Two-factor authentication stopped them.',
+            'not_you' => 'If it was not you, someone knows your password: change it as soon as possible.',
+        ],
         'recovery_code_used' => [
             'subject' => 'A recovery code was used at :site',
             'body' => 'One of your recovery codes was used to sign in to your :site account on :when.',
@@ -40,5 +45,13 @@ return [
         'refused' => 'Two-factor authentication could not be reset.',
         'nothing' => 'The account :email has no two-factor authentication on: nothing to remove.',
         'done' => 'Two-factor authentication removed from :email. Its sessions were closed and the person was mailed.',
+    ],
+
+    // The panel's sign-in challenge (core#770)
+    'panel' => [
+        'label' => 'Authenticator app',
+        'app_code' => 'App code',
+        'recovery_code' => 'Recovery code',
+        'use_recovery_code' => 'Use a recovery code',
     ],
 ];

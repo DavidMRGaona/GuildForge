@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
+use App\Application\DTOs\LoginAttemptOutcome;
 use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\AuthServiceInterface;
+use App\Application\TwoFactor\Services\PendingTwoFactorLoginInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
@@ -20,6 +22,7 @@ final class LoginController extends Controller
     public function __construct(
         private readonly AuthServiceInterface $authService,
         private readonly SeoMetadataFactoryInterface $seo,
+        private readonly PendingTwoFactorLoginInterface $pendingLogins,
     ) {}
 
     public function create(): Response
@@ -35,12 +38,19 @@ final class LoginController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         $credentials = $request->validated();
+        // A plain form sends "1": the rule accepts it, but the service takes a bool
+        $remember = $request->boolean('remember');
 
-        if (! $this->authService->attemptLogin(
-            $credentials['email'],
-            $credentials['password'],
-            $credentials['remember'] ?? false,
-        )) {
+        $attempt = $this->authService->attemptLogin($credentials['email'], $credentials['password'], $remember);
+
+        if ($attempt->outcome === LoginAttemptOutcome::TwoFactorRequired && $attempt->userId !== null) {
+            // Nobody is signed in yet; begin() gives the session a new id
+            $this->pendingLogins->begin($request->session(), $attempt->userId, $remember);
+
+            return redirect()->route('login.two-factor');
+        }
+
+        if ($attempt->outcome !== LoginAttemptOutcome::SignedIn) {
             throw ValidationException::withMessages([
                 'email' => [__('auth.failed')],
             ]);

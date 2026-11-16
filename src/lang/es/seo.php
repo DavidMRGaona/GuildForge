@@ -22,6 +22,7 @@ return [
         'knowledge' => 'Centro de ayuda',
         'about' => 'Sobre :name',
         'login' => 'Iniciar sesión',
+        'two_factor_challenge' => 'Verificación en dos pasos',
         'register' => 'Crear cuenta',
         'forgot_password' => 'Recuperar contraseña',
         'reset_password' => 'Restablecer contraseña',

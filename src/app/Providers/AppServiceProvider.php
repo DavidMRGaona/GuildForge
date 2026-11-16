@@ -81,6 +81,7 @@ use App\Application\Services\UserServiceInterface;
 use App\Application\Surveys\Contracts\SubjectEndSurveyChoiceInterface;
 use App\Application\Surveys\Contracts\SurveySubjectLinksInterface;
 use App\Application\Surveys\Services\SurveySubjectSourceRegistryInterface;
+use App\Application\TwoFactor\Services\PendingTwoFactorLoginInterface;
 use App\Application\Updates\Services\CoreUpdateCheckerInterface;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Application\Updates\Services\GitHubReleaseFetcherInterface;
@@ -107,6 +108,7 @@ use App\Domain\Repositories\GalleryRepositoryInterface;
 use App\Domain\Repositories\PhotoRepositoryInterface;
 use App\Domain\Repositories\SlugRedirectRepositoryInterface;
 use App\Domain\Repositories\UserRepositoryInterface;
+use App\Domain\TwoFactor\TwoFactorChallengeRule;
 use App\Filament\Support\PanelSelects;
 use App\Infrastructure\Auth\UuidEloquentUserProvider;
 use App\Infrastructure\Calendar\Export\AddToCalendarLinksFactory;
@@ -520,9 +522,25 @@ class AppServiceProvider extends ServiceProvider
         // Rate limiter for login: 5 attempts per minute per IP + email combo
         RateLimiter::for(
             'login',
+            // The email as the account is found (trimmed, in lower case), so writing it another way
+            // does not give the attempts back
             static fn (Request $request) => Limit::perMinute(5)->by(
-                ($request->input('email', '') ?: '').'|'.($request->ip() ?? 'unknown')
+                (is_string($email = $request->input('email')) ? mb_strtolower(trim($email)) : '').'|'.($request->ip() ?? 'unknown')
             )
+        );
+
+        // The site's sign-in challenge (core#770), per pending sign-in and address. The account's
+        // own limits, shared with the panel, are TwoFactorChallengeInterface::check()'s
+        RateLimiter::for(
+            'two-factor-challenge',
+            static function (Request $request): Limit {
+                $pending = $request->hasSession()
+                    ? app(PendingTwoFactorLoginInterface::class)->current($request->session())
+                    : null;
+
+                return Limit::perMinute(TwoFactorChallengeRule::ATTEMPTS_PER_MINUTE)
+                    ->by('pending:'.($pending->token ?? 'none').'|'.($request->ip() ?? 'unknown'));
+            }
         );
 
         // Rate limiter for contact form: 3 submissions per minute per IP

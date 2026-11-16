@@ -85,6 +85,18 @@ final class LoginControllerTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
+    public function test_the_login_limit_counts_an_email_however_it_is_written(): void
+    {
+        UserModel::factory()->create(['email' => 'persona@example.com']);
+
+        foreach (['persona@example.com', 'Persona@example.com', 'PERSONA@example.com', ' persona@example.com', 'persona@EXAMPLE.com'] as $email) {
+            $this->post('/iniciar-sesion', ['email' => $email, 'password' => 'wrong'])->assertSessionHasErrors();
+        }
+
+        $this->post('/iniciar-sesion', ['email' => 'Persona@Example.com', 'password' => 'password'])->assertStatus(429);
+        $this->assertGuest();
+    }
+
     public function test_user_can_logout(): void
     {
         $user = UserModel::factory()->create();

@@ -1,0 +1,148 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Infrastructure\TwoFactor\SignIn;
+
+use App\Application\TwoFactor\DTOs\PendingTwoFactorLoginDTO;
+use App\Application\TwoFactor\Services\PendingTwoFactorLoginInterface;
+use App\Application\TwoFactor\Services\TwoFactorStatusReaderInterface;
+use App\Domain\TwoFactor\TwoFactorChallengeRule;
+use App\Infrastructure\TwoFactor\TwoFactorSessionSeal;
+use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Contracts\Auth\Factory as AuthFactory;
+use Illuminate\Contracts\Session\Session;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
+
+/**
+ * Keeps, next to the pending sign-in, a keyed fingerprint of the account's password hash as it was
+ * when the password was given: a password changed or reset meanwhile (or the account gone) ends
+ * it, as the panel's login, which checks the password again with the code. So does two-factor
+ * authentication turned off or reset meanwhile: there is no code left to ask for.
+ */
+final readonly class SessionPendingTwoFactorLogin implements PendingTwoFactorLoginInterface
+{
+    public const string SESSION_KEY = 'two_factor_login';
+
+    /** Its own domain for the HMAC key, so it is never the same value as another use of the application key */
+    private const string KEY_DOMAIN = 'two-factor-pending|';
+
+    public function __construct(
+        private AuthFactory $auth,
+        private TwoFactorStatusReaderInterface $twoFactor,
+        #[\SensitiveParameter] private string $key,
+    ) {}
+
+    public function begin(Session $session, string $userId, bool $remember): PendingTwoFactorLoginDTO
+    {
+        $pending = new PendingTwoFactorLoginDTO(Str::random(40), $userId, $remember, $this->now(), 0);
+
+        // A new id before anything else is written, so a session id fixed beforehand gets nothing,
+        // and no seal from an earlier sign-in: only the challenge stamps it
+        $session->regenerate();
+        $session->forget(TwoFactorSessionSeal::SESSION_KEY);
+        $this->write($session, $pending, $this->fingerprintOf($userId) ?? '');
+
+        return $pending;
+    }
+
+    public function current(Session $session): ?PendingTwoFactorLoginDTO
+    {
+        $stored = $session->get(self::SESSION_KEY);
+        $pending = $this->read($stored);
+
+        if (! $pending instanceof PendingTwoFactorLoginDTO
+            || TwoFactorChallengeRule::hasExpired($pending->startedAt, $this->now())
+            || ! $this->passwordUnchanged($pending->userId, $stored)
+            || ! $this->twoFactor->isEnabled($pending->userId)) {
+            $this->forget($session);
+
+            return null;
+        }
+
+        return $pending;
+    }
+
+    public function recordFailure(Session $session): bool
+    {
+        $pending = $this->current($session);
+
+        if (! $pending instanceof PendingTwoFactorLoginDTO) {
+            return false;
+        }
+
+        $failures = $pending->failures + 1;
+
+        if (TwoFactorChallengeRule::isExhausted($failures)) {
+            $this->forget($session);
+
+            return false;
+        }
+
+        // Read and written in two steps: requests sent at once may count one failure less, but the
+        // route's limit per pending sign-in and the account's limit in the challenge bound that
+        $session->put(self::SESSION_KEY.'.failures', $failures);
+
+        return true;
+    }
+
+    public function forget(Session $session): void
+    {
+        $session->forget(self::SESSION_KEY);
+    }
+
+    private function write(Session $session, PendingTwoFactorLoginDTO $pending, string $fingerprint): void
+    {
+        $session->put(self::SESSION_KEY, [
+            'token' => $pending->token,
+            'user_id' => $pending->userId,
+            'remember' => $pending->remember,
+            'started_at' => $pending->startedAt,
+            'failures' => $pending->failures,
+            'fingerprint' => $fingerprint,
+        ]);
+    }
+
+    private function passwordUnchanged(string $userId, mixed $stored): bool
+    {
+        $current = $this->fingerprintOf($userId);
+        $kept = is_array($stored) ? ($stored['fingerprint'] ?? null) : null;
+
+        return $current !== null && is_string($kept) && hash_equals($current, $kept);
+    }
+
+    private function fingerprintOf(string $userId): ?string
+    {
+        $user = $this->auth->guard('web')->getProvider()->retrieveById($userId);
+
+        return $user instanceof Authenticatable
+            ? hash_hmac('sha256', $user->getAuthPassword(), self::KEY_DOMAIN.$this->key)
+            : null;
+    }
+
+    private function read(mixed $stored): ?PendingTwoFactorLoginDTO
+    {
+        if (! is_array($stored)
+            || ! is_string($stored['token'] ?? null)
+            || ! is_string($stored['user_id'] ?? null)
+            || ! is_bool($stored['remember'] ?? null)
+            || ! is_int($stored['started_at'] ?? null)
+            || ! is_int($stored['failures'] ?? null)) {
+            return null;
+        }
+
+        return new PendingTwoFactorLoginDTO(
+            $stored['token'],
+            $stored['user_id'],
+            $stored['remember'],
+            $stored['started_at'],
+            $stored['failures'],
+        );
+    }
+
+    private function now(): int
+    {
+        return Carbon::now()->getTimestamp();
+    }
+}

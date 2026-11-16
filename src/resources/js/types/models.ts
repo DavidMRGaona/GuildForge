@@ -62,6 +62,12 @@ export interface LoginFormData {
     remember: boolean;
 }
 
+/** The second step of signing in (core#770): a code from the app, or a recovery code */
+export interface TwoFactorChallengeFormData {
+    code: string;
+    recovery: boolean;
+}
+
 export interface ForgotPasswordFormData {
     email: string;
 }

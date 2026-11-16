@@ -7,6 +7,7 @@ namespace App\Infrastructure\Services;
 use App\Application\Authorization\Services\MemberRoleServiceInterface;
 use App\Application\DTOs\CreateUserDTO;
 use App\Application\DTOs\ImageOptimizationSettingsDTO;
+use App\Application\DTOs\LoginAttemptDTO;
 use App\Application\DTOs\Response\UserResponseDTO;
 use App\Application\DTOs\UpdateUserDTO;
 use App\Application\Factories\ResponseDTOFactoryInterface;
@@ -14,6 +15,7 @@ use App\Application\Services\AuthServiceInterface;
 use App\Application\Services\ImageOptimizationServiceInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\Services\UserModelQueryServiceInterface;
+use App\Application\TwoFactor\Services\TwoFactorStatusReaderInterface;
 use App\Domain\Events\RegistrationFieldsSubmitted;
 use App\Domain\Events\UserLoggedIn;
 use App\Domain\Events\UserLoggedOut;
@@ -46,6 +48,7 @@ final readonly class AuthService implements AuthServiceInterface
         private UserModelQueryServiceInterface $userModelQuery,
         private MemberRoleServiceInterface $memberRole,
         private SiteBrandingServiceInterface $siteBranding,
+        private TwoFactorStatusReaderInterface $twoFactor,
         private AvatarPath $avatarPaths = new AvatarPath,
     ) {}
 
@@ -71,20 +74,37 @@ final readonly class AuthService implements AuthServiceInterface
         return $this->dtoFactory->createUserDTO($userModel);
     }
 
-    public function attemptLogin(string $email, string $password, bool $remember = false): bool
+    public function attemptLogin(string $email, #[\SensitiveParameter] string $password, bool $remember = false): LoginAttemptDTO
     {
-        $result = Auth::attempt([
+        $credentials = [
             'email' => strtolower($email),
             'password' => $password,
-        ], $remember);
+        ];
+        $guard = Auth::guard('web');
 
-        if ($result) {
-            /** @var UserModel $user */
-            $user = Auth::user();
-            Event::dispatch(new UserLoggedIn((string) $user->id, $user->email));
+        // validate() only checks: nothing is signed in and no «remember me» cookie is queued
+        // before the second factor (core#770)
+        if (! $guard->validate($credentials)) {
+            return LoginAttemptDTO::failed();
         }
 
-        return $result;
+        $user = $guard->getLastAttempted();
+
+        if (! $user instanceof UserModel) {
+            return LoginAttemptDTO::failed();
+        }
+
+        $guard->getProvider()->rehashPasswordIfRequired($user, $credentials);
+        $userId = (string) $user->id;
+
+        if ($this->twoFactor->isEnabled($userId)) {
+            return LoginAttemptDTO::twoFactorRequired($userId);
+        }
+
+        $guard->login($user, $remember);
+        Event::dispatch(new UserLoggedIn($userId, $user->email));
+
+        return LoginAttemptDTO::signedIn($userId);
     }
 
     public function logout(): void

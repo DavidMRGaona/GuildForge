@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { useForm, Link, setLayoutProps } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { useForm, Link, setLayoutProps, usePage } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import type { AuthLayoutProps } from '@/types/layouts';
@@ -8,6 +9,7 @@ import FormCheckbox from '@/components/form/FormCheckbox.vue';
 import { useAuth } from '@/composables/useAuth';
 import { useNotifications } from '@/composables/useNotifications';
 import { useRoutes } from '@/composables/useRoutes';
+import type { FlashMessages } from '@/types';
 import type { LoginFormData } from '@/types/models';
 
 const { t } = useI18n();
@@ -21,6 +23,10 @@ setLayoutProps<AuthLayoutProps>({
 const { authSettings } = useAuth();
 const notifications = useNotifications();
 const routes = useRoutes();
+
+// «Vuelve a iniciar sesión» when the second step expired or took too many wrong codes (core#770)
+const page = usePage<{ flash?: FlashMessages }>();
+const warning = computed(() => page.props.flash?.warning);
 
 const form = useForm<LoginFormData>({
     email: '',
@@ -37,6 +43,10 @@ const submit = () => {
 </script>
 
 <template>
+    <div v-if="warning" class="mb-4 rounded-md bg-warning-light p-4" role="status">
+        <p class="text-sm text-warning">{{ warning }}</p>
+    </div>
+
     <form class="space-y-6" @submit.prevent="submit">
         <div>
             <label for="email" class="block text-sm font-medium text-base-secondary">

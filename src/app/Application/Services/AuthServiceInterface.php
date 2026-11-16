@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Services;
 
 use App\Application\DTOs\CreateUserDTO;
+use App\Application\DTOs\LoginAttemptDTO;
 use App\Application\DTOs\Response\UserResponseDTO;
 use App\Application\DTOs\UpdateUserDTO;
 use Illuminate\Http\UploadedFile;
@@ -20,9 +21,11 @@ interface AuthServiceInterface
     public function register(CreateUserDTO $dto, array $registrationFields = []): UserResponseDTO;
 
     /**
-     * Attempt to log in a user.
+     * Checks an email and a password. An account without two-factor authentication is signed in
+     * (with «remember me» when asked). One with it on is not: nothing is signed in and no cookie
+     * is queued until the sign-in challenge accepts a code (core#770, TwoFactorChallengeInterface).
      */
-    public function attemptLogin(string $email, string $password, bool $remember = false): bool;
+    public function attemptLogin(string $email, #[\SensitiveParameter] string $password, bool $remember = false): LoginAttemptDTO;
 
     /**
      * Log out the current user.

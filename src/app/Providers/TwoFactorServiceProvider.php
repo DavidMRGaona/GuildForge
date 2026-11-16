@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Application\TwoFactor\Services\PendingTwoFactorLoginInterface;
+use App\Application\TwoFactor\Services\TwoFactorChallengeInterface;
 use App\Application\TwoFactor\Services\TwoFactorResetInterface;
 use App\Application\TwoFactor\Services\TwoFactorServiceInterface;
 use App\Application\TwoFactor\Services\TwoFactorSessionSealInterface;
 use App\Application\TwoFactor\Services\TwoFactorStatusReaderInterface;
 use App\Domain\TwoFactor\Events\RecoveryCodesRegenerated;
 use App\Domain\TwoFactor\Events\RecoveryCodeUsed;
+use App\Domain\TwoFactor\Events\RepeatedTwoFactorCodeFailures;
 use App\Domain\TwoFactor\Events\TwoFactorDisabled;
 use App\Domain\TwoFactor\Events\TwoFactorEnabled;
 use App\Domain\TwoFactor\Events\TwoFactorReset;
@@ -18,10 +21,13 @@ use App\Infrastructure\QrCodes\TotpQrCodeRenderer;
 use App\Infrastructure\QrCodes\TotpQrCodeRendererInterface;
 use App\Infrastructure\TwoFactor\Listeners\SendTwoFactorSecurityNotice;
 use App\Infrastructure\TwoFactor\Listeners\StampSessionSealOnLogin;
+use App\Infrastructure\TwoFactor\SignIn\SessionPendingTwoFactorLogin;
+use App\Infrastructure\TwoFactor\SignIn\TwoFactorChallenge;
 use App\Infrastructure\TwoFactor\TwoFactorResetService;
 use App\Infrastructure\TwoFactor\TwoFactorService;
 use App\Infrastructure\TwoFactor\TwoFactorSessionSeal;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Contracts\Auth\Factory as AuthFactory;
 use Illuminate\Contracts\Cookie\QueueingFactory as CookieJar;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -42,6 +48,13 @@ final class TwoFactorServiceProvider extends ServiceProvider
             (string) config('app.key'),
         ));
 
+        $this->app->bind(TwoFactorChallengeInterface::class, TwoFactorChallenge::class);
+        $this->app->bind(PendingTwoFactorLoginInterface::class, static fn ($app): SessionPendingTwoFactorLogin => new SessionPendingTwoFactorLogin(
+            $app->make(AuthFactory::class),
+            $app->make(TwoFactorStatusReaderInterface::class),
+            (string) config('app.key'),
+        ));
+
         $this->app->bind(TotpQrCodeRendererInterface::class, static fn ($app): TotpQrCodeRendererInterface => new TotpQrCodeRenderer(
             new QrCodeContentPolicy((string) config('app.url'), $app->environment('local', 'testing')),
         ));
@@ -54,6 +67,7 @@ final class TwoFactorServiceProvider extends ServiceProvider
         Event::listen(TwoFactorDisabled::class, [SendTwoFactorSecurityNotice::class, 'disabled']);
         Event::listen(TwoFactorReset::class, [SendTwoFactorSecurityNotice::class, 'reset']);
         Event::listen(RecoveryCodeUsed::class, [SendTwoFactorSecurityNotice::class, 'recoveryCodeUsed']);
+        Event::listen(RepeatedTwoFactorCodeFailures::class, [SendTwoFactorSecurityNotice::class, 'repeatedCodeFailures']);
         Event::listen(RecoveryCodesRegenerated::class, [SendTwoFactorSecurityNotice::class, 'recoveryCodesRegenerated']);
     }
 }

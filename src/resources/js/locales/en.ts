@@ -717,6 +717,17 @@ export default {
             registerLink: 'Sign up',
             error: 'Error signing in. Please check your credentials.',
         },
+        twoFactorChallenge: {
+            title: 'Two-step verification',
+            subtitleApp: 'Enter the code shown by your authenticator app',
+            subtitleRecovery: 'Enter one of your recovery codes',
+            appCode: 'App code',
+            recoveryCode: 'Recovery code',
+            useRecoveryCode: 'Use a recovery code',
+            useAppCode: 'Use the app code',
+            submit: 'Verify',
+            back: 'Back to sign in',
+        },
         forgotPassword: {
             title: 'Forgot password',
             subtitle: "We'll send you a link to reset your password",
