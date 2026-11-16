@@ -17,7 +17,9 @@ use App\Domain\Profiles\ProfileVisibility;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Tests\TestCase;
@@ -56,9 +58,21 @@ final class PublicProfileCardTest extends TestCase
     public function test_an_id_in_capitals_is_the_same_account(): void
     {
         $owner = $this->owner(ProfileVisibility::Public);
+        $this->app->forgetScopedInstances();
+        $cards = $this->app->make(ProfileCardServiceInterface::class);
+        $reads = 0;
+        DB::listen(static function (QueryExecuted $query) use (&$reads): void {
+            if (preg_match('/from\s+["`]?user_profiles["`]?(\s|$)/i', $query->sql) === 1) {
+                $reads++;
+            }
+        });
 
-        $this->assertSame('ana-prueba', $this->card(strtoupper($owner->id), null)?->handle);
-        $this->assertTrue($this->card(strtoupper($owner->id), $owner)?->isOwner);
+        // One request: the id in capitals is the same row the request already read, on any database
+        // (PostgreSQL's uuid ignores case, so only the request's rows tell them apart)
+        $this->assertSame('ana-prueba', $cards->card($owner->id, null)?->handle);
+        $this->assertSame('ana-prueba', $cards->card(strtoupper($owner->id), null)?->handle);
+        $this->assertTrue($cards->card(strtoupper($owner->id), $owner)?->isOwner);
+        $this->assertSame(1, $reads);
     }
 
     public function test_the_owner_gets_their_own_card_whatever_the_visibility(): void
