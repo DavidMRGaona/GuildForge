@@ -814,6 +814,7 @@ export interface RouteDefinitions {
     };
     auth: {
         login: string;
+        twoFactorChallenge: string;
         register: string;
         logout: string;
         forgotPassword: string;
@@ -952,6 +953,7 @@ export interface ApiResponse<T> {
 export interface FlashMessages {
     success?: string;
     error?: string;
+    warning?: string;
 }
 ```
 
@@ -1056,6 +1058,10 @@ export interface LoginFormData {
     email: string;
     password: string;
     remember: boolean;
+}
+export interface TwoFactorChallengeFormData {
+    code: string;
+    recovery: boolean;
 }
 export interface ForgotPasswordFormData {
     email: string;

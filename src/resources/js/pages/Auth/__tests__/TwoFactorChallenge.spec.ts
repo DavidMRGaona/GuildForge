@@ -4,10 +4,9 @@ import { createI18n } from 'vue-i18n';
 import TwoFactorChallenge from '../TwoFactorChallenge.vue';
 import en from '@/locales/en';
 import es from '@/locales/es';
+import type { TwoFactorChallengeFormData } from '@/types/models';
 
 type FakeForm = Record<string, unknown> & {
-    code: string;
-    recovery: boolean;
     errors: Record<string, string>;
     processing: boolean;
     post: ReturnType<typeof vi.fn>;
@@ -46,12 +45,12 @@ function mountPage(): VueWrapper {
     return mount(TwoFactorChallenge, { global: { plugins: [i18n] } });
 }
 
-function form(): FakeForm {
+function form(): FakeForm & TwoFactorChallengeFormData {
     if (forms.last === null) {
         throw new Error('The page built no form');
     }
 
-    return forms.last;
+    return forms.last as FakeForm & TwoFactorChallengeFormData;
 }
 
 describe('TwoFactorChallenge page', () => {
