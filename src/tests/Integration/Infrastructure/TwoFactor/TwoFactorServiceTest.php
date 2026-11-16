@@ -41,14 +41,20 @@ final class TwoFactorServiceTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    /** A moment in the middle of a 30-second step */
-    private const int NOW = 1_800_000_015;
+    /**
+     * The frozen clock: the middle of the previous 30-second step, so always a moment just past.
+     * Never a fixed date: the first test of a process runs the migrations under it, and some of them
+     * stamp the time (the email verification cutoff), which later test classes compare with now.
+     */
+    private int $now;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        Carbon::setTestNow(Carbon::createFromTimestamp(self::NOW));
+        $this->now = intdiv(time(), 30) * 30 - 15;
+
+        Carbon::setTestNow(Carbon::createFromTimestamp($this->now));
         app(SettingsServiceInterface::class)->set('guild_name', 'Example [site]');
     }
 
@@ -167,7 +173,7 @@ final class TwoFactorServiceTest extends TestCase
         $this->assertTrue($status->enabled);
         $this->assertFalse($status->setupPending);
         $this->assertSame(8, $status->recoveryCodesRemaining);
-        $this->assertSame(self::NOW, $status->confirmedAt?->getTimestamp());
+        $this->assertSame($this->now, $status->confirmedAt?->getTimestamp());
         Event::assertDispatched(TwoFactorEnabled::class, static fn (TwoFactorEnabled $event): bool => $event->userId === (string) $user->id);
     }
 
@@ -513,7 +519,7 @@ final class TwoFactorServiceTest extends TestCase
         }
     }
 
-    public function test_every_change_locks_the_account_before_its_two_factor_row(): void
+    public function test_setup_confirmation_and_disabling_lock_the_account_before_its_two_factor_row(): void
     {
         $user = UserModel::factory()->create();
         $setup = $this->service()->beginSetup((string) $user->id);
@@ -575,17 +581,17 @@ final class TwoFactorServiceTest extends TestCase
     private function enable(UserModel $user, int $confirmAtOffset = 0): string
     {
         // Confirmed back then, so the window of that moment accepts the code
-        Carbon::setTestNow(Carbon::createFromTimestamp(self::NOW + 30 * $confirmAtOffset));
+        Carbon::setTestNow(Carbon::createFromTimestamp($this->now + 30 * $confirmAtOffset));
         $setup = $this->service()->beginSetup((string) $user->id);
         $this->service()->confirmSetup((string) $user->id, $this->codeAt($setup->secret, $confirmAtOffset));
-        Carbon::setTestNow(Carbon::createFromTimestamp(self::NOW));
+        Carbon::setTestNow(Carbon::createFromTimestamp($this->now));
 
         return $setup->secret;
     }
 
     private function codeAt(string $secret, int $stepOffset): string
     {
-        return (new Google2FA)->oathTotp($secret, intdiv(self::NOW, 30) + $stepOffset);
+        return (new Google2FA)->oathTotp($secret, intdiv($this->now, 30) + $stepOffset);
     }
 
     private function sessionStore(): Store
@@ -601,7 +607,7 @@ final class TwoFactorServiceTest extends TestCase
             'ip_address' => '127.0.0.1',
             'user_agent' => 'Test',
             'payload' => base64_encode(serialize([])),
-            'last_activity' => self::NOW,
+            'last_activity' => $this->now,
         ]);
     }
 

@@ -13,6 +13,7 @@ use App\Domain\Impersonation\Enums\ImpersonationMode;
 use App\Filament\Resources\TagResource;
 use App\Filament\Resources\TagResource\Pages\CreateTag;
 use App\Http\Middleware\EnsureSessionPassedTwoFactor;
+use App\Infrastructure\Impersonation\ImpersonationSessionState;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\TwoFactor\TwoFactorSessionSeal;
 use Filament\Facades\Filament;
@@ -41,7 +42,12 @@ final class EnsureSessionPassedTwoFactorTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    private const int NOW = 1_800_000_015;
+    /**
+     * The frozen clock: the middle of the previous 30-second step, so always a moment just past.
+     * Never a fixed date: the first test of a process runs the migrations under it, and some of them
+     * stamp the time (the email verification cutoff), which later test classes compare with now.
+     */
+    private int $now;
 
     private const string PASSWORD = 'correct horse battery staple';
 
@@ -49,7 +55,9 @@ final class EnsureSessionPassedTwoFactorTest extends TestCase
     {
         parent::setUp();
 
-        Carbon::setTestNow(Carbon::createFromTimestamp(self::NOW));
+        $this->now = intdiv(time(), 30) * 30 - 15;
+
+        Carbon::setTestNow(Carbon::createFromTimestamp($this->now));
     }
 
     protected function tearDown(): void
@@ -146,6 +154,120 @@ final class EnsureSessionPassedTwoFactorTest extends TestCase
         $response->assertStatus(503)->assertSessionHas(TwoFactorSessionSeal::SESSION_KEY, 'kept');
         $this->assertNull($response->getCookie(TwoFactorSessionSeal::REMEMBER_COOKIE, false));
         $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_an_unreadable_seal_answers_a_readable_503_to_json(): void
+    {
+        $user = UserModel::factory()->create();
+        Schema::drop('user_two_factor');
+
+        $this->actingAs($user)
+            ->getJson(route('profile.show'))
+            ->assertStatus(503)
+            ->assertHeader('Retry-After', (string) EnsureSessionPassedTwoFactor::RETRY_AFTER_SECONDS)
+            ->assertHeader(EnsureSessionPassedTwoFactor::JSON_ERROR_HEADER, '1')
+            ->assertHeader('X-Content-Type-Options', 'nosniff')
+            ->assertJson([
+                'error' => EnsureSessionPassedTwoFactor::JSON_ERROR_CODE,
+                'message' => __('two_factor.unavailable'),
+            ]);
+    }
+
+    public function test_an_unreadable_seal_answers_503_to_inertia_with_the_security_headers(): void
+    {
+        $user = UserModel::factory()->create();
+        Schema::drop('user_two_factor');
+
+        $this->actingAs($user)
+            ->withHeaders(['X-Inertia' => 'true'])
+            ->get(route('profile.show'))
+            ->assertStatus(503)
+            ->assertHeader('Retry-After', (string) EnsureSessionPassedTwoFactor::RETRY_AFTER_SECONDS)
+            ->assertHeader('X-Frame-Options', 'DENY')
+            ->assertHeader('Content-Security-Policy');
+    }
+
+    public function test_an_unreadable_seal_answers_503_to_livewire(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+        Schema::drop('user_two_factor');
+
+        $this->actingAs($admin)
+            ->withHeaders(['X-Livewire' => 'true'])
+            ->postJson(Livewire::getUpdateUri(), ['components' => []])
+            ->assertStatus(503)
+            ->assertJsonPath('error', EnsureSessionPassedTwoFactor::JSON_ERROR_CODE);
+
+        $this->assertAuthenticatedAs($admin);
+    }
+
+    public function test_an_unreadable_seal_while_impersonating_answers_503_and_keeps_the_impersonation(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+        $target = UserModel::factory()->create();
+        $this->actingAs($admin);
+        $this->app->make(ImpersonationServiceInterface::class)->start($admin, $target, ImpersonationMode::ReadOnly);
+        Schema::drop('user_two_factor');
+
+        // The database is not asked again here: on PostgreSQL the failed read aborted the test's transaction
+        $this->get(route('profile.show'))
+            ->assertStatus(503)
+            ->assertSessionHas(ImpersonationSessionState::SESSION_KEY);
+
+        $this->assertAuthenticatedAs($admin);
+    }
+
+    public function test_signing_out_works_even_when_the_seal_cannot_be_read(): void
+    {
+        $user = UserModel::factory()->create();
+        Schema::drop('user_two_factor');
+
+        $this->actingAs($user)
+            ->post(route('logout'))
+            ->assertRedirect()
+            ->assertHeader('X-Frame-Options', 'DENY');
+
+        $this->assertGuest();
+    }
+
+    public function test_signing_out_of_the_panel_works_even_when_the_seal_cannot_be_read(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+        Schema::drop('user_two_factor');
+
+        $this->actingAs($admin)
+            ->post(Filament::getPanel('admin')->getLogoutUrl())
+            ->assertRedirect();
+
+        $this->assertGuest();
+    }
+
+    public function test_signing_out_while_impersonating_works_even_when_the_seal_cannot_be_read(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+        $target = UserModel::factory()->create();
+        $this->actingAs($admin);
+        $this->app->make(ImpersonationServiceInterface::class)->start($admin, $target, ImpersonationMode::ReadOnly);
+        Schema::drop('user_two_factor');
+
+        $this->post(route('logout'))->assertRedirect();
+
+        $this->assertGuest();
+        $entry = DB::table('impersonation_log')->where('impersonator_id', $admin->id)->first();
+        $this->assertNotNull($entry?->ended_at);
+        $this->assertSame(ImpersonationEndReason::Logout->value, $entry->ended_reason);
+    }
+
+    public function test_the_redirect_to_the_login_carries_the_security_headers(): void
+    {
+        $user = UserModel::factory()->create();
+        $this->enable($user);
+
+        $this->actingAs($this->fresh($user))
+            ->get(route('profile.show'))
+            ->assertRedirect(route('login'))
+            ->assertHeader('X-Frame-Options', 'DENY')
+            ->assertHeader('X-Content-Type-Options', 'nosniff');
     }
 
     public function test_two_factor_on_without_a_seal_signs_out(): void
@@ -326,7 +448,7 @@ final class EnsureSessionPassedTwoFactorTest extends TestCase
             ])->assertOk();
 
         $this->assertSame(array_keys((array) $real->json()), array_keys((array) $ours->json()));
-        $this->assertSame(['snapshot', 'effects'], array_keys((array) $ours->json('components.0')));
+        $this->assertSame(array_keys((array) $real->json('components.0')), array_keys((array) $ours->json('components.0')));
         $this->assertSame(Filament::getPanel('admin')->getLoginUrl(), $ours->json('components.0.effects.redirect'));
         $this->assertSame($real->json('components.0.effects.redirectUsingNavigate') ?? null, $ours->json('components.0.effects.redirectUsingNavigate'));
     }
@@ -442,7 +564,7 @@ final class EnsureSessionPassedTwoFactorTest extends TestCase
     {
         $service = $this->app->make(TwoFactorServiceInterface::class);
         $setup = $service->beginSetup((string) $user->id);
-        $service->confirmSetup((string) $user->id, (new Google2FA)->oathTotp($setup->secret, intdiv(self::NOW, 30) + $offset));
+        $service->confirmSetup((string) $user->id, (new Google2FA)->oathTotp($setup->secret, intdiv($this->now, 30) + $offset));
     }
 
     private function fresh(UserModel $user): UserModel

@@ -27,7 +27,12 @@ final class TwoFactorRaceTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const int NOW = 1_800_000_015;
+    /**
+     * The frozen clock: the middle of the previous 30-second step, so always a moment just past.
+     * Never a fixed date: the first test of a process runs the migrations under it, and some of them
+     * stamp the time (the email verification cutoff), which later test classes compare with now.
+     */
+    private int $now;
 
     private const string SECOND = 'two_factor_race';
 
@@ -50,7 +55,9 @@ final class TwoFactorRaceTest extends TestCase
 
         parent::setUp();
 
-        Carbon::setTestNow(Carbon::createFromTimestamp(self::NOW));
+        $this->now = intdiv(time(), 30) * 30 - 15;
+
+        Carbon::setTestNow(Carbon::createFromTimestamp($this->now));
         Notification::fake();
         $this->handlesBefore = array_values(DB::table('user_profile_handles')->pluck('handle_hash')->map(static fn (mixed $hash): string => (string) $hash)->all());
         $default = (string) config('database.default');
@@ -92,7 +99,7 @@ final class TwoFactorRaceTest extends TestCase
     public function test_a_code_raced_by_two_requests_passes_once(): void
     {
         [$secret] = $this->enable();
-        $code = (new Google2FA)->oathTotp($secret, intdiv(self::NOW, 30) + 1);
+        $code = (new Google2FA)->oathTotp($secret, intdiv($this->now, 30) + 1);
 
         $this->race(fn (): bool => $this->service()->verify((string) $this->user?->id, $code), [true, false]);
     }
@@ -142,7 +149,7 @@ final class TwoFactorRaceTest extends TestCase
     {
         $this->user = UserModel::factory()->create();
         $setup = $this->service()->beginSetup((string) $this->user->id);
-        $codes = $this->service()->confirmSetup((string) $this->user->id, (new Google2FA)->oathTotp($setup->secret, intdiv(self::NOW, 30)));
+        $codes = $this->service()->confirmSetup((string) $this->user->id, (new Google2FA)->oathTotp($setup->secret, intdiv($this->now, 30)));
 
         return [$setup->secret, $codes];
     }

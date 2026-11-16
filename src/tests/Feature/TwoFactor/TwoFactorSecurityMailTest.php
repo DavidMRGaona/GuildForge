@@ -28,15 +28,22 @@ final class TwoFactorSecurityMailTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    private const int NOW = 1_800_000_015;
+    /**
+     * The frozen clock: the middle of the previous 30-second step, so always a moment just past.
+     * Never a fixed date: the first test of a process runs the migrations under it, and some of them
+     * stamp the time (the email verification cutoff), which later test classes compare with now.
+     */
+    private int $now;
 
     protected function setUp(): void
     {
         parent::setUp();
 
+        $this->now = intdiv(time(), 30) * 30 - 15;
+
         app()->setLocale('es');
         config(['app.display_timezone' => 'Europe/Madrid']);
-        Carbon::setTestNow(Carbon::createFromTimestamp(self::NOW));
+        Carbon::setTestNow(Carbon::createFromTimestamp($this->now));
         app(SettingsServiceInterface::class)->set('guild_name', 'Example *site*');
         Notification::fake();
     }
@@ -74,7 +81,7 @@ final class TwoFactorSecurityMailTest extends TestCase
             $this->assertSame(CoreMailCategories::ACCOUNT_SECURITY, $notification->mailCategory());
             $this->assertSame('Doble factor activado en Example *site*', $mail->subject);
             $this->assertStringContainsString('Example \*site\*', $this->text($mail));
-            $this->assertStringContainsString(app(TimezoneServiceInterface::class)->format(Carbon::createFromTimestamp(self::NOW)), $this->text($mail));
+            $this->assertStringContainsString(app(TimezoneServiceInterface::class)->format(Carbon::createFromTimestamp($this->now)), $this->text($mail));
             $this->assertStringContainsString('Si no has sido tú', $this->text($mail));
             $this->assertSame(route('profile.show'), $mail->actionUrl);
 
@@ -147,7 +154,7 @@ final class TwoFactorSecurityMailTest extends TestCase
     {
         $setup = $this->service()->beginSetup((string) $user->id);
 
-        return $this->service()->confirmSetup((string) $user->id, (new Google2FA)->oathTotp($setup->secret, intdiv(self::NOW, 30)));
+        return $this->service()->confirmSetup((string) $user->id, (new Google2FA)->oathTotp($setup->secret, intdiv($this->now, 30)));
     }
 
     private function service(): TwoFactorServiceInterface

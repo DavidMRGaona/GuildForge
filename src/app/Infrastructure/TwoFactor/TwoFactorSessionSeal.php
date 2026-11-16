@@ -115,12 +115,20 @@ final readonly class TwoFactorSessionSeal implements TwoFactorSessionSealInterfa
     public function rememberAfterChallenge(string $userId): void
     {
         $id = $this->normalise($userId);
-        $value = $id === null ? null : $this->rememberValue($id);
+
+        if ($id === null) {
+            // Never the text as it came: it is no id, so it may be anything
+            Log::warning('Two-factor «remember me» cookie not issued: not an account id.', ['user_id' => null]);
+
+            return;
+        }
+
+        $value = $this->rememberValue($id);
 
         if ($value === null) {
             // Called before login($user, true) gave the account a remember token, or without a seal
             Log::warning('Two-factor «remember me» cookie not issued: the account has no remember token or seal yet.', [
-                'user_id' => $id ?? $userId,
+                'user_id' => $id,
             ]);
 
             return;

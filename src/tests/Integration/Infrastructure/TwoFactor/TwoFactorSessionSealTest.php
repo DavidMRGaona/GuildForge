@@ -32,13 +32,20 @@ final class TwoFactorSessionSealTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    private const int NOW = 1_800_000_015;
+    /**
+     * The frozen clock: the middle of the previous 30-second step, so always a moment just past.
+     * Never a fixed date: the first test of a process runs the migrations under it, and some of them
+     * stamp the time (the email verification cutoff), which later test classes compare with now.
+     */
+    private int $now;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        Carbon::setTestNow(Carbon::createFromTimestamp(self::NOW));
+        $this->now = intdiv(time(), 30) * 30 - 15;
+
+        Carbon::setTestNow(Carbon::createFromTimestamp($this->now));
     }
 
     protected function tearDown(): void
@@ -204,11 +211,26 @@ final class TwoFactorSessionSealTest extends TestCase
         $this->enable($user);
         UserModel::query()->whereKey($user->id)->update(['remember_token' => null]);
 
-        $this->seal()->rememberAfterChallenge((string) $user->id);
+        // Logged with the id as stored, whatever the caller's spelling
+        $this->seal()->rememberAfterChallenge('  '.strtoupper((string) $user->id).' ');
 
         $this->assertNull($this->app->make(CookieJar::class)->queued(TwoFactorSessionSeal::REMEMBER_COOKIE));
         $log->shouldHaveReceived('warning')->once()->withArgs(
-            static fn (string $message, array $context): bool => $context['user_id'] === (string) $user->id,
+            static fn (string $message, array $context): bool => str_contains($message, 'no remember token')
+                && $context === ['user_id' => (string) $user->id],
+        );
+    }
+
+    public function test_an_id_that_names_no_account_gets_its_own_warning_without_echoing_it(): void
+    {
+        $log = Log::spy();
+
+        $this->seal()->rememberAfterChallenge('<script>not-an-id');
+
+        $this->assertNull($this->app->make(CookieJar::class)->queued(TwoFactorSessionSeal::REMEMBER_COOKIE));
+        $log->shouldHaveReceived('warning')->once()->withArgs(
+            static fn (string $message, array $context): bool => str_contains($message, 'not an account id')
+                && $context === ['user_id' => null],
         );
     }
 
@@ -228,7 +250,7 @@ final class TwoFactorSessionSealTest extends TestCase
 
         try {
             DB::transaction(function () use ($user, $setup): void {
-                $this->service()->confirmSetup((string) $user->id, (new Google2FA)->oathTotp($setup->secret, intdiv(self::NOW, 30)));
+                $this->service()->confirmSetup((string) $user->id, (new Google2FA)->oathTotp($setup->secret, intdiv($this->now, 30)));
 
                 // Inside the same transaction, before any commit
                 $this->assertNotNull($this->fresh($user)->session_seal);
@@ -287,7 +309,7 @@ final class TwoFactorSessionSealTest extends TestCase
     private function enable(UserModel $user, ?Store $session = null): void
     {
         $setup = $this->service()->beginSetup((string) $user->id);
-        $this->service()->confirmSetup((string) $user->id, (new Google2FA)->oathTotp($setup->secret, intdiv(self::NOW, 30)), $session);
+        $this->service()->confirmSetup((string) $user->id, (new Google2FA)->oathTotp($setup->secret, intdiv($this->now, 30)), $session);
     }
 
     private function fresh(UserModel $user): UserModel

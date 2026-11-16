@@ -42,6 +42,9 @@ $app = Application::configure(basePath: dirname(__DIR__))
         );
 
         $middleware->web(append: [
+            // First, so its headers reach every answer, also those given before the controllers run
+            // (the two-factor check's 503 and sign-out redirect, the impersonation's refusals)
+            SecurityHeadersMiddleware::class,
             // Before the impersonation applies: the seal checked is the session owner's, and a session
             // without it ends the impersonation outside the safety net, so its log entry is closed
             // (core#768)
@@ -52,7 +55,6 @@ $app = Application::configure(basePath: dirname(__DIR__))
             // «Solo mirar»: the site only reads (core#574); needs the context ApplyImpersonation fills
             BlockSiteWritesWhenImpersonatingReadOnly::class,
             HandleInertiaRequests::class,
-            SecurityHeadersMiddleware::class,
             EnsureSiteIsNotInMaintenance::class,
             EnsureEmailIsVerifiedWhenRequired::class,
         ]);
