@@ -50,7 +50,7 @@ Es la primera página al entrar. Muestra resúmenes, como los próximos eventos 
 
 ## Tu menú
 
-Pulsa tu avatar, arriba a la derecha. Desde ahí vas a **Mi perfil** de la web (la imagen que subas allí es la de tu avatar), a **Visitar sitio** y a **Ayuda**, cambias entre el modo claro y el oscuro y cierras sesión.
+Pulsa tu avatar, arriba a la derecha. Desde ahí vas a **Ajustes de la cuenta** de la web (la imagen que subas allí es la de tu avatar), a **Visitar sitio** y a **Ayuda**, cambias entre el modo claro y el oscuro y cierras sesión.
 
 > [!TIP]
 > Si te falta una sección que necesitas, pide a quien gestiona los roles que te dé el permiso.

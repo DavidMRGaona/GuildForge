@@ -48,7 +48,7 @@ return [
         'choose' => 'Choose which emails you receive',
         'mandatory' => 'This email is always sent. You can choose which others you receive :profile.',
         'without_category' => 'You can choose which emails you receive :profile.',
-        'profile_link' => 'in your profile',
+        'profile_link' => 'in your account settings',
         'mute_subject' => 'Stop notices about «:subject»',
         'digest' => 'You receive this digest because you chose to get the notices of these categories once a day.',
     ],

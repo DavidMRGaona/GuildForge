@@ -8,7 +8,7 @@ return [
     'email_verified' => 'Your email has been verified.',
     'verification_link_sent' => 'A new verification link has been sent.',
     'email_verification_required' => 'Verify your email address to continue.',
-    'profile_updated' => 'Profile updated successfully.',
+    'profile_updated' => 'Settings updated successfully.',
     'password_incorrect' => 'The current password is incorrect.',
     'password_changed' => 'Password updated successfully.',
     'mail_preferences_saved' => 'Mail preferences saved.',
@@ -31,6 +31,6 @@ return [
     'welcome_line1' => 'Thank you for registering at :app. We are delighted to have you with us.',
     'welcome_line2' => 'You can now access your account and enjoy all the features of our community.',
     'welcome_action' => 'Sign in',
-    'welcome_preferences' => 'In your profile you can choose which emails you want to receive.',
+    'welcome_preferences' => 'In your account settings you can choose which emails you want to receive.',
     'welcome_line3' => 'We hope to see you soon at our events!',
 ];

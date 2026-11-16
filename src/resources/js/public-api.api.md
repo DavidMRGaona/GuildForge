@@ -1032,6 +1032,7 @@ export interface User {
     permissions?: string[];
     mustVerifyEmail?: boolean;
     verificationEmail?: string;
+    publicProfilePath?: string | null;
 }
 export interface AuthSettings {
     registrationEnabled: boolean;

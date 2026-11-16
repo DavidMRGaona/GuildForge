@@ -20,7 +20,7 @@ final class CoreSiteGuidesTest extends TestCase
     /** Guides every signed-in account sees, by category. */
     private const array GUIDES_BY_CATEGORY = [
         'getting-started' => ['core.help.welcome', 'core.help.use-help', 'core.search.site-search'],
-        'account' => ['core.account.complete-profile', 'core.account.change-password', 'core.account.change-email', 'core.account.mail-preferences'],
+        'account' => ['core.account.complete-profile', 'core.account.change-password', 'core.account.change-email', 'core.account.mail-preferences', 'core.site.public-profile'],
         'events-and-games' => ['core.events.find-events'],
         'community' => ['core.content.read-articles', 'core.content.browse-galleries'],
     ];
@@ -99,6 +99,43 @@ final class CoreSiteGuidesTest extends TestCase
         foreach ($files as $file) {
             $this->assertDoesNotMatchRegularExpression('/\bsocios?\b/iu', (string) file_get_contents($file), $file);
         }
+    }
+
+    public function test_only_the_guides_about_the_public_profile_call_anything_my_profile(): void
+    {
+        // «Mi perfil» in the user menu is the public profile; the settings page is «Ajustes de la cuenta» (core#745)
+        $guidesThatMayName = ['public-profile.md', 'complete-profile.md', 'welcome.md'];
+        $files = [...(glob(resource_path('knowledge/es/site/*.md')) ?: []), ...(glob(resource_path('knowledge/es/panel/*.md')) ?: [])];
+        $this->assertNotEmpty($files);
+
+        foreach ($files as $file) {
+            if (in_array(basename($file), $guidesThatMayName, true)) {
+                continue;
+            }
+
+            $this->assertStringNotContainsString('Mi perfil', (string) file_get_contents($file), $file);
+        }
+    }
+
+    public function test_the_public_profile_guide_is_for_every_signed_in_account_and_never_for_guests(): void
+    {
+        $this->actingAs($this->member());
+        $this->get('/ayuda/core.site.public-profile')->assertOk()->assertInertia(
+            fn (Assert $page) => $page->where('guide.id', 'core.site.public-profile'),
+        );
+
+        auth()->logout();
+        $this->get('/ayuda/core.site.public-profile')->assertRedirect();
+    }
+
+    public function test_the_public_profile_guide_names_no_module_and_only_markers_for_the_site_and_the_role(): void
+    {
+        $text = (string) file_get_contents(resource_path('knowledge/es/site/public-profile.md'));
+
+        // Which module adds a section is not for the core to say: modules are never named here
+        $this->assertDoesNotMatchRegularExpression('/game-tables|tournaments|forum|memberships|surveys|mesas|torneos|foro/iu', $text);
+        $this->assertStringContainsString('{{association_role}}', $text);
+        $this->assertStringContainsString('{{site_name}}', $text);
     }
 
     public function test_the_verify_email_guide_is_hidden_when_verification_is_not_required(): void

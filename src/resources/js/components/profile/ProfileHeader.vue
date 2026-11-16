@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { Calendar, Camera, UserRound } from '@lucide/vue';
+import { Calendar, Camera, Eye, UserRound } from '@lucide/vue';
 import { computed, ref } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { Link, useForm } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { buildAvatarUrl } from '@/utils/cloudinary';
+import { useAuth } from '@/composables/useAuth';
 import { useNotifications } from '@/composables/useNotifications';
 import HelpLink from '@/components/knowledge/HelpLink.vue';
 import type { User, UpdateProfileFormData } from '@/types/models';
@@ -16,6 +17,10 @@ interface Props {
 const props = defineProps<Props>();
 const { t, locale } = useI18n();
 const notifications = useNotifications();
+const { user: authUser } = useAuth();
+
+// Where the server says the person's own public profile is (core#745); none for an account without one
+const publicProfilePath = computed(() => authUser.value?.publicProfilePath ?? null);
 
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const avatarPreview = ref<string | null>(null);
@@ -134,12 +139,30 @@ function uploadAvatar(): void {
                     <p class="mt-1 text-base-secondary">
                         {{ user.email }}
                     </p>
-                    <p
-                        class="mt-2 inline-flex items-center gap-1.5 rounded-full border border-default bg-surface px-3 py-1 text-sm text-base-secondary"
+                    <div
+                        class="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:justify-start"
                     >
-                        <Calendar class="h-4 w-4" aria-hidden="true" />
-                        {{ t('auth.profile.memberSince', { date: memberSinceDate }) }}
-                    </p>
+                        <p
+                            class="inline-flex items-center gap-1.5 rounded-full border border-default bg-surface px-3 py-1 text-sm text-base-secondary"
+                        >
+                            <Calendar class="h-4 w-4" aria-hidden="true" />
+                            {{ t('auth.profile.memberSince', { date: memberSinceDate }) }}
+                        </p>
+                        <!-- The public profile is another page from these settings: say so, and link it -->
+                        <span v-if="publicProfilePath" class="inline-flex items-center gap-2">
+                            <Link
+                                :href="publicProfilePath"
+                                class="inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+                            >
+                                <Eye class="h-4 w-4 shrink-0" aria-hidden="true" />
+                                {{ t('auth.profile.viewPublicProfile') }}
+                            </Link>
+                            <HelpLink
+                                guide="core.site.public-profile"
+                                :label="t('auth.profile.publicProfileHelp')"
+                            />
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>

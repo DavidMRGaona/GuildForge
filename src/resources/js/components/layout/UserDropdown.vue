@@ -2,7 +2,7 @@
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
-import { ChevronDown, User, UserRound, Settings, LogOut, CircleHelp } from '@lucide/vue';
+import { ChevronDown, User, UserCog, UserRound, Settings, LogOut, CircleHelp } from '@lucide/vue';
 import { useAuth } from '@/composables/useAuth';
 import { useRoutes } from '@/composables/useRoutes';
 import { useOnNavigate } from '@/composables/useOnNavigate';
@@ -19,6 +19,8 @@ const routes = useRoutes();
 
 const isOpen = ref(false);
 const userName = computed(() => user.value?.displayName || user.value?.name);
+// Where the server says the account's own public profile is (core#745): never built here
+const publicProfilePath = computed(() => user.value?.publicProfilePath ?? null);
 // A 28 px circle: twice the pixels for sharp screens; without a photo, the initials of the shown name
 const avatarUrl = computed(() => buildAvatarUrl(user.value?.avatarPublicId, 56));
 // A photo that fails to load (deleted from the store) shows the initials, never a broken image
@@ -99,18 +101,30 @@ onUnmounted(() => {
         <!-- Dropdown menu -->
         <div
             v-if="isOpen"
-            class="absolute right-0 mt-2 w-48 rounded-lg border border-default bg-surface shadow-lg z-50"
+            class="absolute right-0 mt-2 w-56 rounded-lg border border-default bg-surface shadow-lg z-50"
         >
             <div class="py-1" role="menu">
-                <!-- Profile link -->
+                <!-- Own public profile: only for an account that has one -->
+                <Link
+                    v-if="publicProfilePath"
+                    :href="publicProfilePath"
+                    class="flex w-full items-center px-4 py-2 text-sm text-base-primary hover:bg-muted"
+                    role="menuitem"
+                    @click="closeDropdown"
+                >
+                    <User class="mr-3 h-4 w-4 shrink-0" aria-hidden="true" />
+                    {{ t('auth.userMenu.profile') }}
+                </Link>
+
+                <!-- Account settings: /perfil, whose address stays the same -->
                 <Link
                     :href="routes.profile"
                     class="flex w-full items-center px-4 py-2 text-sm text-base-primary hover:bg-muted"
                     role="menuitem"
                     @click="closeDropdown"
                 >
-                    <User class="mr-3 h-4 w-4" aria-hidden="true" />
-                    {{ t('auth.userMenu.profile') }}
+                    <UserCog class="mr-3 h-4 w-4 shrink-0" aria-hidden="true" />
+                    {{ t('auth.userMenu.accountSettings') }}
                 </Link>
 
                 <!-- Help centre -->

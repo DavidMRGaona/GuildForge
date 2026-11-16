@@ -11,7 +11,7 @@ return [
     'email_verified' => 'Tu correo electrónico ha sido verificado.',
     'verification_link_sent' => 'Se ha enviado un nuevo enlace de verificación.',
     'email_verification_required' => 'Verifica tu correo electrónico para continuar.',
-    'profile_updated' => 'Perfil actualizado correctamente.',
+    'profile_updated' => 'Ajustes actualizados correctamente.',
     'password_incorrect' => 'La contraseña actual no es correcta.',
     'password_changed' => 'Contraseña actualizada correctamente.',
     'mail_preferences_saved' => 'Preferencias de correo guardadas.',
@@ -34,6 +34,6 @@ return [
     'welcome_line1' => 'Gracias por registrarte en :app. Estamos encantados de tenerte con nosotros.',
     'welcome_line2' => 'Ya puedes acceder a tu cuenta y disfrutar de todas las funcionalidades de nuestra comunidad.',
     'welcome_action' => 'Iniciar sesión',
-    'welcome_preferences' => 'En tu perfil puedes elegir qué correos quieres recibir.',
+    'welcome_preferences' => 'En los ajustes de tu cuenta puedes elegir qué correos quieres recibir.',
     'welcome_line3' => '¡Esperamos verte pronto en nuestros eventos!',
 ];

@@ -20,7 +20,7 @@ Tu calendario personal reúne los eventos, partidas y torneos de {{site_name}} e
 
 ## Suscribirte desde tu aplicación de calendario
 
-1. Pulsa tu nombre en la cabecera y elige **Mi perfil**.
+1. Pulsa tu nombre en la cabecera y elige **Ajustes de la cuenta**.
 2. Abre la pestaña **Mi calendario** y pulsa **Crear dirección de suscripción**.
 3. En **Suscribirte desde**, pulsa el botón de tu aplicación:
    - **Apple Calendar (iPhone y Mac)** abre la app Calendario para que confirmes la suscripción.
@@ -58,7 +58,7 @@ Tu aplicación añade sola las nuevas inscripciones, los cambios de hora y las c
 
 ## Cambiar o quitar la dirección
 
-En **Mi perfil**, pestaña **Mi calendario**:
+En **Ajustes de la cuenta**, pestaña **Mi calendario**:
 
 - **Crear una dirección nueva** retira la anterior. Tendrás que suscribirte otra vez con la nueva en cada aplicación.
 - **Revocar dirección** la desactiva y las aplicaciones suscritas dejan de recibir tu calendario.

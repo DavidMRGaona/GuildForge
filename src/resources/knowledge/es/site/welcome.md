@@ -23,10 +23,11 @@ Estas secciones están en el menú principal. En el móvil, ábrelo con el botó
 
 ## Lo que haces con tu cuenta
 
-- **Mi perfil**: tu nombre, tu foto, tu email y tu contraseña.
+- **Mi perfil**: la página que ven los demás de ti. Allí, con **Editar perfil**, eliges quién puede verla y qué enseña.
+- **Ajustes de la cuenta**: tu nombre, tu foto, tu email y tu contraseña.
 - **Ayuda**: estas guías.
 
-Las dos están en el menú de usuario: pulsa tu nombre en la cabecera.
+Están en el menú de usuario: pulsa tu nombre en la cabecera.
 
 Si ves un «?» junto al título de una página, púlsalo: abre la guía de esa página.
 

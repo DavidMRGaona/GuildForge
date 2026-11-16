@@ -26,10 +26,12 @@ use App\Domain\Modules\Entities\Module;
 use App\Http\Middleware\Concerns\IdentifiesLivewireRequests;
 use App\Infrastructure\Impersonation\ImpersonationContext;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Infrastructure\Profiles\Services\OwnProfilePath;
 use App\Infrastructure\SiteNotifications\SiteNotificationsRealtimeChannel;
 use App\Infrastructure\Social\SocialLinkResolver;
 use App\Modules\ModuleLoader;
 use Closure;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Middleware;
@@ -411,6 +413,8 @@ final class HandleInertiaRequests extends Middleware
                 'mustVerifyEmail' => $this->mustVerifyEmail($user, $userDTO->emailVerified),
                 // Where a verification link goes: a pending address replaces the current one
                 'verificationEmail' => $userDTO->pendingEmail ?? $userDTO->email,
+                // Where the person's own public profile is (core#745); null when the account has none
+                'publicProfilePath' => $this->publicProfilePath($user),
                 'createdAt' => app(TimezoneServiceInterface::class)->iso($userDTO->createdAt),
                 // Roles and permissions come from the user_role pivot
                 'roles' => $roles,
@@ -441,6 +445,23 @@ final class HandleInertiaRequests extends Middleware
             ]);
 
             return ! $emailVerified;
+        }
+    }
+
+    /**
+     * The path of the signed-in account's own public profile, for the user menu and the account settings.
+     * Never worth losing the whole user over: if it cannot be worked out there is simply no link.
+     */
+    private function publicProfilePath(Authenticatable $user): ?string
+    {
+        try {
+            return app(OwnProfilePath::class)->for($user);
+        } catch (\Throwable $e) {
+            logger()->warning('[HandleInertiaRequests::publicProfilePath] '.$e->getMessage(), [
+                'exception' => $e::class,
+            ]);
+
+            return null;
         }
     }
 

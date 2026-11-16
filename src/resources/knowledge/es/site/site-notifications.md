@@ -33,11 +33,11 @@ Cuando se publica por primera vez un evento, un artículo o una galería, te lle
 
 - Solo se avisa la primera vez que se publica. Si después se corrige o se vuelve a publicar, no llega otro aviso.
 - No se avisa de lo que publicas tú, ni de lo que propusiste tú: de eso ya te llega el aviso de tu propuesta.
-- Estas novedades solo llegan a la web, nunca por correo. Si no las quieres, desactívalas en **Mi perfil**, pestaña **Avisos**, sección **Novedades**.
+- Estas novedades solo llegan a la web, nunca por correo. Si no las quieres, desactívalas en **Ajustes de la cuenta**, pestaña **Avisos**, sección **Novedades**.
 
 ## Elegir qué avisos recibes
 
-Los avisos siguen los mismos tipos que los correos. En **Mi perfil**, pestaña **Avisos**, los tipos que también avisan en la web tienen dos interruptores:
+Los avisos siguen los mismos tipos que los correos. En **Ajustes de la cuenta**, pestaña **Avisos**, los tipos que también avisan en la web tienen dos interruptores:
 
 - **En la web**: los avisos de la campana.
 - **Por correo**: los correos de ese tipo.
