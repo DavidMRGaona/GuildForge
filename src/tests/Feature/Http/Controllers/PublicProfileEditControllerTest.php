@@ -223,6 +223,11 @@ final class PublicProfileEditControllerTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $this->assertSame('Se guarda', $this->profileOf($owner)->bio);
+
+        // Where the save leads opens for real
+        $this->actingAs($owner)->get('/miembros/staff')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page): Assert => $page->where('profile.header.handle', 'staff')->where('editor.handle', 'staff'));
     }
 
     public function test_the_address_changes_once_every_thirty_days(): void
@@ -543,6 +548,11 @@ final class PublicProfileEditControllerTest extends TestCase
         $path = tempnam(sys_get_temp_dir(), 'banner');
         $this->assertIsString($path);
         file_put_contents($path, $content);
+        $this->beforeApplicationDestroyed(static function () use ($path): void {
+            if (is_file($path)) {
+                unlink($path);
+            }
+        });
 
         return new UploadedFile($path, $name, null, null, true);
     }

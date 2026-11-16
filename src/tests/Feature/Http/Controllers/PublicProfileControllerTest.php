@@ -296,6 +296,30 @@ final class PublicProfileControllerTest extends TestCase
             ->assertInertia(fn (Assert $page): Assert => $page->where('profile.header.isOwner', true)->where('notices.onlyOwner', true));
     }
 
+    public function test_an_address_given_before_it_became_a_reserved_word_still_opens(): void
+    {
+        $owner = $this->owner(ProfileVisibility::Public);
+        UserProfileModel::query()->whereKey($owner->id)->update(['handle' => 'staff']);
+
+        $this->get('/miembros/staff')->assertOk()->assertInertia(fn (Assert $page): Assert => $page->where('profile.header.handle', 'staff'));
+        $this->get('/miembros/STAFF')->assertRedirect('/miembros/staff');
+        $this->actingAs($owner)->get('/miembros/staff')->assertOk();
+    }
+
+    public function test_the_history_never_resolves_a_reserved_word(): void
+    {
+        $owner = $this->owner(ProfileVisibility::Public);
+        // A reserved word left in the history (given before it was reserved, then retired)
+        UserProfileHandleModel::query()->insert([
+            'handle_hash' => ProfileHandle::hashOf('staff'),
+            'handle' => 'staff',
+            'user_id' => $owner->id,
+            'retired_at' => now(),
+        ]);
+
+        $this->assertSameNotFound($this->get('/miembros/nadie-con-esto'), $this->get('/miembros/staff'));
+    }
+
     public function test_the_sections_are_drawn_once_the_profile_may_be_seen(): void
     {
         $owner = $this->owner(ProfileVisibility::Public);

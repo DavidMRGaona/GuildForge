@@ -188,6 +188,9 @@ Return `null`, never `0`, when the viewer cannot see the things counted: a 0 wou
 **Optional description** (core ≥ the release with #743): a stat may also implement `App\Application\Profiles\Contracts\DescribesProfileStat`, whose `description(): string` is one translated line the profile editor shows under its label («Mensajes que ha escrito en el foro»). It is a separate interface on purpose, so a stat written for the contract of 3.79 keeps working unchanged; without it the editor shows only the label. The interface only exists from that release on: a module that implements it must set `requires.core` to it, since on an older core the class would not load.
 
 ```php
+use App\Application\Profiles\Contracts\DescribesProfileStat;
+use App\Application\Profiles\Contracts\ProfileStatInterface;
+
 final readonly class MessagesProfileStat implements ProfileStatInterface, DescribesProfileStat
 {
     public function description(): string

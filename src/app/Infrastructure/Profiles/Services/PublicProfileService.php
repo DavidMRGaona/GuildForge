@@ -28,13 +28,7 @@ final readonly class PublicProfileService implements PublicProfileServiceInterfa
 
     public function findByHandle(string $handle, ?Authenticatable $viewer): ProfileLookupDTO
     {
-        $requested = ProfileHandle::tryFrom($handle);
-
-        if (! $requested instanceof ProfileHandle) {
-            return ProfileLookupDTO::notFound();
-        }
-
-        $row = $this->findRow($requested);
+        $row = $this->findRow($handle);
         $owner = $row instanceof UserProfileModel ? UserModel::withTrashed()->find($row->user_id) : null;
 
         if (! $row instanceof UserProfileModel || ! $owner instanceof UserModel) {
@@ -55,16 +49,31 @@ final readonly class PublicProfileService implements PublicProfileServiceInterfa
     }
 
     /**
-     * The current address first, then the history (an address retired by its owner still names them
-     * until the account is forgotten). The row is read through StoredProfiles, so the renderer reuses it.
+     * The current address first, exactly as stored once normalised, even a word reserved after it was
+     * given: reserving a word only stops it being chosen, never takes it from whoever holds it (core#743).
+     * Then the history, only for a valid address: an address retired by its owner still names them until
+     * the account is forgotten, and a reserved word never resolves there. The row is read through
+     * StoredProfiles, so the renderer reuses it.
      */
-    private function findRow(ProfileHandle $handle): ?UserProfileModel
+    private function findRow(string $handle): ?UserProfileModel
     {
-        $userId = UserProfileModel::query()->where('handle', $handle->value)->value('user_id')
-            ?? UserProfileHandleModel::query()
-                ->whereKey($handle->hash())
-                ->whereNotNull('user_id')
-                ->value('user_id');
+        $normalised = ProfileHandle::normalise($handle);
+
+        if ($normalised === '' || strlen($normalised) > ProfileHandle::MAX_LENGTH) {
+            return null;
+        }
+
+        $userId = UserProfileModel::query()->where('handle', $normalised)->value('user_id');
+
+        if (! is_string($userId)) {
+            $requested = ProfileHandle::tryFrom($handle);
+            $userId = $requested instanceof ProfileHandle
+                ? UserProfileHandleModel::query()
+                    ->whereKey($requested->hash())
+                    ->whereNotNull('user_id')
+                    ->value('user_id')
+                : null;
+        }
 
         return is_string($userId) ? $this->rows->find($userId) : null;
     }
