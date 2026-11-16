@@ -29,7 +29,7 @@ vi.mock('@/composables/useNotifications', () => ({
 }));
 
 const OFF: SecurityProps = {
-    twoFactor: { active: false, since: null, remainingCodes: 0, canDisable: true },
+    twoFactor: { active: false, since: null, remainingCodes: 0, canDisable: true, requiredBy: [] },
 };
 
 function on(overrides: Partial<SecurityProps['twoFactor']> = {}): SecurityProps {
@@ -39,6 +39,7 @@ function on(overrides: Partial<SecurityProps['twoFactor']> = {}): SecurityProps 
             since: '2026-11-10T12:00:00+01:00',
             remainingCodes: 8,
             canDisable: true,
+            requiredBy: [],
             ...overrides,
         },
     };
@@ -122,6 +123,33 @@ describe('ProfileSecurityTab', () => {
         await button(wrapper, 'Desactivar').trigger('click');
         expect(dialog.props('mode')).toBe('disable');
         expect(dialog.props('open')).toBe(true);
+    });
+
+    it('names the role that requires it while it is off', () => {
+        const wrapper = mountTab({ twoFactor: { ...OFF.twoFactor, requiredBy: ['Tesorería'] } });
+
+        expect(wrapper.find('[data-testid="two-factor-required-by"]').text()).toBe(
+            'Tu rol Tesorería exige doble factor: no funciona hasta que lo actives.'
+        );
+    });
+
+    it('names every role that requires it, as a list', () => {
+        const wrapper = mountTab({
+            twoFactor: { ...OFF.twoFactor, requiredBy: ['Secretaría', 'Tesorería'] },
+        });
+
+        expect(wrapper.find('[data-testid="two-factor-required-by"]').text()).toBe(
+            'Tus roles Secretaría y Tesorería exigen doble factor: no funcionan hasta que lo actives.'
+        );
+    });
+
+    it('says nothing about roles when none requires it, or once it is on', () => {
+        expect(mountTab(OFF).find('[data-testid="two-factor-required-by"]').exists()).toBe(false);
+        expect(
+            mountTab(on({ requiredBy: ['Tesorería'], canDisable: false }))
+                .find('[data-testid="two-factor-required-by"]')
+                .exists()
+        ).toBe(false);
     });
 
     it('hides «Desactivar» and says why when the server says it cannot be turned off', () => {

@@ -99,6 +99,9 @@ export function useProfileTabs(): UseProfileTabsReturn {
 
         return proposals?.available === true;
     });
+    // During maintenance mode, someone let in only to turn two-factor on (core#772) gets
+    // «Seguridad» alone: the server sends no other tab's data
+    const securityOnly = page.props.securityOnly === true;
     const visibleTabIds = [
         SECURITY_TAB,
         ...(hasCalendarTab.value ? [CALENDAR_TAB] : []),
@@ -108,10 +111,24 @@ export function useProfileTabs(): UseProfileTabsReturn {
     ];
     const requestedTab = tabFromUrl(page.url);
     const activeTabId = ref(
-        requestedTab !== null && visibleTabIds.includes(requestedTab) ? requestedTab : DEFAULT_TAB
+        securityOnly
+            ? SECURITY_TAB
+            : requestedTab !== null && visibleTabIds.includes(requestedTab)
+              ? requestedTab
+              : DEFAULT_TAB
     );
 
+    const securityTab = (): ProfileTab => ({
+        id: SECURITY_TAB,
+        label: t('auth.profile.tabs.security'),
+        icon: 'lock' as ProfileTabIcon,
+    });
+
     const tabs = computed<ProfileTab[]>(() => {
+        if (securityOnly) {
+            return [securityTab()];
+        }
+
         const baseTabs: ProfileTab[] = [
             {
                 id: 'account',
@@ -120,11 +137,7 @@ export function useProfileTabs(): UseProfileTabsReturn {
             },
         ];
 
-        baseTabs.push({
-            id: SECURITY_TAB,
-            label: t('auth.profile.tabs.security'),
-            icon: 'lock' as ProfileTabIcon,
-        });
+        baseTabs.push(securityTab());
 
         if (hasCalendarTab.value) {
             baseTabs.push({

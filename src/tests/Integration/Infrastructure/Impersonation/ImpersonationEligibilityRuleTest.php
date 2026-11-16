@@ -18,6 +18,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use RuntimeException;
+use Tests\Support\Authorization\ManagesTwoFactorRoles;
 use Tests\TestCase;
 
 /**
@@ -27,6 +28,7 @@ use Tests\TestCase;
 final class ImpersonationEligibilityRuleTest extends TestCase
 {
     use LazilyRefreshDatabase;
+    use ManagesTwoFactorRoles;
 
     public function test_the_permission_is_defined_and_reserved_to_the_administrator_role(): void
     {
@@ -95,6 +97,31 @@ final class ImpersonationEligibilityRuleTest extends TestCase
 
         $this->assertSame(ImpersonationRefusal::TargetIsAdmin, $this->rule()->startRefusal($admin, $otherAdmin));
         $this->assertSame(ImpersonationRefusal::TargetIsAdmin, $this->rule()->continuationRefusal($admin, $otherAdmin));
+    }
+
+    public function test_an_administrator_whose_role_waits_for_two_factor_cannot_be_impersonated(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+        $otherAdmin = UserModel::factory()->admin()->create();
+        RoleModel::query()->where('name', 'admin')->update(['requires_two_factor' => true]);
+        $this->turnOnTwoFactor($admin);
+
+        // Core#772: the role is paused for the target, who is still an administrator
+        $this->assertFalse(app(AuthorizationServiceInterface::class)->hasRole($otherAdmin, 'admin'));
+        $this->assertSame(ImpersonationRefusal::TargetIsAdmin, $this->rule()->startRefusal($admin, $otherAdmin));
+        $this->assertSame(ImpersonationRefusal::TargetIsAdmin, $this->rule()->continuationRefusal($admin, $otherAdmin));
+    }
+
+    public function test_an_administrator_whose_role_waits_for_membership_cannot_be_impersonated(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+        $otherAdmin = UserModel::factory()->admin()->create();
+        // Written around the role editor, which never allows it on admin: still an administrator.
+        // The actor is a member, so their own role stays in force
+        RoleModel::query()->where('name', 'admin')->update(['requires_association_member' => true]);
+        $admin->roles()->attach(RoleModel::query()->firstOrCreate(['name' => 'socio'], ['display_name' => 'Socio'])->id);
+
+        $this->assertSame(ImpersonationRefusal::TargetIsAdmin, $this->rule()->startRefusal($admin, $otherAdmin));
     }
 
     public function test_nobody_can_impersonate_themselves(): void

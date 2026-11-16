@@ -55,4 +55,39 @@ final class RoleRestrictionRuleTest extends TestCase
         $this->assertTrue($role->requires_association_member);
         $this->assertSame(3, $role->max_holders);
     }
+
+    public function test_two_factor_may_be_required_by_admin_and_regular_roles(): void
+    {
+        $rule = app(RoleRestrictionRule::class);
+
+        $this->assertTrue($rule->canRequireTwoFactor('admin'));
+        $this->assertTrue($rule->canRequireTwoFactor('junta'));
+    }
+
+    public function test_two_factor_is_never_required_by_the_base_or_association_role(): void
+    {
+        $rule = app(RoleRestrictionRule::class);
+
+        $this->assertFalse($rule->canRequireTwoFactor('member'));
+        $this->assertFalse($rule->canRequireTwoFactor('socio'));
+    }
+
+    public function test_role_service_refuses_two_factor_on_the_association_role(): void
+    {
+        $role = RoleModel::query()->where('name', 'socio')->firstOrFail();
+        $role->update(['requires_two_factor' => true]);
+
+        $this->expectException(RoleProtectedException::class);
+
+        app(RoleServiceInterface::class)->update($role->id, new UpdateRoleDTO(displayName: 'Socios'));
+    }
+
+    public function test_role_service_update_keeps_the_two_factor_requirement(): void
+    {
+        $role = RoleModel::query()->create(['name' => 'tesoreria', 'display_name' => 'Tesorería', 'requires_two_factor' => true]);
+
+        app(RoleServiceInterface::class)->update($role->id, new UpdateRoleDTO(displayName: 'Tesorería y cuotas'));
+
+        $this->assertTrue($role->refresh()->requires_two_factor);
+    }
 }

@@ -18,6 +18,7 @@ final readonly class Role
         private bool $isProtected = false,
         private bool $requiresAssociationMember = false,
         private ?int $maxHolders = null,
+        private bool $requiresTwoFactor = false,
     ) {
         if ($maxHolders !== null && $maxHolders < 1) {
             throw new InvalidArgumentException('The maximum number of holders must be at least 1.');
@@ -27,6 +28,14 @@ final readonly class Role
     public function requiresAssociationMember(): bool
     {
         return $this->requiresAssociationMember;
+    }
+
+    /**
+     * Whether the role counts only while its holder has two-factor authentication on (core#772).
+     */
+    public function requiresTwoFactor(): bool
+    {
+        return $this->requiresTwoFactor;
     }
 
     public function maxHolders(): ?int

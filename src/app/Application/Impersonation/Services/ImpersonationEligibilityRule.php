@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Impersonation\Services;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
+use App\Domain\Authorization\Repositories\RoleRepositoryInterface;
 use App\Domain\Enums\UserRole;
 use App\Domain\Impersonation\Enums\ImpersonationRefusal;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -16,7 +17,8 @@ use Throwable;
  * request of an impersonation. The actor needs users.impersonate, which only the administrator
  * role can hold (AdminOnlyPermissionRule). The target may be any account except an
  * administrator, the actor's own, a deactivated or an anonymized one; accounts with panel
- * access included.
+ * access included. Whether the target is an administrator is read from the roles it holds,
+ * not the ones in force: an administrator whose role is paused (core#772) is still one.
  *
  * It fails closed: a check that throws refuses with CheckFailed.
  *
@@ -33,6 +35,7 @@ final readonly class ImpersonationEligibilityRule
         private ImpersonationContextInterface $context,
         private ImpersonationRolesInterface $roles,
         private LoggerInterface $log,
+        private RoleRepositoryInterface $storedRoles,
     ) {}
 
     /**
@@ -126,7 +129,7 @@ final readonly class ImpersonationEligibilityRule
             (string) $actor->getAuthIdentifier() === (string) $target->getAuthIdentifier() => ImpersonationRefusal::TargetIsSelf,
             $this->accounts->isDeactivated($target) => ImpersonationRefusal::TargetDeactivated,
             $this->accounts->isAnonymized($target) => ImpersonationRefusal::TargetAnonymized,
-            $this->authorization->hasRole($target, UserRole::Admin->value) => ImpersonationRefusal::TargetIsAdmin,
+            in_array(UserRole::Admin->value, $this->storedRoles->getRoleNamesForUser((string) $target->getAuthIdentifier()), true) => ImpersonationRefusal::TargetIsAdmin,
             default => null,
         };
     }

@@ -14,6 +14,7 @@ use Filament\Forms\Components\Checkbox;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * «Restablecer el doble factor» (core#771), in the header of the user page: for whoever lost their phone
@@ -41,7 +42,14 @@ final class ResetTwoFactorAction
             ->label(__('filament.users.actions.resetTwoFactor.label'))
             ->icon('heroicon-o-shield-exclamation')
             ->color('danger')
-            ->visible(static fn (): bool => app(TwoFactorStatusReaderInterface::class)->isEnabled((string) $recordResolver()->getKey()))
+            // A reader that fails hides it rather than breaking the user page (core#772)
+            ->visible(static function () use ($recordResolver): bool {
+                try {
+                    return app(TwoFactorStatusReaderInterface::class)->isEnabled((string) $recordResolver()->getKey());
+                } catch (Throwable) {
+                    return false;
+                }
+            })
             ->requiresConfirmation()
             ->modalHeading(static function () use ($recordResolver): string {
                 $user = $recordResolver();

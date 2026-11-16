@@ -27,6 +27,7 @@ use App\Filament\Resources\RoleResource\RoleRequirementImpact;
 use App\Filament\Support\PanelNavigationGroup;
 use App\Infrastructure\Authorization\Services\RoleChangeAnnouncer;
 use App\Infrastructure\Authorization\Services\RoleHolderLimitGuard;
+use App\Infrastructure\Authorization\Services\TwoFactorRequirementGuard;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Closure;
@@ -127,6 +128,19 @@ class RoleResource extends BaseResource
                             ->hintIcon(fn (?RoleModel $record): ?string => self::canBeRestricted($record) ? null : 'heroicon-o-lock-closed')
                             ->hintColor('warning')
                             ->helperText(fn (Get $get, ?RoleModel $record): string => self::requirementHelp((bool) $get('requires_association_member'), $record)),
+                        Toggle::make('requires_two_factor')
+                            ->label(__('filament.roles.fields.requiresTwoFactor'))
+                            ->live()
+                            ->disabled(fn (?RoleModel $record): bool => ! self::canRequireTwoFactor($record))
+                            ->hint(fn (?RoleModel $record): ?string => self::canRequireTwoFactor($record) ? null : (string) __('filament.roles.fields.twoFactorLockedHint'))
+                            ->hintIcon(fn (?RoleModel $record): ?string => self::canRequireTwoFactor($record) ? null : 'heroicon-o-lock-closed')
+                            ->hintColor('warning')
+                            ->helperText(fn (Get $get, ?RoleModel $record): string => self::twoFactorRequirementHelp((bool) $get('requires_two_factor'), $record))
+                            ->rule(static fn (?RoleModel $record): Closure => static function (string $attribute, mixed $value, Closure $fail) use ($record): void {
+                                if (self::refusesTwoFactorMark($record, (bool) $value)) {
+                                    $fail((string) __('filament.roles.fields.twoFactorOwnRole'));
+                                }
+                            }),
                         TextInput::make('max_holders')
                             ->label(__('filament.roles.fields.maxHolders'))
                             ->integer()
@@ -219,6 +233,10 @@ class RoleResource extends BaseResource
                     ->label(__('filament.roles.fields.requiresAssociationMemberShort'))
                     ->boolean()
                     ->visibleFrom('xl'),
+                IconColumn::make('requires_two_factor')
+                    ->label(__('filament.roles.fields.requiresTwoFactorShort'))
+                    ->boolean()
+                    ->visibleFrom('2xl'),
                 IconColumn::make('is_protected')
                     ->label(__('filament.roles.fields.isProtected'))
                     ->boolean()
@@ -282,6 +300,47 @@ class RoleResource extends BaseResource
     {
         return ! $record instanceof RoleModel
             || app(RoleRestrictionRule::class)->canBeRestricted($record->name);
+    }
+
+    /**
+     * Whether the role may require two-factor authentication (core#772): admin may, the base role
+     * and the association member role never. A role not saved yet always may.
+     */
+    public static function canRequireTwoFactor(?RoleModel $record): bool
+    {
+        return ! $record instanceof RoleModel
+            || app(RoleRestrictionRule::class)->canRequireTwoFactor($record->name);
+    }
+
+    /**
+     * Whether the signed-in person may not save the role requiring two-factor authentication:
+     * they hold it and have it off (TwoFactorRequirementGuard).
+     */
+    public static function refusesTwoFactorMark(?RoleModel $record, bool $requires): bool
+    {
+        $actor = auth()->user();
+
+        return $actor !== null && app(TwoFactorRequirementGuard::class)->refuses(
+            $actor,
+            $record,
+            $record instanceof RoleModel && $record->requires_two_factor,
+            $requires,
+        );
+    }
+
+    private static function twoFactorRequirementHelp(bool $requires, ?RoleModel $record): string
+    {
+        $help = (string) __('filament.roles.fields.requiresTwoFactorHelp');
+
+        if (! $requires || ! $record instanceof RoleModel || $record->requires_two_factor) {
+            return $help;
+        }
+
+        $count = app(RoleRequirementImpact::class)->holdersWithoutTwoFactorCount($record);
+
+        return $count > 0
+            ? $help.' '.trans_choice('filament.roles.fields.twoFactorImpact', $count, ['count' => $count])
+            : $help;
     }
 
     private static function requirementHelp(bool $requires, ?RoleModel $record): string

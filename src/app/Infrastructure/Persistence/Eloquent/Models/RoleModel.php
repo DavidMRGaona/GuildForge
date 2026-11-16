@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property bool $is_protected
  * @property bool $requires_association_member
  * @property int|null $max_holders
+ * @property bool $requires_two_factor
  */
 final class RoleModel extends Model
 {
@@ -34,6 +35,7 @@ final class RoleModel extends Model
         'is_protected',
         'requires_association_member',
         'max_holders',
+        'requires_two_factor',
     ];
 
     protected function casts(): array
@@ -42,6 +44,7 @@ final class RoleModel extends Model
             'is_protected' => 'boolean',
             'requires_association_member' => 'boolean',
             'max_holders' => 'integer',
+            'requires_two_factor' => 'boolean',
         ];
     }
 

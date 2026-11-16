@@ -12,6 +12,11 @@ use App\Domain\Enums\UserRole;
  * and the association member role never can: they are what the restrictions are measured
  * against, and a cap or requirement on them would lock accounts out.
  *
+ * Requiring two-factor authentication (core#772) is decided apart: the administrator role may
+ * (whoever holds it can always turn it on from «Ajustes de la cuenta»), the base role and the
+ * association member role never (pausing the association role would pause in cascade every role
+ * that requires membership).
+ *
  * A class of its own rather than a method of a core interface: modules implement those
  * interfaces in their tests, and a new method would break them.
  */
@@ -26,6 +31,12 @@ final readonly class RoleRestrictionRule
     {
         return $roleName !== UserRole::Admin->value
             && ! $this->baseRole->isBaseRoleName($roleName)
+            && ! $this->associationMemberRole->isAssociationMemberRoleName($roleName);
+    }
+
+    public function canRequireTwoFactor(string $roleName): bool
+    {
+        return ! $this->baseRole->isBaseRoleName($roleName)
             && ! $this->associationMemberRole->isAssociationMemberRoleName($roleName);
     }
 }

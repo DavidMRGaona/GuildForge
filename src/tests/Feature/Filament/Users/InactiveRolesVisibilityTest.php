@@ -65,7 +65,7 @@ final class InactiveRolesVisibilityTest extends TestCase
         $plain = $this->holder([$this->role('helper')]);
 
         Livewire::test(ListUsers::class)
-            ->filterTable('inactive_roles', true)
+            ->filterTable('inactive_roles', 'any')
             ->assertCanSeeTableRecords([$inactive])
             ->assertCanNotSeeTableRecords([$active, $plain]);
     }

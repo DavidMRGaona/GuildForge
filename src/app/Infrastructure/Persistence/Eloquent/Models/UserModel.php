@@ -6,6 +6,7 @@ namespace App\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Media\Services\MediaFileReleaserInterface;
+use App\Domain\Enums\UserRole;
 use App\Domain\Events\UserDeactivated;
 use App\Domain\Events\UserRestored;
 use App\Infrastructure\Media\Sources\AvatarMediaSource;
@@ -198,12 +199,14 @@ class UserModel extends Authenticatable implements FilamentUser, HasAvatar, Must
     }
 
     /**
-     * Check if user has admin role.
-     * Used as fast-path in AuthorizationService.
+     * Whether the administrator role is in force for the account: through the authorization
+     * service, so an administrator role paused for want of two-factor authentication (core#772)
+     * counts as not held, like everywhere else. Code that must tell a stored administrator apart
+     * (an account others may not manage) reads the stored roles instead.
      */
     public function isAdmin(): bool
     {
-        return $this->roles()->where('name', 'admin')->exists();
+        return app(AuthorizationServiceInterface::class)->hasRole($this, UserRole::Admin->value);
     }
 
     /**

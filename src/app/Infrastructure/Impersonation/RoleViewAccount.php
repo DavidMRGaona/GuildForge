@@ -13,6 +13,9 @@ use Illuminate\Support\Str;
  * The throwaway account a role view runs as. It only lives inside the impersonation safety net's
  * rolled back transaction. Written straight to the tables on purpose: no model events, observers,
  * role holder cap or role history for an account that never exists.
+ *
+ * It counts as having two-factor authentication on (core#772), so a role that requires it shows
+ * what it gives: its id is kept in RoleViewAccountIds for the request, never as a stored setup.
  */
 final readonly class RoleViewAccount
 {
@@ -23,6 +26,10 @@ final readonly class RoleViewAccount
 
     /** Length of users.name and users.display_name: PostgreSQL rejects anything longer. */
     private const int NAME_MAX_LENGTH = 255;
+
+    public function __construct(
+        private ?RoleViewAccountIds $ids = null,
+    ) {}
 
     /**
      * @param  non-empty-list<ViewedRoleDTO>  $roles
@@ -50,6 +57,8 @@ final readonly class RoleViewAccount
             'created_at' => $now,
             'updated_at' => $now,
         ], $roles));
+
+        ($this->ids ?? app(RoleViewAccountIds::class))->add($id);
 
         return UserModel::query()->findOrFail($id);
     }

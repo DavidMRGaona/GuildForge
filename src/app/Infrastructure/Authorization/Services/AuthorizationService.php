@@ -4,17 +4,15 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Authorization\Services;
 
-use App\Application\Authorization\Services\AdminOnlyPermissionRule;
-use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\BaseRoleRule;
 use App\Application\Authorization\Services\RoleAuditLoggerInterface;
 use App\Domain\Authorization\Exceptions\RoleHolderLimitReachedException;
 use App\Domain\Events\AssociationRoleLost;
+use App\Domain\Events\TwoFactorRolesPaused;
 use App\Domain\Events\UserRolesChanged;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -105,7 +103,7 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
     }
 
     /**
-     * The permissions of the user's active roles only (see activeRoles()).
+     * The permissions of the user's active roles only (ActiveRoleResolver::activeRoles()).
      *
      * @return array<string>
      */
@@ -113,29 +111,14 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
     {
         return $this->cachedLookup('permissions', $user, static function () use ($user): array {
             /** @var UserModel $user */
-            $activeIds = self::activeRoles($user)->pluck('id')->all();
+            $resolver = app(ActiveRoleResolver::class);
 
-            if ($activeIds === []) {
-                return [];
-            }
-
-            $adminOnly = app(AdminOnlyPermissionRule::class);
-
-            return RoleModel::query()
-                ->whereIn('id', $activeIds)
-                ->with('permissions')
-                ->get()
-                // An admin-only permission written into another role gives nothing (fails closed)
-                ->flatMap(fn (RoleModel $role) => $role->permissions->pluck('key')
-                    ->filter(static fn (mixed $key): bool => is_string($key) && $adminOnly->mayHold($role->name, $key)))
-                ->unique()
-                ->values()
-                ->toArray();
+            return $resolver->permissionKeys($resolver->activeRoles($user));
         });
     }
 
     /**
-     * The user's active roles only (see activeRoles()): the frontend gets this list too, so
+     * The user's active roles only (ActiveRoleResolver::activeRoles()): the frontend gets this list too, so
      * an inactive role must not open anything there. Screens that need every role the user
      * holds read the relationship or RoleRepositoryInterface::getRoleNamesForUser().
      *
@@ -145,7 +128,7 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
     {
         return $this->cachedLookup('roles', $user, static function () use ($user): array {
             /** @var UserModel $user */
-            return self::activeRoles($user)->pluck('name')->all();
+            return app(ActiveRoleResolver::class)->activeRoles($user)->pluck('name')->all();
         });
     }
 
@@ -157,6 +140,7 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
         /** @var UserModel $user */
         DB::transaction(function () use ($user, $roleName): void {
             $role = RoleModel::where('name', $roleName)->firstOrFail();
+            $pausedBefore = app(ActiveRoleResolver::class)->pausedByTwoFactor($user);
 
             // Already held: no new holder, nothing to check, nothing to log
             $before = null;
@@ -171,6 +155,7 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
 
             if ($before !== null) {
                 $this->announceRolesChanged($user, $before, $this->storedRoleNames($user));
+                $this->announceTwoFactorPause($user, $pausedBefore);
             }
         });
     }
@@ -220,6 +205,7 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
             // Read from the database, not the cache: a user who has the base role of every account keeps it
             $currentIds = $user->roles()->pluck('roles.id')->all();
             $before = $this->storedRoleNames($user);
+            $pausedBefore = app(ActiveRoleResolver::class)->pausedByTwoFactor($user);
             $hasBaseRole = $user->roles()->where('roles.name', BaseRoleRule::NAME)->exists();
 
             if ($hasBaseRole && ! in_array(BaseRoleRule::NAME, $roleNames, true)) {
@@ -260,6 +246,9 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
                 $user,
                 array_values(array_map(static fn (int|string $roleId): string => (string) $namesById[$roleId], $changes['detached'])),
             );
+            if ($changes['attached'] !== []) {
+                $this->announceTwoFactorPause($user, $pausedBefore);
+            }
         });
     }
 
@@ -300,7 +289,7 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
      */
     private function announceAssociationRoleLost(UserModel $user, array $detachedRoleNames): void
     {
-        $associationRole = self::associationMemberRoleName();
+        $associationRole = app(ActiveRoleResolver::class)->associationMemberRoleName();
         if ($associationRole === null || ! in_array($associationRole, $detachedRoleNames, true)) {
             return;
         }
@@ -314,6 +303,27 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
         $userId = (string) $user->getKey();
         DB::afterCommit(static function () use ($userId, $inactive): void {
             Event::dispatch(new AssociationRoleLost($userId, $inactive));
+        });
+    }
+
+    /**
+     * After the commit, tells the person that roles wait for two-factor authentication
+     * (core#772) that did not before the change: a role just given, or one that waited for
+     * membership and now only for two-factor (the association member role was given). Read
+     * then, from the database, so a rollback or a later change in the same transaction is seen.
+     *
+     * @param  list<string>  $pausedBefore  ActiveRoleResolver::pausedByTwoFactor() before the change
+     */
+    private function announceTwoFactorPause(UserModel $user, array $pausedBefore): void
+    {
+        $userId = (string) $user->getKey();
+
+        DB::afterCommit(static function () use ($user, $userId, $pausedBefore): void {
+            $paused = array_values(array_diff(app(ActiveRoleResolver::class)->pausedByTwoFactor($user), $pausedBefore));
+
+            if ($paused !== []) {
+                Event::dispatch(new TwoFactorRolesPaused($userId, $paused));
+            }
         });
     }
 
@@ -343,6 +353,8 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
     /**
      * The cache only saves queries: when it is unreachable or holds anything but a list of
      * names, the answer comes from the database, so a cache problem can never grant access.
+     * Nor is an answer kept that was computed while the two-factor reader failed: it paused
+     * roles for a passing failure, and would keep them paused for the cache's lifetime.
      *
      * @param  callable(): array<string>  $query
      * @return array<string>
@@ -368,9 +380,12 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
             $key = null;
         }
 
+        // An answer computed while the two-factor reader failed is served, never kept (core#772)
+        $twoFactor = app(TwoFactorHolders::class);
+        $failuresBefore = $twoFactor->failures();
         $fresh = array_values(array_map(strval(...), $query()));
 
-        if ($key !== null) {
+        if ($key !== null && $twoFactor->failures() === $failuresBefore) {
             try {
                 Cache::put($key, $fresh, self::CACHE_TTL);
             } catch (Throwable) {
@@ -439,48 +454,6 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
         }
 
         return array_all($value, fn ($name) => is_string($name));
-    }
-
-    /**
-     * The roles that count for the user. A role that requires association membership is
-     * active only while the user's own roles (unfiltered) include the association member
-     * role; when no association member role is usable (roleName() is null) none of them is.
-     * Every other role is always active.
-     *
-     * The setting is read only when one of the roles carries the requirement. If it cannot
-     * be read, those roles stay inactive: a failure never grants access.
-     *
-     * @return Collection<int, RoleModel>
-     */
-    private static function activeRoles(UserModel $user): Collection
-    {
-        $roles = $user->roles()->get(['roles.id', 'roles.name', 'roles.requires_association_member']);
-        $requiresMembership = static fn (RoleModel $role): bool => $role->requires_association_member === true;
-
-        if (! $roles->contains($requiresMembership)) {
-            return $roles;
-        }
-
-        $associationRole = self::associationMemberRoleName();
-        $isAssociationMember = $associationRole !== null
-            && $roles->contains(fn (RoleModel $role): bool => $role->name === $associationRole);
-
-        return $isAssociationMember ? $roles : $roles->reject($requiresMembership)->values();
-    }
-
-    /**
-     * The membership service is resolved here, not injected: it depends on this service.
-     * roleName() reads only the setting, never this service.
-     */
-    private static function associationMemberRoleName(): ?string
-    {
-        try {
-            return app(AssociationMembershipServiceInterface::class)->roleName();
-        } catch (Throwable $e) {
-            Log::warning("Association member role setting unreadable, roles that require it stay inactive: {$e->getMessage()}");
-
-            return null;
-        }
     }
 
     /**

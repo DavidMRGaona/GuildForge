@@ -7,6 +7,8 @@ export interface TwoFactorState {
     remainingCodes: number;
     /** False while something (a role that requires it) says it cannot be turned off. */
     canDisable: boolean;
+    /** Display names of the roles held that require it (core#772), paused while it is off. */
+    requiredBy: string[];
 }
 
 export interface SecurityProps {

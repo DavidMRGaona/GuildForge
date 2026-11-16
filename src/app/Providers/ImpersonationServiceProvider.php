@@ -17,6 +17,7 @@ use App\Infrastructure\Impersonation\EloquentImpersonationRoles;
 use App\Infrastructure\Impersonation\ImpersonationContext;
 use App\Infrastructure\Impersonation\ImpersonationLogger;
 use App\Infrastructure\Impersonation\ImpersonationService;
+use App\Infrastructure\Impersonation\RoleViewAccountIds;
 use App\Infrastructure\Impersonation\SafetyNet\ImpersonationSafetyNet;
 use App\Infrastructure\Impersonation\SafetyNet\RolledBackTransaction;
 use Filament\Http\Middleware\AuthenticateSession as FilamentAuthenticateSession;
@@ -43,6 +44,8 @@ final class ImpersonationServiceProvider extends ServiceProvider
         // ends, terminating middleware and defer() callbacks included
         $this->app->singleton(RolledBackTransaction::class);
         $this->app->singleton(ImpersonationSafetyNet::class);
+        // Throwaway accounts of role views count as having two-factor authentication (core#772)
+        $this->app->scoped(RoleViewAccountIds::class);
 
         // Both session checks store the administrator's password hash, not the target's.
         // Bound under the framework names: the panel and Livewire's persistent middleware

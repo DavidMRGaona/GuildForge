@@ -818,6 +818,8 @@ export default {
                 off: {
                     status: 'Desactivado',
                     enable: 'Activar doble factor',
+                    requiredBy:
+                        'Tu rol {roles} exige doble factor: no funciona hasta que lo actives. | Tus roles {roles} exigen doble factor: no funcionan hasta que lo actives.',
                 },
                 on: {
                     status: 'Activado',

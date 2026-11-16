@@ -621,9 +621,11 @@ final class SiteSettings extends Page implements HasForms
         $options = [];
 
         // Roles with panel access, a membership requirement or a holder cap contradict (or would
-        // escalate) a role handed out automatically to every paying member
+        // escalate) a role handed out automatically to every paying member; a two-factor
+        // requirement (core#772) would pause it, and with it every role that requires membership
         $roles = RoleModel::query()
             ->where('requires_association_member', false)
+            ->where('requires_two_factor', false)
             ->whereNull('max_holders')
             ->whereDoesntHave('permissions', static function (Builder $permissions): void {
                 $permissions->where('key', 'admin.access');

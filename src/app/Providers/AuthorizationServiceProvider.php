@@ -15,14 +15,23 @@ use App\Application\Authorization\Services\RoleServiceInterface;
 use App\Domain\Authorization\Repositories\PermissionRepositoryInterface;
 use App\Domain\Authorization\Repositories\RoleRepositoryInterface;
 use App\Domain\Events\AssociationRoleLost;
+use App\Domain\Events\TwoFactorRolesPaused;
+use App\Domain\Events\UserRestored;
+use App\Domain\TwoFactor\Events\TwoFactorAppChanged;
+use App\Domain\TwoFactor\Events\TwoFactorDisabled;
+use App\Domain\TwoFactor\Events\TwoFactorEnabled;
+use App\Domain\TwoFactor\Events\TwoFactorReset;
 use App\Infrastructure\Authorization\CorePermissionDefinitions;
+use App\Infrastructure\Authorization\Listeners\FollowTwoFactorChanges;
 use App\Infrastructure\Authorization\Listeners\NotifyInactiveRoles;
+use App\Infrastructure\Authorization\Listeners\NotifyTwoFactorRolesPaused;
 use App\Infrastructure\Authorization\Repositories\EloquentPermissionRepository;
 use App\Infrastructure\Authorization\Repositories\EloquentRoleRepository;
 use App\Infrastructure\Authorization\Services\AssociationMemberRoleWarning;
 use App\Infrastructure\Authorization\Services\AssociationMembershipService;
 use App\Infrastructure\Authorization\Services\AuthorizationCacheVersion;
 use App\Infrastructure\Authorization\Services\AuthorizationService;
+use App\Infrastructure\Authorization\Services\InactiveRoleHolders;
 use App\Infrastructure\Authorization\Services\MemberRoleService;
 use App\Infrastructure\Authorization\Services\PermissionRegistry;
 use App\Infrastructure\Authorization\Services\ProcessPermissionSyncRunner;
@@ -31,6 +40,7 @@ use App\Infrastructure\Authorization\Services\RoleAuditLogger;
 use App\Infrastructure\Authorization\Services\RoleAuditSourceResolver;
 use App\Infrastructure\Authorization\Services\RolePermissionGrants;
 use App\Infrastructure\Authorization\Services\RoleService;
+use App\Infrastructure\Authorization\Services\TwoFactorHolders;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobProcessed;
@@ -50,6 +60,9 @@ class AuthorizationServiceProvider extends ServiceProvider
         $this->app->singleton(AuthorizationServiceInterface::class, AuthorizationService::class);
         // Per request or job: the singleton above must not keep a token across them
         $this->app->scoped(AuthorizationCacheVersion::class);
+        // Core#772: counts the two-factor reader's failures per request; remembers who has it off
+        $this->app->scoped(TwoFactorHolders::class);
+        $this->app->scoped(InactiveRoleHolders::class);
         $this->app->singleton(RoleServiceInterface::class, RoleService::class);
         // A permission key outside "resource.action" fails as its module loads where the author
         // looks (local, tests, module CI); in production it is skipped with a warning (core#402)
@@ -81,6 +94,14 @@ class AuthorizationServiceProvider extends ServiceProvider
         );
 
         Event::listen(AssociationRoleLost::class, [NotifyInactiveRoles::class, 'handle']);
+
+        // Roles that require two-factor authentication (core#772)
+        Event::listen(TwoFactorEnabled::class, [FollowTwoFactorChanges::class, 'enabled']);
+        Event::listen(TwoFactorDisabled::class, [FollowTwoFactorChanges::class, 'disabled']);
+        Event::listen(TwoFactorReset::class, [FollowTwoFactorChanges::class, 'reset']);
+        Event::listen(TwoFactorAppChanged::class, [FollowTwoFactorChanges::class, 'appChanged']);
+        Event::listen(UserRestored::class, [FollowTwoFactorChanges::class, 'restored']);
+        Event::listen(TwoFactorRolesPaused::class, [NotifyTwoFactorRolesPaused::class, 'handle']);
 
         // Register core permissions in memory (for use in policies and code)
         // The database sync is done by `php artisan permissions:sync` (every deploy), when a

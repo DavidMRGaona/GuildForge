@@ -114,6 +114,12 @@ final readonly class RoleService implements RoleServiceInterface
         return $this->toResponseDTO($role);
     }
 
+    /**
+     * Keeps the role's requirements as they are: UpdateRoleDTO carries neither the association
+     * member requirement nor the two-factor one (core#772), which only the role editor changes.
+     * Should it ever carry the two-factor one, turning it on must go through
+     * TwoFactorRequirementGuard (nobody pauses a role they hold), like EditRole does.
+     */
     public function update(string $id, UpdateRoleDTO $dto): RoleResponseDTO
     {
         $existingRole = $this->roleRepository->findById(RoleId::fromString($id));
@@ -130,6 +136,7 @@ final readonly class RoleService implements RoleServiceInterface
             isProtected: $existingRole->isProtected(),
             requiresAssociationMember: $existingRole->requiresAssociationMember(),
             maxHolders: $existingRole->maxHolders(),
+            requiresTwoFactor: $existingRole->requiresTwoFactor(),
         );
 
         $this->guardRestrictions($role);
@@ -305,6 +312,7 @@ final readonly class RoleService implements RoleServiceInterface
             'name' => $role->name()->value,
             'requires_association_member' => $role->requiresAssociationMember(),
             'max_holders' => $role->maxHolders(),
+            'requires_two_factor' => $role->requiresTwoFactor(),
         ];
     }
 
@@ -328,6 +336,10 @@ final readonly class RoleService implements RoleServiceInterface
 
         if ($restricted && ! $this->roleRestriction->canBeRestricted($role->name()->value)) {
             throw RoleProtectedException::cannotRestrict($role->name()->value);
+        }
+
+        if ($role->requiresTwoFactor() && ! $this->roleRestriction->canRequireTwoFactor($role->name()->value)) {
+            throw RoleProtectedException::cannotRequireTwoFactor($role->name()->value);
         }
     }
 

@@ -179,6 +179,7 @@ final class SiteSettingsAssociationMemberRoleTest extends TestCase
         $this->roleWithPanelAccess('panel');
         RoleModel::query()->create(['name' => 'vocal', 'display_name' => 'Vocal', 'requires_association_member' => true]);
         RoleModel::query()->create(['name' => 'tesorero', 'display_name' => 'Tesorero', 'max_holders' => 1]);
+        RoleModel::query()->create(['name' => 'secretaria', 'display_name' => 'Secretaría', 'requires_two_factor' => true]);
         $this->actingAs(UserModel::factory()->admin()->create());
 
         $options = $this->select(Livewire::test(SiteSettings::class)->instance())->getOptions();
@@ -192,6 +193,7 @@ final class SiteSettingsAssociationMemberRoleTest extends TestCase
         $this->roleWithPanelAccess('panel');
         RoleModel::query()->create(['name' => 'vocal', 'display_name' => 'Vocal', 'requires_association_member' => true]);
         RoleModel::query()->create(['name' => 'tesorero', 'display_name' => 'Tesorero', 'max_holders' => 1]);
+        RoleModel::query()->create(['name' => 'secretaria', 'display_name' => 'Secretaría', 'requires_two_factor' => true]);
         app(SettingsServiceInterface::class)->set(self::KEY, 'socio');
         $this->actingAs(UserModel::factory()->admin()->create());
 
@@ -212,6 +214,7 @@ final class SiteSettingsAssociationMemberRoleTest extends TestCase
             'panel access' => ['panel'],
             'requires membership' => ['vocal'],
             'holder cap' => ['tesorero'],
+            'requires two-factor' => ['secretaria'],
         ];
     }
 
