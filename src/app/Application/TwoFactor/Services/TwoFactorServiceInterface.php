@@ -18,9 +18,9 @@ use Illuminate\Contracts\Session\Session;
  * - A code is never accepted twice: each check runs under a row lock and only takes a step later
  *   than the last one accepted for the account.
  * - Secrets are encrypted at rest and recovery codes are stored as hashes; neither is ever logged.
- * - Turning it on gives the account a new session seal (TwoFactorSessionSealInterface), closes
- *   its other sessions and invalidates its «remember me» cookies, after the commit, so every
- *   session of an account with two-factor authentication passed it.
+ * - Turning it on or off renews the account's session seal (TwoFactorSessionSealInterface::renew()):
+ *   after the commit, every other session is signed out and older «remember me» cookies stop
+ *   working, so every session of an account with two-factor authentication passed it.
  * - Every change sends a mail in the mandatory category core.account-security (through the
  *   events in App\Domain\TwoFactor\Events, dispatched after the commit).
  * - Changes are refused while an administrator impersonates the account.
@@ -42,9 +42,8 @@ interface TwoFactorServiceInterface extends TwoFactorStatusReaderInterface
 
     /**
      * Turns it on with a code from the app, and returns the recovery codes in plain text: the
-     * only time they are ever shown. After the commit: the session given is stamped with the new
-     * seal and stays signed in, every other one is closed (rows deleted with the database driver,
-     * signed out on their next request with any driver) and the remember token rotates.
+     * only time they are ever shown. Renews the session seal: the session given stays signed in,
+     * every other one is signed out.
      *
      * @param  Session|null  $currentSession  the session to keep signed in (the request's); null keeps none
      * @return list<string>
@@ -74,9 +73,12 @@ interface TwoFactorServiceInterface extends TwoFactorStatusReaderInterface
     public function regenerateRecoveryCodes(string $userId): array;
 
     /**
-     * Turns it off: secret and recovery codes are deleted.
+     * Turns it off: secret and recovery codes are deleted. Renews the session seal like
+     * confirmSetup(): the session given stays signed in, every other one is signed out.
+     *
+     * @param  Session|null  $currentSession  the session to keep signed in (the request's); null keeps none
      *
      * @throws TwoFactorException NotEnabled, Impersonating
      */
-    public function disable(string $userId): void;
+    public function disable(string $userId, ?Session $currentSession = null): void;
 }

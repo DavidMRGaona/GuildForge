@@ -18,7 +18,6 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $confirmed_at
  * @property list<string>|null $recovery_codes SHA-256 hashes of the unused codes
  * @property int|null $last_used_timestep
- * @property string|null $session_seal what a session must hold to stay signed in (TwoFactorSessionSeal)
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -40,13 +39,11 @@ final class UserTwoFactorModel extends Model
         'confirmed_at',
         'recovery_codes',
         'last_used_timestep',
-        'session_seal',
     ];
 
     protected $hidden = [
         'secret',
         'recovery_codes',
-        'session_seal',
     ];
 
     /**

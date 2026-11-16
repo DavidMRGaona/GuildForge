@@ -25,8 +25,6 @@ return new class extends Migration
             $table->text('recovery_codes')->nullable();
             // The last TOTP step accepted: only later ones are, so no code is used twice
             $table->bigInteger('last_used_timestep')->nullable();
-            // Random, new each time it is turned on: only sessions holding it stay signed in
-            $table->string('session_seal', 64)->nullable();
             $table->timestamps();
         });
     }

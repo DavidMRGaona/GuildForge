@@ -97,7 +97,7 @@ final class TwoFactorServiceTest extends TestCase
         $model = UserTwoFactorModel::query()->findOrFail($user->id);
         $this->assertArrayNotHasKey('secret', $model->toArray());
         $this->assertArrayNotHasKey('recovery_codes', $model->toArray());
-        $this->assertArrayNotHasKey('session_seal', $model->toArray());
+        $this->assertArrayNotHasKey('session_seal', $user->fresh()?->toArray() ?? []);
         $this->assertStringNotContainsString($setup->secret, (string) json_encode($user->fresh()));
     }
 
@@ -390,8 +390,9 @@ final class TwoFactorServiceTest extends TestCase
 
         // The session that turned it on stays signed in, with any driver; a session opened before does not
         $seal = $this->app->make(TwoFactorSessionSealInterface::class);
-        $this->assertTrue($seal->passes($current, (string) $user->id));
-        $this->assertFalse($seal->passes($this->sessionStore(), (string) $user->id));
+        $fresh = $user->refresh();
+        $this->assertTrue($seal->passes($current, $fresh));
+        $this->assertFalse($seal->passes($this->sessionStore(), $fresh));
     }
 
     public function test_without_a_current_session_every_session_closes(): void

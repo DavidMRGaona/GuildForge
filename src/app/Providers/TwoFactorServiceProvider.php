@@ -15,8 +15,10 @@ use App\Infrastructure\QrCodes\EndroidQrCodeRenderer;
 use App\Infrastructure\QrCodes\QrCodeContentPolicy;
 use App\Infrastructure\QrCodes\TotpQrCodeRendererInterface;
 use App\Infrastructure\TwoFactor\Listeners\SendTwoFactorSecurityNotice;
+use App\Infrastructure\TwoFactor\Listeners\StampSessionSealOnLogin;
 use App\Infrastructure\TwoFactor\TwoFactorService;
 use App\Infrastructure\TwoFactor\TwoFactorSessionSeal;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
@@ -39,6 +41,7 @@ final class TwoFactorServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Event::listen(Login::class, StampSessionSealOnLogin::class);
         Event::listen(TwoFactorEnabled::class, [SendTwoFactorSecurityNotice::class, 'enabled']);
         Event::listen(TwoFactorDisabled::class, [SendTwoFactorSecurityNotice::class, 'disabled']);
         Event::listen(RecoveryCodeUsed::class, [SendTwoFactorSecurityNotice::class, 'recoveryCodeUsed']);

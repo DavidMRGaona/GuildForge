@@ -43,6 +43,7 @@ use Illuminate\Support\Facades\Storage;
  * @property Carbon|null $email_verified_at
  * @property Carbon|null $deleted_at
  * @property Carbon|null $anonymized_at
+ * @property string|null $session_seal what each session must hold to stay signed in (core#768); null for an account that never had one
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -143,6 +144,7 @@ class UserModel extends Authenticatable implements FilamentUser, HasAvatar, Must
     protected $hidden = [
         'password',
         'remember_token',
+        'session_seal',
     ];
 
     /**

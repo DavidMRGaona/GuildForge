@@ -168,18 +168,11 @@ final readonly class TwoFactorService implements TwoFactorServiceInterface
                 'recovery_codes' => $this->hashesOf($codes),
                 // The code just typed cannot be typed again to sign in
                 'last_used_timestep' => $step,
-                'session_seal' => Str::random(64),
             ])->save();
 
-            DB::afterCommit(function () use ($id, $currentSession): void {
-                if ($currentSession instanceof Session) {
-                    $this->seal->stamp($currentSession, $id);
-                }
-
-                $this->closeOtherSessions($id, $currentSession?->getId());
-                $this->rotateRememberToken($id);
-                Event::dispatch(new TwoFactorEnabled($id));
-            });
+            // Every session opened before is signed out; the one that turned it on stays
+            $this->seal->renew($id, $currentSession);
+            DB::afterCommit(static fn () => Event::dispatch(new TwoFactorEnabled($id)));
 
             return array_map(static fn (RecoveryCode $recoveryCode): string => $recoveryCode->value, $codes);
         });
@@ -275,15 +268,16 @@ final readonly class TwoFactorService implements TwoFactorServiceInterface
         });
     }
 
-    public function disable(string $userId): void
+    public function disable(string $userId, ?Session $currentSession = null): void
     {
         $this->refuseWhileImpersonating();
 
         $id = $this->normalise($userId) ?? throw TwoFactorException::because(TwoFactorFailure::NotEnabled);
 
-        DB::transaction(function () use ($id): void {
+        DB::transaction(function () use ($id, $currentSession): void {
             $this->enabledRowOrFail($id)->delete();
 
+            $this->seal->renew($id, $currentSession);
             DB::afterCommit(static fn () => Event::dispatch(new TwoFactorDisabled($id)));
         });
     }
@@ -368,35 +362,6 @@ final readonly class TwoFactorService implements TwoFactorServiceInterface
             'digits' => TotpCode::DIGITS,
             'period' => TotpWindowRule::PERIOD_SECONDS,
         ], '', '&', PHP_QUERY_RFC3986);
-    }
-
-    /**
-     * With the database driver the rows go at once. Other drivers cannot list an account's
-     * sessions: those lack the new seal, so EnsureSessionPassedTwoFactor signs them out on their
-     * next request.
-     */
-    private function closeOtherSessions(string $id, ?string $currentSessionId): void
-    {
-        if (config('session.driver') !== 'database') {
-            return;
-        }
-
-        $connection = config('session.connection');
-        $table = config('session.table');
-
-        DB::connection(is_string($connection) ? $connection : null)
-            ->table(is_string($table) ? $table : 'sessions')
-            ->where('user_id', $id)
-            ->when($currentSessionId !== null, static fn ($query) => $query->where('id', '!=', $currentSessionId))
-            ->delete();
-    }
-
-    /**
-     * «Remember me» cookies carry the token: a new one invalidates every cookie issued before.
-     */
-    private function rotateRememberToken(string $id): void
-    {
-        UserModel::query()->withTrashed()->whereKey($id)->update(['remember_token' => Str::random(60)]);
     }
 
     private function refuseWhileImpersonating(): void

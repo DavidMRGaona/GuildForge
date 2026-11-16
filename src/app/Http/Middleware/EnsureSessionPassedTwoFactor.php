@@ -16,9 +16,13 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Signs out a session of an account with two-factor authentication on that does not hold the
- * account's seal (TwoFactorSessionSealInterface): one opened before it was turned on, or one that
- * skipped the challenge. In the web group and the panel's middleware.
+ * Signs out a session that does not hold its account's current seal (TwoFactorSessionSealInterface):
+ * one opened before two-factor authentication was turned on, off or reset, or one of an account
+ * with it on that skipped the challenge. An account that never had a seal is left alone.
+ *
+ * In the web group and the panel's middleware. Not inside the AuthenticateSession subclasses: the
+ * web group does not run AuthenticateSession, and adding it there would also start signing out
+ * site sessions on every password change.
  *
  * The seal is the session owner's: the administrator's while impersonating, like the password
  * hash AuthenticateSession compares (ChecksTheImpersonatorsSession).
@@ -40,16 +44,10 @@ final readonly class EnsureSessionPassedTwoFactor
         }
 
         $session = $request->session();
-        $ownerId = (string) $owner->getAuthIdentifier();
-        $guard = $this->auth->guard();
 
-        // Restored from a «remember me» cookie, which is only issued after the challenge and was
-        // invalidated for every older one when two-factor authentication was turned on
-        if ($guard instanceof StatefulGuard && $guard->viaRemember()) {
-            $this->seal->stamp($session, $ownerId);
-        }
+        if (! $this->seal->passes($session, $owner)) {
+            $guard = $this->auth->guard();
 
-        if (! $this->seal->passes($session, $ownerId)) {
             // Only this device: logout() would also rotate the remember token of the account
             if ($guard instanceof SessionGuard) {
                 $guard->logoutCurrentDevice();
