@@ -8,6 +8,7 @@ use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Http\Middleware\Concerns\IdentifiesLivewireRequests;
+use App\Infrastructure\Authorization\Services\TwoFactorPanelAccess;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Closure;
 use Filament\Facades\Filament;
@@ -51,6 +52,14 @@ final readonly class EnsureSiteIsNotInMaintenance
         'correos/logo.png',
     ];
 
+    /** The account settings page, opened on its «Seguridad» tab only (core#772) */
+    private const string SECURITY_PAGE_ROUTE = 'profile.show';
+
+    private const string SECURITY_TAB = 'seguridad';
+
+    /** Turning two-factor authentication on (core#769) */
+    private const string TWO_FACTOR_ROUTES = 'profile.two-factor.*';
+
     public function __construct(
         private SettingsServiceInterface $settings,
         private SeoMetadataFactoryInterface $seo,
@@ -62,6 +71,15 @@ final readonly class EnsureSiteIsNotInMaintenance
             || $request->is(...self::EXCLUDED_PATHS)
             || $this->isLivewireRequest($request)
             || $this->canAccessPanel($request)) {
+            return $next($request);
+        }
+
+        // Core#772: whoever would enter the panel with two-factor on may reach «Seguridad»
+        if ($this->isTwoFactorSetupRoute($request) && $this->panelWaitsForTwoFactor($request)) {
+            if ($request->routeIs(self::SECURITY_PAGE_ROUTE) && $request->query('tab') !== self::SECURITY_TAB) {
+                return redirect()->route(self::SECURITY_PAGE_ROUTE, ['tab' => self::SECURITY_TAB]);
+            }
+
             return $next($request);
         }
 
@@ -87,6 +105,22 @@ final readonly class EnsureSiteIsNotInMaintenance
         $response->headers->set('Retry-After', (string) self::RETRY_AFTER_SECONDS);
 
         return $response;
+    }
+
+    private function isTwoFactorSetupRoute(Request $request): bool
+    {
+        return $request->routeIs(self::SECURITY_PAGE_ROUTE, self::TWO_FACTOR_ROUTES);
+    }
+
+    /**
+     * Signed in, kept out of the panel only because roles that require two-factor authentication
+     * are paused: without «Seguridad» there would be no way to turn it on until maintenance ends.
+     */
+    private function panelWaitsForTwoFactor(Request $request): bool
+    {
+        $user = $request->user();
+
+        return $user instanceof UserModel && app(TwoFactorPanelAccess::class)->pausedOnlyByTwoFactor($user);
     }
 
     private function canAccessPanel(Request $request): bool

@@ -15,8 +15,15 @@ use App\Application\Authorization\Services\RoleServiceInterface;
 use App\Domain\Authorization\Repositories\PermissionRepositoryInterface;
 use App\Domain\Authorization\Repositories\RoleRepositoryInterface;
 use App\Domain\Events\AssociationRoleLost;
+use App\Domain\Events\TwoFactorRolesPaused;
+use App\Domain\TwoFactor\Events\TwoFactorAppChanged;
+use App\Domain\TwoFactor\Events\TwoFactorDisabled;
+use App\Domain\TwoFactor\Events\TwoFactorEnabled;
+use App\Domain\TwoFactor\Events\TwoFactorReset;
 use App\Infrastructure\Authorization\CorePermissionDefinitions;
+use App\Infrastructure\Authorization\Listeners\FollowTwoFactorChanges;
 use App\Infrastructure\Authorization\Listeners\NotifyInactiveRoles;
+use App\Infrastructure\Authorization\Listeners\NotifyTwoFactorRolesPaused;
 use App\Infrastructure\Authorization\Repositories\EloquentPermissionRepository;
 use App\Infrastructure\Authorization\Repositories\EloquentRoleRepository;
 use App\Infrastructure\Authorization\Services\AssociationMemberRoleWarning;
@@ -81,6 +88,13 @@ class AuthorizationServiceProvider extends ServiceProvider
         );
 
         Event::listen(AssociationRoleLost::class, [NotifyInactiveRoles::class, 'handle']);
+
+        // Roles that require two-factor authentication (core#772)
+        Event::listen(TwoFactorEnabled::class, [FollowTwoFactorChanges::class, 'enabled']);
+        Event::listen(TwoFactorDisabled::class, [FollowTwoFactorChanges::class, 'disabled']);
+        Event::listen(TwoFactorReset::class, [FollowTwoFactorChanges::class, 'reset']);
+        Event::listen(TwoFactorAppChanged::class, [FollowTwoFactorChanges::class, 'appChanged']);
+        Event::listen(TwoFactorRolesPaused::class, [NotifyTwoFactorRolesPaused::class, 'handle']);
 
         // Register core permissions in memory (for use in policies and code)
         // The database sync is done by `php artisan permissions:sync` (every deploy), when a

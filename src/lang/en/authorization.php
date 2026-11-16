@@ -3,6 +3,12 @@
 declare(strict_types=1);
 
 return [
+    'two_factor_roles' => [
+        'subject' => 'Your roles on :site are waiting for two-factor authentication',
+        'body' => 'These roles require two-factor authentication and do not work while it is off: :roles. Turn it on in your account settings, «Security» tab, and they will work again at once.',
+        'action' => 'Turn on two-factor authentication',
+        'site_title' => 'Your role requires two-factor authentication',
+    ],
     'tabs' => [
         'content' => 'Content',
         'users' => 'Users and roles',
@@ -203,6 +209,7 @@ return [
     'errors' => [
         'cannot_delete_base_role' => 'Cannot delete ":role": it is the base role of every account.',
         'cannot_restrict_role' => 'The ":role" role does not accept an association member requirement or a maximum number of people.',
+        'cannot_require_two_factor' => 'The ":role" role cannot require two-factor authentication.',
         'role_holder_limit' => '[0,1] The role «:role» is already held by :holders. Take it from them before giving it to someone else.|[2,*] The role «:role» is already held by :holders. Take it from one of them before giving it to someone else.',
         'admin_only_permissions' => 'The ":role" role cannot hold these permissions, which belong to the administrator role alone: :permissions.',
         'role_grant_denied' => 'You cannot give or take these roles: :roles.',

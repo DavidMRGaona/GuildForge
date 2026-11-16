@@ -816,6 +816,8 @@ export default {
                 off: {
                     status: 'Off',
                     enable: 'Turn on two-factor authentication',
+                    requiredBy:
+                        'Your role {roles} requires two-factor authentication: it does not work until you turn it on. | Your roles {roles} require two-factor authentication: they do not work until you turn it on.',
                 },
                 on: {
                     status: 'On',

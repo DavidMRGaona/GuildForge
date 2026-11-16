@@ -164,6 +164,56 @@ final class EnsureSiteIsNotInMaintenanceTest extends TestCase
         $this->get('/up')->assertOk();
     }
 
+    public function test_whoever_waits_for_two_factor_to_enter_the_panel_reaches_the_security_tab(): void
+    {
+        $this->enableMaintenance();
+        $user = $this->holderOfPanelRoleRequiringTwoFactor();
+
+        $this->actingAs($user)->get(route('profile.show', ['tab' => 'seguridad']))->assertOk();
+        $this->actingAs($user)->get(route('profile.show'))->assertRedirect(route('profile.show', ['tab' => 'seguridad']));
+        $this->actingAs($user)->get(route('profile.show', ['tab' => 'cuenta']))->assertRedirect(route('profile.show', ['tab' => 'seguridad']));
+        $this->actingAs($user)
+            ->postJson(route('profile.two-factor.begin'), ['current_password' => 'password'])
+            ->assertOk();
+    }
+
+    public function test_whoever_waits_for_two_factor_still_gets_the_maintenance_page_elsewhere(): void
+    {
+        $this->enableMaintenance();
+        $user = $this->holderOfPanelRoleRequiringTwoFactor();
+
+        $this->actingAs($user)->get('/')->assertStatus(503);
+        $this->actingAs($user)->postJson(route('profile.update'), [])->assertStatus(503);
+        $this->actingAs($user)->putJson(route('profile.password'), [])->assertStatus(503);
+    }
+
+    public function test_a_member_without_such_a_role_does_not_reach_the_security_tab(): void
+    {
+        $this->enableMaintenance();
+        $role = RoleModel::query()->create(['name' => 'secretaria', 'display_name' => 'Secretaría', 'requires_two_factor' => true]);
+        $member = UserModel::factory()->create();
+        // Requires two-factor, but would not open the panel even with it
+        $member->roles()->attach($role->id);
+
+        $this->actingAs($member)->get(route('profile.show', ['tab' => 'seguridad']))->assertStatus(503);
+        $this->actingAs(UserModel::factory()->create())->get(route('profile.show', ['tab' => 'seguridad']))->assertStatus(503);
+        $this->get(route('profile.show', ['tab' => 'seguridad']))->assertStatus(503);
+    }
+
+    private function holderOfPanelRoleRequiringTwoFactor(): UserModel
+    {
+        $role = RoleModel::query()->create(['name' => 'tesoreria', 'display_name' => 'Tesorería', 'requires_two_factor' => true]);
+        $permission = PermissionModel::query()->firstOrCreate(
+            ['key' => 'admin.access'],
+            ['label' => 'admin.access', 'resource' => 'admin', 'action' => 'access'],
+        );
+        $role->permissions()->attach($permission->id);
+        $user = UserModel::factory()->create();
+        $user->roles()->attach($role->id);
+
+        return $user;
+    }
+
     private function enableMaintenance(string $message = ''): void
     {
         $settings = app(SettingsServiceInterface::class);

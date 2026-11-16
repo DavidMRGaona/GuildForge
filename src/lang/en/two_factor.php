@@ -64,7 +64,7 @@ return [
         'invalid_code' => 'The code is wrong or was already used. Try the next one your app shows, or a recovery code.',
         // Confirming a new app (turning it on or changing it): only its first code counts
         'invalid_new_code' => 'The code is wrong or was already used. Type the one your app shows now; if it just changed, wait for the next one.',
-        'cannot_disable' => 'Your account cannot turn two-factor authentication off.',
+        'cannot_disable' => 'You cannot turn two-factor authentication off while you hold a role that requires it. You can change the app.',
         'refused' => [
             'unknown_account' => 'We could not find your account. Sign in again.',
             'already_enabled' => 'Two-factor authentication is already on for your account.',
@@ -73,5 +73,11 @@ return [
             'impersonating' => 'Two-factor authentication cannot be changed while you are viewing another person\'s account.',
             'unavailable' => 'We could not complete the operation right now. Please try again later.',
         ],
+    ],
+
+    // Roles that require it (core#772)
+    'roles' => [
+        'panel_paused' => 'Your role requires two-factor authentication. Turn it on in your account settings.',
+        'panel_paused_action' => 'Go to Security',
     ],
 ];

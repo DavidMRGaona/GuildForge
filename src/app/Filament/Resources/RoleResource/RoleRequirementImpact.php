@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Filament\Resources\RoleResource;
 
 use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
+use App\Infrastructure\Authorization\Services\TwoFactorHolders;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 
 /**
- * How many people a role would leave inactive if it started requiring association membership.
+ * How many people a role would leave inactive if it started requiring association membership,
+ * or two-factor authentication (core#772).
  */
 final readonly class RoleRequirementImpact
 {
@@ -32,5 +34,21 @@ final readonly class RoleRequirementImpact
                 ),
             )
             ->count();
+    }
+
+    /**
+     * Holders of the role (not deactivated, not anonymized) with two-factor authentication off,
+     * asked through TwoFactorHolders: the ones the requirement would pause.
+     */
+    public function holdersWithoutTwoFactorCount(RoleModel $role): int
+    {
+        /** @var list<string> $ids */
+        $ids = $role->users()
+            ->whereNull('users.anonymized_at')
+            ->pluck('users.id')
+            ->map(strval(...))
+            ->all();
+
+        return count($ids) - count(app(TwoFactorHolders::class)->among($ids));
     }
 }

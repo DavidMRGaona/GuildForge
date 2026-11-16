@@ -5,14 +5,16 @@ declare(strict_types=1);
 namespace App\Infrastructure\Authorization\Services;
 
 use App\Domain\Events\RoleDeleted;
+use App\Domain\Events\TwoFactorRolesPaused;
 use App\Domain\Events\UserActiveRolesChanged;
+use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 
 /**
- * Announces to the modules what a role deletion or a membership change already does: it
- * changes no roles, no cache and no history. Everything is dispatched after the outermost
+ * Announces to the modules what a role deletion, a membership change or a change of the
+ * two-factor requirement already does: it changes no roles, no cache and no history. Everything is dispatched after the outermost
  * transaction commits, so a rollback dispatches nothing.
  */
 final readonly class RoleChangeAnnouncer
@@ -94,6 +96,42 @@ final readonly class RoleChangeAnnouncer
                     $this->dispatch($userId, [$roleName], activated: ! $requires);
                 }
             }
+        });
+    }
+
+    /**
+     * The role $roleName started ($requires true) or stopped requiring two-factor authentication
+     * (core#772). Its holders who have it off get the role paused (and are told) or activated;
+     * a holder for whom the role waits for membership anyway sees no change.
+     */
+    public function announceTwoFactorRequirementChange(string $roleName, bool $requires): void
+    {
+        DB::afterCommit(function () use ($roleName, $requires): void {
+            $resolver = app(ActiveRoleResolver::class);
+
+            UserModel::query()
+                ->whereNull('anonymized_at')
+                ->whereHas('roles', static fn ($roles) => $roles->where('roles.name', $roleName))
+                ->orderBy('id')
+                ->each(function (UserModel $holder) use ($resolver, $roleName, $requires): void {
+                    $userId = (string) $holder->getKey();
+
+                    if ($requires) {
+                        if (in_array($roleName, $resolver->pausedByTwoFactor($holder), true)) {
+                            $this->dispatch($userId, [$roleName], activated: false);
+                            Event::dispatch(new TwoFactorRolesPaused($userId, [$roleName]));
+                        }
+
+                        return;
+                    }
+
+                    // Off now: it counts for every holder it would count for with two-factor on
+                    $counts = $resolver->activeRoles($holder)->contains('name', $roleName);
+
+                    if ($counts && ! app(TwoFactorHolders::class)->has($userId)) {
+                        $this->dispatch($userId, [$roleName], activated: true);
+                    }
+                });
         });
     }
 

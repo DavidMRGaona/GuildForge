@@ -7,12 +7,12 @@ namespace App\Application\Authorization\Services;
 /**
  * What changed in a role's definition, in the shape the role history keeps: the permission
  * keys added and removed, and the fields that changed (name, association member requirement,
- * holder limit). The display name and the description are not part of it.
+ * holder limit, two-factor requirement). The display name and the description are not part of it.
  */
 final readonly class RoleDefinitionChanges
 {
     /** The fields of a role the history follows. */
-    public const array FIELDS = ['name', 'requires_association_member', 'max_holders'];
+    public const array FIELDS = ['name', 'requires_association_member', 'max_holders', 'requires_two_factor'];
 
     /**
      * @param  array<int, string>  $keysBefore

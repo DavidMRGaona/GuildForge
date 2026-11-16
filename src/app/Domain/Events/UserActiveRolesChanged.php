@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Domain\Events;
 
 /**
- * Roles of an account turned on or off without being granted or taken away: they require the
- * association member role, and the account became (or stopped being) a member because the
- * association member role setting changed, or because a role gained or lost that requirement.
+ * Roles of an account turned on or off without being granted or taken away. Either they require
+ * the association member role, and the account became (or stopped being) a member because the
+ * association member role setting changed, or because a role gained or lost that requirement;
+ * or they require two-factor authentication (core#772), and the account turned it on or off (or
+ * had it reset), or a role gained or lost that requirement.
  * Dispatched after the change commits, once per affected account.
  *
  * The roles stored for the account do not change, so UserRolesChanged does not come through;

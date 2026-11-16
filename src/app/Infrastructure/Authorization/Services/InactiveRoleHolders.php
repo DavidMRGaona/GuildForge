@@ -11,8 +11,9 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Accounts that hold a role requiring association membership (so the role is inactive for
- * them) without being members: they lack the association member role. Deactivated
- * (soft-deleted) and anonymized accounts are left out.
+ * them) without being members: they lack the association member role. Also (core#772) the
+ * accounts that hold a role requiring two-factor authentication with it off, asked through
+ * TwoFactorHolders. Deactivated (soft-deleted) and anonymized accounts are left out.
  */
 final readonly class InactiveRoleHolders
 {
@@ -35,6 +36,43 @@ final readonly class InactiveRoleHolders
         }
 
         return $query;
+    }
+
+    /**
+     * Ids of the accounts that hold a role requiring two-factor authentication (one of
+     * $roleNames, when given) and have it off, as stored.
+     *
+     * @param  list<string>|null  $roleNames
+     * @return list<string>
+     */
+    public function withoutTwoFactorIds(?array $roleNames = null): array
+    {
+        /** @var list<string> $ids */
+        $ids = UserModel::query()
+            ->whereNull('anonymized_at')
+            ->whereHas('roles', static function (Builder $roles) use ($roleNames): void {
+                $roles->where('requires_two_factor', true)
+                    ->when($roleNames !== null, static fn (Builder $query): Builder => $query->whereIn('name', $roleNames ?? []));
+            })
+            ->orderBy('id')
+            ->pluck('id')
+            ->map(strval(...))
+            ->all();
+
+        $on = app(TwoFactorHolders::class)->among($ids);
+
+        return array_values(array_filter($ids, static fn (string $id): bool => ! isset($on[strtolower($id)])));
+    }
+
+    /**
+     * The accounts of withoutTwoFactorIds() as a query.
+     *
+     * @param  list<string>|null  $roleNames
+     * @return Builder<UserModel>
+     */
+    public function withoutTwoFactorQuery(?array $roleNames = null): Builder
+    {
+        return UserModel::query()->whereIn('users.id', $this->withoutTwoFactorIds($roleNames));
     }
 
     public function count(?string $associationRoleName): int

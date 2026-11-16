@@ -264,6 +264,7 @@ final class PanelTablesFitTest extends TestCase
             'roles protected' => [ListRoles::class, 'is_protected', 'sm'],
             'roles name' => [ListRoles::class, 'name', 'md'],
             'roles requires member' => [ListRoles::class, 'requires_association_member', 'xl'],
+            'roles requires two factor' => [ListRoles::class, 'requires_two_factor', '2xl'],
 
             'recent articles title' => [RecentArticlesWidget::class, 'title', null],
             'recent articles published' => [RecentArticlesWidget::class, 'published_at', null],

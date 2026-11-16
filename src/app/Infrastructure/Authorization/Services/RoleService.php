@@ -130,6 +130,7 @@ final readonly class RoleService implements RoleServiceInterface
             isProtected: $existingRole->isProtected(),
             requiresAssociationMember: $existingRole->requiresAssociationMember(),
             maxHolders: $existingRole->maxHolders(),
+            requiresTwoFactor: $existingRole->requiresTwoFactor(),
         );
 
         $this->guardRestrictions($role);
@@ -305,6 +306,7 @@ final readonly class RoleService implements RoleServiceInterface
             'name' => $role->name()->value,
             'requires_association_member' => $role->requiresAssociationMember(),
             'max_holders' => $role->maxHolders(),
+            'requires_two_factor' => $role->requiresTwoFactor(),
         ];
     }
 
@@ -328,6 +330,10 @@ final readonly class RoleService implements RoleServiceInterface
 
         if ($restricted && ! $this->roleRestriction->canBeRestricted($role->name()->value)) {
             throw RoleProtectedException::cannotRestrict($role->name()->value);
+        }
+
+        if ($role->requiresTwoFactor() && ! $this->roleRestriction->canRequireTwoFactor($role->name()->value)) {
+            throw RoleProtectedException::cannotRequireTwoFactor($role->name()->value);
         }
     }
 

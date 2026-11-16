@@ -24,6 +24,7 @@ use App\Filament\Resources\UserResource\RelationManagers\RoleAuditRelationManage
 use App\Filament\Support\PanelNavigationGroup;
 use App\Infrastructure\Authorization\Services\InactiveRoleHolders;
 use App\Infrastructure\Authorization\Services\RoleHolderLimitGuard;
+use App\Infrastructure\Authorization\Services\TwoFactorHolders;
 use App\Infrastructure\Images\AvatarPath;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -65,6 +66,13 @@ class UserResource extends BaseResource
 {
     /** The create form's choice to count the address as verified without its link */
     public const string MARK_EMAIL_VERIFIED_FIELD = 'mark_email_verified';
+
+    /** Values of the «Con roles inactivos» filter: any reason, not a member, two-factor off (core#772) */
+    public const string INACTIVE_ANY = 'any';
+
+    public const string INACTIVE_MEMBERSHIP = 'membership';
+
+    public const string INACTIVE_TWO_FACTOR = 'two_factor';
 
     protected static ?string $model = UserModel::class;
 
@@ -168,6 +176,12 @@ class UserResource extends BaseResource
                     ->schema([
                         CheckboxList::make('roles')
                             ->label(__('filament.users.fields.roles'))
+                            // Core#772: roles that require two-factor authentication are paused
+                            ->hint(static fn (?UserModel $record): ?string => self::pausedByTwoFactor($record)
+                                ? (string) __('filament.users.roleBadges.withoutTwoFactor')
+                                : null)
+                            ->hintIcon(static fn (?UserModel $record): ?string => self::pausedByTwoFactor($record) ? 'heroicon-o-shield-exclamation' : null)
+                            ->hintColor('warning')
                             // Only where the base role is ticked: never on an anonymized account
                             ->helperText(static fn (?UserModel $record): ?string => $baseRoleExists && $record?->anonymized_at === null
                                 ? (string) __('filament.users.fields.rolesHelp')
@@ -212,22 +226,31 @@ class UserResource extends BaseResource
 
     public static function table(Table $table): Table
     {
-        // Read once per table render, on first use: every row asks for it
-        $associationRole = false;
-        $inactiveRoles = static function (UserModel $record) use (&$associationRole): array {
-            if ($associationRole === false) {
-                $associationRole = app(AssociationMembershipServiceInterface::class)->roleName();
-            }
-
-            return self::inactiveRoleDisplayNames($record, $associationRole);
-        };
-
         // The ids with two-factor authentication on among those the page lists: one query for all the rows
         $twoFactorOn = null;
         $hasTwoFactor = static function (UserModel $record, HasTable $livewire) use (&$twoFactorOn): bool {
             $twoFactorOn ??= array_flip(app(TwoFactorStatusReaderInterface::class)->enabledAmong(self::pageUserIds($livewire)));
 
             return isset($twoFactorOn[strtolower((string) $record->getKey())]);
+        };
+
+        // Paused roles count with roles that require two-factor authentication (core#772): asked
+        // through TwoFactorHolders, so a reader that fails shows them paused, like the access
+        $twoFactorHolders = null;
+        $holdsTwoFactor = static function (UserModel $record, HasTable $livewire) use (&$twoFactorHolders): bool {
+            $twoFactorHolders ??= app(TwoFactorHolders::class)->among(self::pageUserIds($livewire));
+
+            return isset($twoFactorHolders[strtolower((string) $record->getKey())]);
+        };
+
+        // Read once per table render, on first use: every row asks for it
+        $associationRole = false;
+        $inactiveRoles = static function (UserModel $record, HasTable $livewire) use (&$associationRole, $holdsTwoFactor): array {
+            if ($associationRole === false) {
+                $associationRole = app(AssociationMembershipServiceInterface::class)->roleName();
+            }
+
+            return self::inactiveRoles($record, $associationRole, static fn (): bool => $holdsTwoFactor($record, $livewire));
         };
 
         return $table
@@ -255,15 +278,15 @@ class UserResource extends BaseResource
                     ->label(__('filament.users.fields.roles'))
                     ->badge()
                     ->separator(', ')
-                    ->color(fn (string $state, UserModel $record): string => match (true) {
-                        in_array($state, $inactiveRoles($record), true) => 'gray',
+                    ->color(fn (string $state, UserModel $record, HasTable $livewire): string => match (true) {
+                        array_key_exists($state, $inactiveRoles($record, $livewire)) => 'gray',
                         $state === 'Administrator' => 'danger',
                         $state === 'Editor' => 'warning',
                         default => 'success',
                     })
-                    ->tooltip(fn (UserModel $record): ?string => $inactiveRoles($record) === []
+                    ->tooltip(fn (UserModel $record, HasTable $livewire): ?string => $inactiveRoles($record, $livewire) === []
                         ? null
-                        : (string) __('filament.users.roleBadges.inactive'))
+                        : implode(' · ', array_unique($inactiveRoles($record, $livewire))))
                     ->visibleFrom('xl'),
                 IconColumn::make('email_verified_at')
                     ->label(__('filament.users.fields.emailVerified'))
@@ -315,14 +338,15 @@ class UserResource extends BaseResource
                     ->relationship('roles', 'display_name')
                     ->multiple()
                     ->preload(),
-                Filter::make('inactive_roles')
+                // With the reason (core#772): not a member, or two-factor authentication off
+                SelectFilter::make('inactive_roles')
                     ->label(__('filament.users.filters.inactiveRoles'))
-                    ->query(static fn (Builder $query): Builder => $query->whereIn(
-                        'users.id',
-                        app(InactiveRoleHolders::class)
-                            ->query(app(AssociationMembershipServiceInterface::class)->roleName())
-                            ->select('users.id'),
-                    )),
+                    ->options([
+                        self::INACTIVE_ANY => __('filament.users.filters.inactiveReasons.any'),
+                        self::INACTIVE_MEMBERSHIP => __('filament.users.filters.inactiveReasons.membership'),
+                        self::INACTIVE_TWO_FACTOR => __('filament.users.filters.inactiveReasons.two_factor'),
+                    ])
+                    ->query(static fn (Builder $query, array $data): Builder => self::filterInactiveRoles($query, $data['value'] ?? null)),
                 TernaryFilter::make('two_factor')
                     ->label(__('filament.users.filters.twoFactor.label'))
                     ->trueLabel(__('filament.users.filters.twoFactor.true'))
@@ -585,11 +609,18 @@ class UserResource extends BaseResource
             && $record->roles()->where('name', $associationRole)->exists();
         $descriptions = [];
 
-        foreach (RoleModel::query()->get(['name', 'description', 'requires_association_member', 'max_holders']) as $role) {
+        $lacksTwoFactor = $record instanceof UserModel && $showInactive
+            && ! app(TwoFactorHolders::class)->has((string) $record->getKey());
+
+        foreach (RoleModel::query()->get(['name', 'description', 'requires_association_member', 'max_holders', 'requires_two_factor']) as $role) {
             $parts = $role->description === null || $role->description === '' ? [] : [$role->description];
 
             if ($role->requires_association_member) {
                 $parts[] = (string) __('filament.users.roleBadges.requiresMember');
+            }
+
+            if ($role->requires_two_factor) {
+                $parts[] = (string) __('filament.users.roleBadges.requiresTwoFactor');
             }
 
             if ($role->max_holders !== null) {
@@ -598,6 +629,10 @@ class UserResource extends BaseResource
 
             if ($role->requires_association_member && $showInactive && ! $isMember) {
                 $parts[] = (string) __('filament.users.roleBadges.inactive');
+            }
+
+            if ($role->requires_two_factor && $lacksTwoFactor) {
+                $parts[] = (string) __('filament.users.roleBadges.pausedTwoFactor');
             }
 
             if ($parts !== []) {
@@ -636,31 +671,69 @@ class UserResource extends BaseResource
     }
 
     /**
-     * Display names of the roles that do nothing for this account because it is not a member.
+     * The roles that do nothing for this account, display name => why: it is not a member, or
+     * (core#772) it has two-factor authentication off. Two-factor is asked only when a role
+     * requires it.
      *
-     * @return list<string>
+     * @param  callable(): bool  $hasTwoFactor
+     * @return array<string, string>
      */
-    private static function inactiveRoleDisplayNames(UserModel $record, ?string $associationRole): array
+    private static function inactiveRoles(UserModel $record, ?string $associationRole, callable $hasTwoFactor): array
     {
         if ($record->anonymized_at !== null) {
             return [];
         }
 
         $roles = $record->roles;
-
-        if ($associationRole !== null && $roles->contains('name', $associationRole)) {
-            return [];
-        }
-
-        $names = [];
+        $isMember = $associationRole !== null && $roles->contains('name', $associationRole);
+        $lacksTwoFactor = null;
+        $inactive = [];
 
         foreach ($roles as $role) {
-            if ($role->requires_association_member) {
-                $names[] = $role->display_name;
+            if ($role->requires_association_member && ! $isMember) {
+                $inactive[$role->display_name] = (string) __('filament.users.roleBadges.inactive');
+            } elseif ($role->requires_two_factor && ($lacksTwoFactor ??= ! $hasTwoFactor())) {
+                $inactive[$role->display_name] = (string) __('filament.users.roleBadges.pausedTwoFactor');
             }
         }
 
-        return $names;
+        return $inactive;
+    }
+
+    /**
+     * Whether the account holds a role that requires two-factor authentication while it has it
+     * off (core#772): the form shows the «Sin doble factor» badge.
+     */
+    private static function pausedByTwoFactor(?UserModel $record): bool
+    {
+        return $record instanceof UserModel
+            && $record->anonymized_at === null
+            && $record->roles()->where('roles.requires_two_factor', true)->exists()
+            && ! app(TwoFactorHolders::class)->has((string) $record->getKey());
+    }
+
+    /**
+     * @param  Builder<UserModel>  $query
+     * @return Builder<UserModel>
+     */
+    private static function filterInactiveRoles(Builder $query, mixed $reason): Builder
+    {
+        if (! in_array($reason, [self::INACTIVE_ANY, self::INACTIVE_MEMBERSHIP, self::INACTIVE_TWO_FACTOR], true)) {
+            return $query;
+        }
+
+        $holders = app(InactiveRoleHolders::class);
+        $notMembers = static fn (): Builder => $holders
+            ->query(app(AssociationMembershipServiceInterface::class)->roleName())
+            ->select('users.id');
+
+        return match ($reason) {
+            self::INACTIVE_MEMBERSHIP => $query->whereIn('users.id', $notMembers()),
+            self::INACTIVE_TWO_FACTOR => $query->whereIn('users.id', $holders->withoutTwoFactorIds()),
+            default => $query->where(static fn (Builder $inner): Builder => $inner
+                ->whereIn('users.id', $notMembers())
+                ->orWhereIn('users.id', $holders->withoutTwoFactorIds())),
+        };
     }
 
     private static function actorCanAssignRoles(): bool

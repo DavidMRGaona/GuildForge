@@ -35,6 +35,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 final class ProfileController extends Controller
 {
@@ -114,20 +115,30 @@ final class ProfileController extends Controller
      * «Seguridad» (core#769): where the account stands with two-factor authentication. Only
      * numbers and dates: the secret and the recovery codes are never in page props.
      *
-     * @return array{twoFactor: array{active: bool, since: string|null, remainingCodes: int, canDisable: bool}}
+     * `requiredBy` names the roles held that require it (core#772), for «Tu rol X exige doble
+     * factor»; empty when they cannot be read, while `canDisable` then refuses.
+     *
+     * @return array{twoFactor: array{active: bool, since: string|null, remainingCodes: int, canDisable: bool, requiredBy: list<string>}}
      */
     private function securityFor(UserModel $user): array
     {
         $userId = (string) $user->id;
         $status = $this->twoFactor->status($userId);
 
+        try {
+            $requiredBy = $this->twoFactorDisable->rolesRequiringIt($userId);
+        } catch (Throwable) {
+            $requiredBy = [];
+        }
+
         return [
             'twoFactor' => [
                 'active' => $status->enabled,
                 'since' => $this->timezone->iso($status->confirmedAt),
                 'remainingCodes' => $status->recoveryCodesRemaining,
-                // Decided on the server (the route asks the same rule): core#772 refuses it while a role requires it
+                // Decided on the server (the route asks the same rule): refused while a role requires it
                 'canDisable' => $this->twoFactorDisable->allowed($userId),
+                'requiredBy' => $requiredBy,
             ],
         ];
     }

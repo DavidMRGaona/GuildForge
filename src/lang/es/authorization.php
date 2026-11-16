@@ -13,6 +13,12 @@ return [
         'site_roles' => 'Roles: :roles',
         'manager_digest_line' => ':name tiene roles en pausa: :roles',
     ],
+    'two_factor_roles' => [
+        'subject' => 'Tus roles en :site esperan al doble factor',
+        'body' => 'Estos roles exigen el doble factor y no funcionan mientras no lo tengas activo: :roles. Actívalo en Ajustes de la cuenta, pestaña «Seguridad», y volverán a funcionar al momento.',
+        'action' => 'Activar el doble factor',
+        'site_title' => 'Tu rol exige doble factor',
+    ],
     'tabs' => [
         'content' => 'Contenido',
         'users' => 'Usuarios y roles',
@@ -213,6 +219,7 @@ return [
     'errors' => [
         'cannot_delete_base_role' => 'No se puede eliminar «:role»: es el rol base de todas las cuentas.',
         'cannot_restrict_role' => 'El rol «:role» no admite requisito de socio ni máximo de personas.',
+        'cannot_require_two_factor' => 'El rol «:role» no puede exigir doble factor.',
         'role_holder_limit' => '[0,1] El rol «:role» ya lo tiene :holders. Quítaselo antes de dárselo a otra persona.|[2,*] El rol «:role» ya lo tienen :holders. Quítaselo a alguien antes de dárselo a otra persona.',
         'admin_only_permissions' => 'El rol «:role» no puede tener estos permisos, que son solo de la administración: :permissions.',
         'role_grant_denied' => 'No puedes dar ni quitar estos roles: :roles.',

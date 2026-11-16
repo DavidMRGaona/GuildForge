@@ -55,6 +55,14 @@ const changePassword = () => {
 
 // Two-factor authentication
 const twoFactor = computed(() => props.security.twoFactor);
+// Roles that require it (core#772), named in the language's own list form
+const requiredByLabel = computed((): string | null => {
+    const roles = twoFactor.value.requiredBy;
+
+    return roles.length === 0
+        ? null
+        : new Intl.ListFormat(locale.value, { style: 'long', type: 'conjunction' }).format(roles);
+});
 const dialogOpen = ref(false);
 const statusRef = ref<HTMLElement | null>(null);
 const dialogMode = ref<TwoFactorMode>('enable');
@@ -142,6 +150,20 @@ function onDone(mode: TwoFactorMode): void {
 
                     <!-- Off -->
                     <template v-if="!twoFactor.active">
+                        <p
+                            v-if="requiredByLabel !== null"
+                            role="status"
+                            class="rounded-md bg-warning-light p-3 text-sm text-base-primary"
+                            data-testid="two-factor-required-by"
+                        >
+                            {{
+                                t(
+                                    'auth.profile.twoFactor.off.requiredBy',
+                                    { roles: requiredByLabel },
+                                    twoFactor.requiredBy.length
+                                )
+                            }}
+                        </p>
                         <p
                             ref="statusRef"
                             tabindex="-1"

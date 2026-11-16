@@ -125,6 +125,7 @@ final readonly class EloquentRoleRepository implements RoleRepositoryInterface
             isProtected: $model->is_protected,
             requiresAssociationMember: $model->requires_association_member,
             maxHolders: $model->max_holders,
+            requiresTwoFactor: $model->requires_two_factor,
         );
     }
 
@@ -141,6 +142,7 @@ final readonly class EloquentRoleRepository implements RoleRepositoryInterface
             'is_protected' => $role->isProtected(),
             'requires_association_member' => $role->requiresAssociationMember(),
             'max_holders' => $role->maxHolders(),
+            'requires_two_factor' => $role->requiresTwoFactor(),
         ];
     }
 }

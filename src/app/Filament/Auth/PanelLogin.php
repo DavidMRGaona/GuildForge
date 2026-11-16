@@ -6,10 +6,13 @@ namespace App\Filament\Auth;
 
 use App\Application\TwoFactor\Services\TwoFactorChallengeInterface;
 use App\Domain\TwoFactor\TwoFactorChallengeRule;
+use App\Infrastructure\Authorization\Services\TwoFactorPanelAccess;
+use Filament\Actions\Action;
 use Filament\Auth\Http\Responses\Contracts\LoginResponse;
 use Filament\Auth\Pages\Login;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
@@ -26,8 +29,10 @@ use Illuminate\Validation\ValidationException;
  * - Once the code is accepted and Filament signed in: regenerate, stamp the session seal and,
  *   with «remember me», the challenge's cookie (TwoFactorChallengeInterface::completeSignIn()).
  *
- * Who may enter the panel at all stays Filament's isUserAllowedToAccessPanel(): the place for
- * telling people why their panel access is paused (core#772).
+ * Who may enter the panel at all stays Filament's isUserAllowedToAccessPanel(). Someone kept out
+ * only because roles that require two-factor authentication are paused (core#772) is told so,
+ * with a link to «Seguridad», instead of the generic refusal. Filament asks it once the password
+ * was checked, so the message never tells a stranger anything about an account.
  */
 final class PanelLogin extends Login
 {
@@ -146,6 +151,32 @@ final class PanelLogin extends Login
             ->warning()
             ->persistent()
             ->send();
+    }
+
+    protected function isUserAllowedToAccessPanel(Authenticatable $user): bool
+    {
+        if (parent::isUserAllowedToAccessPanel($user)) {
+            return true;
+        }
+
+        if (app(TwoFactorPanelAccess::class)->pausedOnlyByTwoFactor($user)) {
+            Notification::make()
+                ->title(__('two_factor.roles.panel_paused'))
+                ->warning()
+                ->persistent()
+                ->actions([
+                    Action::make('security')
+                        ->label(__('two_factor.roles.panel_paused_action'))
+                        ->url(route('profile.show', ['tab' => 'seguridad'])),
+                ])
+                ->send();
+
+            throw ValidationException::withMessages([
+                'data.email' => __('two_factor.roles.panel_paused'),
+            ]);
+        }
+
+        return false;
     }
 
     private function pendingKey(): ?string

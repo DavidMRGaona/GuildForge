@@ -25,6 +25,7 @@ use App\Filament\Support\PanelCreateMenu;
 use App\Filament\Support\PanelNavigationGroups;
 use App\Filament\Support\PanelSidebarMode;
 use App\Http\Middleware\ApplyImpersonation;
+use App\Http\Middleware\AuthenticatePanel;
 use App\Http\Middleware\EnsureSessionPassedTwoFactor;
 use App\Http\Middleware\RedirectImpersonatedAccountWithoutPanelAccess;
 use App\Infrastructure\Impersonation\ImpersonatedName;
@@ -34,7 +35,6 @@ use App\Modules\ModuleAutoloader;
 use App\Modules\ModuleServiceProvider;
 use App\View\Modules\CompatibilityIssueFormatter;
 use Filament\Facades\Filament;
-use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -138,7 +138,8 @@ class AdminPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
             ])
             ->authMiddleware([
-                Authenticate::class,
+                // Filament's, sending to «Seguridad» rather than the 403 when only two-factor is missing (core#772)
+                AuthenticatePanel::class,
             ])
             // Static JS is served as immutable for a year, so the script URL changes with its content.
             // A missing script leaves the URL unversioned: a 404 for the script, not a broken panel.

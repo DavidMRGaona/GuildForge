@@ -103,6 +103,23 @@ trait RecordsRoleHistory
     }
 
     /**
+     * Tells the holders, after the page's transaction commits, that the role started or stopped
+     * requiring two-factor authentication (core#772). Nothing when it stayed the same.
+     */
+    private function announceTwoFactorRequirementChange(RoleModel $record): void
+    {
+        $fresh = $record->fresh() ?? $record;
+        $before = (bool) ($this->fieldsBeforeSave['requires_two_factor'] ?? false);
+        $after = $fresh->requires_two_factor;
+
+        if ($before === $after) {
+            return;
+        }
+
+        app(RoleChangeAnnouncer::class)->announceTwoFactorRequirementChange($fresh->name, $after);
+    }
+
+    /**
      * @return list<string>
      */
     private function permissionKeysOf(RoleModel $record): array

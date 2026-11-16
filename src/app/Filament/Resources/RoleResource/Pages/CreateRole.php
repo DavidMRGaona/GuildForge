@@ -40,6 +40,10 @@ class CreateRole extends CreateRecord
             unset($data['requires_association_member'], $data['max_holders']);
         }
 
+        if (! app(RoleRestrictionRule::class)->canRequireTwoFactor((string) ($data['name'] ?? ''))) {
+            unset($data['requires_two_factor']);
+        }
+
         // Synced after creating (afterCreate), never written to the role itself
         unset($data['permissions_by_section'], $data['panel_access']);
 

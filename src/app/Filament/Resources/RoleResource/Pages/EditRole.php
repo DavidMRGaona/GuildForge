@@ -11,6 +11,7 @@ use App\Filament\Resources\RoleResource\Concerns\SyncsPermissionTabs;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Validation\ValidationException;
 
 class EditRole extends EditRecord
 {
@@ -51,7 +52,9 @@ class EditRole extends EditRecord
 
     /**
      * The name field is disabled for protected roles, the base role of every account and the
-     * association member role; a forged Livewire state must not rename them either.
+     * association member role; a forged Livewire state must not rename them either. Nor may it
+     * put a requirement on a role that cannot carry it, or make a role the actor holds require
+     * two-factor authentication while they have it off (core#772).
      *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
@@ -67,6 +70,17 @@ class EditRole extends EditRecord
 
         if (! RoleResource::canBeRestricted($record)) {
             unset($data['requires_association_member'], $data['max_holders']);
+        }
+
+        if (! RoleResource::canRequireTwoFactor($record)) {
+            unset($data['requires_two_factor']);
+        }
+
+        // Also when the field's own rule was skipped: nobody pauses a role they hold by mistake
+        if (array_key_exists('requires_two_factor', $data) && RoleResource::refusesTwoFactorMark($record, (bool) $data['requires_two_factor'])) {
+            throw ValidationException::withMessages([
+                'data.requires_two_factor' => (string) __('filament.roles.fields.twoFactorOwnRole'),
+            ]);
         }
 
         // Synced after saving (afterSave), never written to the role itself
@@ -108,6 +122,7 @@ class EditRole extends EditRecord
 
         $this->announcePermissionChange($record);
         $this->announceRequirementChange($record);
+        $this->announceTwoFactorRequirementChange($record);
     }
 
     protected function getRedirectUrl(): string

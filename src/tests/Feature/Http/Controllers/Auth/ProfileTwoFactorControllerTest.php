@@ -13,6 +13,7 @@ use App\Domain\TwoFactor\Events\RecoveryCodesRegenerated;
 use App\Domain\TwoFactor\Events\TwoFactorDisabled;
 use App\Domain\TwoFactor\Events\TwoFactorEnabled;
 use App\Http\Middleware\BlockSiteWritesWhenImpersonatingReadOnly;
+use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserTwoFactorModel;
 use App\Infrastructure\TwoFactor\TwoFactorSessionSeal;
@@ -316,6 +317,63 @@ final class ProfileTwoFactorControllerTest extends TestCase
         $this->assertTrue(app(TwoFactorServiceInterface::class)->isEnabled((string) $user->id));
         $this->get(route('profile.show', ['tab' => 'seguridad']))
             ->assertInertia(fn (Assert $inertia) => $inertia->where('security.twoFactor.canDisable', false));
+    }
+
+    public function test_turning_it_off_is_refused_while_a_role_held_requires_it(): void
+    {
+        $user = UserModel::factory()->create();
+        $user->roles()->attach(RoleModel::query()->create(['name' => 'tesoreria', 'display_name' => 'Tesorería', 'requires_two_factor' => true])->id);
+        $this->enable($user);
+        $this->asSealed($user);
+
+        $this->deleteJson(route('profile.two-factor.disable'), [
+            'current_password' => 'password',
+            'code' => $this->code($this->secretOf($user), 1),
+        ])->assertForbidden()->assertJsonPath('message', __('two_factor.profile.cannot_disable'));
+
+        $this->assertTrue(app(TwoFactorServiceInterface::class)->isEnabled((string) $user->id));
+        $this->get(route('profile.show', ['tab' => 'seguridad']))
+            ->assertInertia(fn (Assert $inertia) => $inertia
+                ->where('security.twoFactor.canDisable', false)
+                ->where('security.twoFactor.requiredBy', ['Tesorería']));
+    }
+
+    public function test_a_role_paused_for_membership_still_keeps_it_on(): void
+    {
+        RoleModel::query()->firstOrCreate(['name' => 'socio'], ['display_name' => 'Socio']);
+        $user = UserModel::factory()->create();
+        $user->roles()->attach(RoleModel::query()->create([
+            'name' => 'tesoreria',
+            'display_name' => 'Tesorería',
+            'requires_two_factor' => true,
+            'requires_association_member' => true,
+        ])->id);
+        $this->enable($user);
+
+        $this->assertFalse(app(TwoFactorDisableRule::class)->allowed((string) $user->id));
+    }
+
+    public function test_the_security_tab_names_the_roles_that_require_it_while_it_is_off(): void
+    {
+        $user = UserModel::factory()->create();
+        $user->roles()->attach(RoleModel::query()->create(['name' => 'tesoreria', 'display_name' => 'Tesorería', 'requires_two_factor' => true])->id);
+
+        $this->actingAs($user)->get(route('profile.show', ['tab' => 'seguridad']))
+            ->assertInertia(fn (Assert $inertia) => $inertia
+                ->where('security.twoFactor.active', false)
+                ->where('security.twoFactor.requiredBy', ['Tesorería']));
+    }
+
+    public function test_without_such_roles_it_can_be_turned_off_and_names_none(): void
+    {
+        $user = UserModel::factory()->create();
+        $this->enable($user);
+        $this->asSealed($user);
+
+        $this->get(route('profile.show', ['tab' => 'seguridad']))
+            ->assertInertia(fn (Assert $inertia) => $inertia
+                ->where('security.twoFactor.canDisable', true)
+                ->where('security.twoFactor.requiredBy', []));
     }
 
     // Changing the app

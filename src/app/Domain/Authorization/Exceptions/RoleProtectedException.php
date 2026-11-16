@@ -36,6 +36,14 @@ final class RoleProtectedException extends DomainException
     }
 
     /**
+     * The base role and the association member role never require two-factor authentication.
+     */
+    public static function cannotRequireTwoFactor(string $roleName): self
+    {
+        return new self(__('authorization.errors.cannot_require_two_factor', ['role' => $roleName]));
+    }
+
+    /**
      * Only the administrator role holds the permissions that run code on the server
      * (installing modules, applying updates).
      *

@@ -64,7 +64,7 @@ return [
         'invalid_code' => 'El código no es correcto o ya se ha usado. Prueba con el siguiente que muestre tu app, o con un código de recuperación.',
         // Confirming a new app (turning it on or changing it): only its first code counts
         'invalid_new_code' => 'El código no es correcto o ya se ha usado. Escribe el que muestra ahora tu app; si acaba de cambiar, espera al siguiente.',
-        'cannot_disable' => 'Tu cuenta no puede desactivar el doble factor.',
+        'cannot_disable' => 'No puedes desactivar el doble factor mientras tengas un rol que lo exige. Sí puedes cambiar de app.',
         'refused' => [
             'unknown_account' => 'No hemos encontrado tu cuenta. Vuelve a iniciar sesión.',
             'already_enabled' => 'El doble factor ya está activado en tu cuenta.',
@@ -73,5 +73,11 @@ return [
             'impersonating' => 'No se puede cambiar el doble factor mientras ves la cuenta de otra persona.',
             'unavailable' => 'No hemos podido completar la operación ahora. Inténtalo de nuevo más tarde.',
         ],
+    ],
+
+    // Roles that require it (core#772)
+    'roles' => [
+        'panel_paused' => 'Tu rol exige doble factor. Actívalo en Ajustes de la cuenta.',
+        'panel_paused_action' => 'Ir a Seguridad',
     ],
 ];
