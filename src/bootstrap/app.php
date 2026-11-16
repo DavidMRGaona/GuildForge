@@ -8,6 +8,7 @@ use App\Http\Middleware\BlockSiteWritesWhenImpersonatingReadOnly;
 use App\Http\Middleware\EnsureEmailIsVerifiedWhenRequired;
 use App\Http\Middleware\EnsureLoginIsEnabled;
 use App\Http\Middleware\EnsureRegistrationIsEnabled;
+use App\Http\Middleware\EnsureSessionPassedTwoFactor;
 use App\Http\Middleware\EnsureSiteIsNotInMaintenance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SecurityHeadersMiddleware;
@@ -44,6 +45,8 @@ $app = Application::configure(basePath: dirname(__DIR__))
             // First: everything after it (shared props, maintenance, verification, the
             // controllers) sees the impersonated account. Livewire requests are web requests.
             ApplyImpersonation::class,
+            // A session of an account with two-factor authentication must have passed it (core#768)
+            EnsureSessionPassedTwoFactor::class,
             // «Solo mirar»: the site only reads (core#574); needs the context ApplyImpersonation fills
             BlockSiteWritesWhenImpersonatingReadOnly::class,
             HandleInertiaRequests::class,

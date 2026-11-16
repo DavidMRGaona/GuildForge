@@ -7,6 +7,7 @@ namespace App\Application\TwoFactor\Services;
 use App\Application\TwoFactor\DTOs\TwoFactorSetupDTO;
 use App\Application\TwoFactor\DTOs\TwoFactorStatusDTO;
 use App\Domain\TwoFactor\Exceptions\TwoFactorException;
+use Illuminate\Contracts\Session\Session;
 
 /**
  * Two-factor authentication of an account (core#197): a TOTP secret (RFC 6238, six digits,
@@ -17,8 +18,9 @@ use App\Domain\TwoFactor\Exceptions\TwoFactorException;
  * - A code is never accepted twice: each check runs under a row lock and only takes a step later
  *   than the last one accepted for the account.
  * - Secrets are encrypted at rest and recovery codes are stored as hashes; neither is ever logged.
- * - Turning it on closes the account's other sessions and invalidates its «remember me» cookies,
- *   after the commit, so every session of an account with two-factor authentication passed it.
+ * - Turning it on gives the account a new session seal (TwoFactorSessionSealInterface), closes
+ *   its other sessions and invalidates its «remember me» cookies, after the commit, so every
+ *   session of an account with two-factor authentication passed it.
  * - Every change sends a mail in the mandatory category core.account-security (through the
  *   events in App\Domain\TwoFactor\Events, dispatched after the commit).
  * - Changes are refused while an administrator impersonates the account.
@@ -40,15 +42,16 @@ interface TwoFactorServiceInterface extends TwoFactorStatusReaderInterface
 
     /**
      * Turns it on with a code from the app, and returns the recovery codes in plain text: the
-     * only time they are ever shown. Closes every other session of the account (the one given
-     * stays) and rotates its remember token, after the commit.
+     * only time they are ever shown. After the commit: the session given is stamped with the new
+     * seal and stays signed in, every other one is closed (rows deleted with the database driver,
+     * signed out on their next request with any driver) and the remember token rotates.
      *
-     * @param  string|null  $currentSessionId  the session to keep open (the request's); null closes them all
+     * @param  Session|null  $currentSession  the session to keep signed in (the request's); null keeps none
      * @return list<string>
      *
      * @throws TwoFactorException NoPendingSetup, AlreadyEnabled, InvalidCode, Impersonating
      */
-    public function confirmSetup(string $userId, #[\SensitiveParameter] string $code, ?string $currentSessionId = null): array;
+    public function confirmSetup(string $userId, #[\SensitiveParameter] string $code, ?Session $currentSession = null): array;
 
     /**
      * Checks a code from the app for an account with it on. False for a wrong, malformed, expired

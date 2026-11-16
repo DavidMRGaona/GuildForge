@@ -11,6 +11,7 @@ use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\TwoFactor\DTOs\TwoFactorSetupDTO;
 use App\Application\TwoFactor\DTOs\TwoFactorStatusDTO;
 use App\Application\TwoFactor\Services\TwoFactorServiceInterface;
+use App\Application\TwoFactor\Services\TwoFactorSessionSealInterface;
 use App\Domain\TwoFactor\Events\RecoveryCodesRegenerated;
 use App\Domain\TwoFactor\Events\RecoveryCodeUsed;
 use App\Domain\TwoFactor\Events\TwoFactorDisabled;
@@ -24,9 +25,9 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserTwoFactorModel;
 use App\Infrastructure\QrCodes\TotpQrCodeRendererInterface;
 use DateTimeImmutable;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use PragmaRX\Google2FA\Google2FA;
 
@@ -48,6 +49,7 @@ final readonly class TwoFactorService implements TwoFactorServiceInterface
         private TotpQrCodeRendererInterface $qrCodes,
         private SiteBrandingServiceInterface $branding,
         private ImpersonationContextInterface $impersonation,
+        private TwoFactorSessionSealInterface $seal,
     ) {}
 
     public function status(string $userId): TwoFactorStatusDTO
@@ -137,14 +139,14 @@ final readonly class TwoFactorService implements TwoFactorServiceInterface
         );
     }
 
-    public function confirmSetup(string $userId, #[\SensitiveParameter] string $code, ?string $currentSessionId = null): array
+    public function confirmSetup(string $userId, #[\SensitiveParameter] string $code, ?Session $currentSession = null): array
     {
         $this->refuseWhileImpersonating();
 
         $id = $this->normalise($userId) ?? throw TwoFactorException::because(TwoFactorFailure::NoPendingSetup);
         $totp = TotpCode::tryFrom($code);
 
-        return DB::transaction(function () use ($id, $totp, $currentSessionId): array {
+        return DB::transaction(function () use ($id, $totp, $currentSession): array {
             $row = UserTwoFactorModel::query()->lockForUpdate()->find($id);
 
             if (! $row instanceof UserTwoFactorModel) {
@@ -166,10 +168,15 @@ final readonly class TwoFactorService implements TwoFactorServiceInterface
                 'recovery_codes' => $this->hashesOf($codes),
                 // The code just typed cannot be typed again to sign in
                 'last_used_timestep' => $step,
+                'session_seal' => Str::random(64),
             ])->save();
 
-            DB::afterCommit(function () use ($id, $currentSessionId): void {
-                $this->closeOtherSessions($id, $currentSessionId);
+            DB::afterCommit(function () use ($id, $currentSession): void {
+                if ($currentSession instanceof Session) {
+                    $this->seal->stamp($currentSession, $id);
+                }
+
+                $this->closeOtherSessions($id, $currentSession?->getId());
                 $this->rotateRememberToken($id);
                 Event::dispatch(new TwoFactorEnabled($id));
             });
@@ -364,20 +371,13 @@ final readonly class TwoFactorService implements TwoFactorServiceInterface
     }
 
     /**
-     * Sessions in the database are closed by deleting their rows. Other drivers cannot list an
-     * account's sessions: the sign-in challenge (core#770) closes any session of an account with
-     * two-factor authentication that did not pass it.
+     * With the database driver the rows go at once. Other drivers cannot list an account's
+     * sessions: those lack the new seal, so EnsureSessionPassedTwoFactor signs them out on their
+     * next request.
      */
     private function closeOtherSessions(string $id, ?string $currentSessionId): void
     {
-        $driver = config('session.driver');
-
-        if ($driver !== 'database') {
-            Log::warning('Two-factor authentication turned on: other sessions cannot be closed with this session driver', [
-                'user_id' => $id,
-                'driver' => is_string($driver) ? $driver : null,
-            ]);
-
+        if (config('session.driver') !== 'database') {
             return;
         }
 

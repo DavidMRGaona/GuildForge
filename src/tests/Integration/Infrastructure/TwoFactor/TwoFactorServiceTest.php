@@ -7,6 +7,7 @@ namespace Tests\Integration\Infrastructure\TwoFactor;
 use App\Application\Impersonation\Services\ImpersonationContextInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\TwoFactor\Services\TwoFactorServiceInterface;
+use App\Application\TwoFactor\Services\TwoFactorSessionSealInterface;
 use App\Application\TwoFactor\Services\TwoFactorStatusReaderInterface;
 use App\Domain\TwoFactor\Events\RecoveryCodesRegenerated;
 use App\Domain\TwoFactor\Events\RecoveryCodeUsed;
@@ -16,9 +17,12 @@ use App\Domain\TwoFactor\Exceptions\TwoFactorException;
 use App\Domain\TwoFactor\TwoFactorFailure;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserTwoFactorModel;
+use App\Infrastructure\TwoFactor\TwoFactorSessionSeal;
 use Closure;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Session\ArraySessionHandler;
+use Illuminate\Session\Store;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -93,6 +97,7 @@ final class TwoFactorServiceTest extends TestCase
         $model = UserTwoFactorModel::query()->findOrFail($user->id);
         $this->assertArrayNotHasKey('secret', $model->toArray());
         $this->assertArrayNotHasKey('recovery_codes', $model->toArray());
+        $this->assertArrayNotHasKey('session_seal', $model->toArray());
         $this->assertStringNotContainsString($setup->secret, (string) json_encode($user->fresh()));
     }
 
@@ -363,23 +368,30 @@ final class TwoFactorServiceTest extends TestCase
         config(['session.driver' => 'database']);
         $user = UserModel::factory()->create(['remember_token' => 'old-remember-token']);
         $other = UserModel::factory()->create();
-        $this->storeSession('current', $user);
+        $current = $this->sessionStore();
+        $this->storeSession($current->getId(), $user);
         $this->storeSession('laptop', $user);
         $this->storeSession('phone', $user);
         $this->storeSession('someone-else', $other);
         $setup = $this->service()->beginSetup((string) $user->id);
 
-        DB::transaction(function () use ($user, $setup): void {
-            $this->service()->confirmSetup((string) $user->id, $this->codeAt($setup->secret, 0), 'current');
+        DB::transaction(function () use ($user, $setup, $current): void {
+            $this->service()->confirmSetup((string) $user->id, $this->codeAt($setup->secret, 0), $current);
 
-            // Nothing is closed before the commit
+            // Nothing is closed or stamped before the commit
             $this->assertSame(3, DB::table('sessions')->where('user_id', $user->id)->count());
+            $this->assertFalse($current->has(TwoFactorSessionSeal::SESSION_KEY));
         });
 
-        $this->assertSame(['current', 'someone-else'], DB::table('sessions')->orderBy('id')->pluck('id')->all());
+        $this->assertEqualsCanonicalizing([$current->getId(), 'someone-else'], DB::table('sessions')->pluck('id')->all());
         $token = (string) $user->fresh()?->getRememberToken();
         $this->assertNotSame('old-remember-token', $token);
         $this->assertSame(60, strlen($token));
+
+        // The session that turned it on stays signed in, with any driver; a session opened before does not
+        $seal = $this->app->make(TwoFactorSessionSealInterface::class);
+        $this->assertTrue($seal->passes($current, (string) $user->id));
+        $this->assertFalse($seal->passes($this->sessionStore(), (string) $user->id));
     }
 
     public function test_without_a_current_session_every_session_closes(): void
@@ -400,11 +412,12 @@ final class TwoFactorServiceTest extends TestCase
         config(['session.driver' => 'database']);
         $user = UserModel::factory()->create(['remember_token' => 'old-remember-token']);
         $this->storeSession('laptop', $user);
+        $current = $this->sessionStore();
         $setup = $this->service()->beginSetup((string) $user->id);
 
         try {
-            DB::transaction(function () use ($user, $setup): void {
-                $this->service()->confirmSetup((string) $user->id, $this->codeAt($setup->secret, 0));
+            DB::transaction(function () use ($user, $setup, $current): void {
+                $this->service()->confirmSetup((string) $user->id, $this->codeAt($setup->secret, 0), $current);
 
                 throw new \RuntimeException('Rolled back');
             });
@@ -412,6 +425,7 @@ final class TwoFactorServiceTest extends TestCase
         }
 
         $this->assertSame(1, DB::table('sessions')->count());
+        $this->assertFalse($current->has(TwoFactorSessionSeal::SESSION_KEY));
         $this->assertSame('old-remember-token', $user->fresh()?->getRememberToken());
         $this->assertFalse($this->service()->isEnabled((string) $user->id));
         Event::assertNotDispatched(TwoFactorEnabled::class);
@@ -472,6 +486,11 @@ final class TwoFactorServiceTest extends TestCase
     private function codeAt(string $secret, int $stepOffset): string
     {
         return (new Google2FA)->oathTotp($secret, intdiv(self::NOW, 30) + $stepOffset);
+    }
+
+    private function sessionStore(): Store
+    {
+        return new Store('test', new ArraySessionHandler(10), Str::random(40));
     }
 
     private function storeSession(string $id, UserModel $user): void

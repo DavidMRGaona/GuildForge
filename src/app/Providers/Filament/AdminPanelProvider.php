@@ -23,6 +23,7 @@ use App\Filament\Support\PanelCreateMenu;
 use App\Filament\Support\PanelNavigationGroups;
 use App\Filament\Support\PanelSidebarMode;
 use App\Http\Middleware\ApplyImpersonation;
+use App\Http\Middleware\EnsureSessionPassedTwoFactor;
 use App\Http\Middleware\RedirectImpersonatedAccountWithoutPanelAccess;
 use App\Infrastructure\Impersonation\ImpersonatedName;
 use App\Infrastructure\Impersonation\ImpersonationContext;
@@ -124,6 +125,8 @@ class AdminPanelProvider extends PanelProvider
                 RedirectImpersonatedAccountWithoutPanelAccess::class,
                 // Resolves to AuthenticatePanelImpersonatorSession (ImpersonationServiceProvider)
                 AuthenticateSession::class,
+                // A session of an account with two-factor authentication must have passed it (core#768)
+                EnsureSessionPassedTwoFactor::class,
                 ShareErrorsFromSession::class,
                 PreventRequestForgery::class,
                 SubstituteBindings::class,

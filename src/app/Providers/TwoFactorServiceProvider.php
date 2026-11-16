@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Application\TwoFactor\Services\TwoFactorServiceInterface;
+use App\Application\TwoFactor\Services\TwoFactorSessionSealInterface;
 use App\Application\TwoFactor\Services\TwoFactorStatusReaderInterface;
 use App\Domain\TwoFactor\Events\RecoveryCodesRegenerated;
 use App\Domain\TwoFactor\Events\RecoveryCodeUsed;
@@ -15,6 +16,7 @@ use App\Infrastructure\QrCodes\QrCodeContentPolicy;
 use App\Infrastructure\QrCodes\TotpQrCodeRendererInterface;
 use App\Infrastructure\TwoFactor\Listeners\SendTwoFactorSecurityNotice;
 use App\Infrastructure\TwoFactor\TwoFactorService;
+use App\Infrastructure\TwoFactor\TwoFactorSessionSeal;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
@@ -28,6 +30,7 @@ final class TwoFactorServiceProvider extends ServiceProvider
     {
         $this->app->bind(TwoFactorServiceInterface::class, TwoFactorService::class);
         $this->app->bind(TwoFactorStatusReaderInterface::class, TwoFactorService::class);
+        $this->app->bind(TwoFactorSessionSealInterface::class, TwoFactorSessionSeal::class);
 
         $this->app->bind(TotpQrCodeRendererInterface::class, static fn ($app): TotpQrCodeRendererInterface => new EndroidQrCodeRenderer(
             new QrCodeContentPolicy((string) config('app.url'), $app->environment('local', 'testing')),
