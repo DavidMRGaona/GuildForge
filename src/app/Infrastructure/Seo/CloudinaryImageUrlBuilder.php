@@ -6,7 +6,7 @@ namespace App\Infrastructure\Seo;
 
 /**
  * Server-side counterpart of resources/js/utils/cloudinary.ts, limited to the
- * presets link previews and the panel media library need. Keep the public ID normalization in sync.
+ * presets link previews, the panel media library and the profile card need. Keep the public ID normalization in sync.
  */
 final readonly class CloudinaryImageUrlBuilder
 {
@@ -67,6 +67,15 @@ final readonly class CloudinaryImageUrlBuilder
         $animated = str_ends_with($baseName, self::ANIMATED_AVATAR_SUFFIX) ? ',fl_animated' : '';
 
         return $this->build($publicId, "w_{$size},h_{$size},c_fill,g_face,q_auto,f_auto{$animated}");
+    }
+
+    /**
+     * A banner cropped to the box around what Cloudinary finds most relevant, like the profile page's
+     * buildImageUrl() with `crop: 'fill', gravity: 'auto'` (core#744).
+     */
+    public function banner(string $publicId, int $width, int $height): ?string
+    {
+        return $this->build($publicId, "w_{$width},h_{$height},c_fill,g_auto,q_auto,f_auto");
     }
 
     /**

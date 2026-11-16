@@ -35,7 +35,7 @@ final readonly class PublicProfileService implements PublicProfileServiceInterfa
             return ProfileLookupDTO::notFound();
         }
 
-        $profile = $this->toDto($row, $owner);
+        $profile = self::describe($row, $owner);
 
         if (! $this->access->canView($profile, $viewer)) {
             return ProfileLookupDTO::notFound();
@@ -78,7 +78,11 @@ final readonly class PublicProfileService implements PublicProfileServiceInterfa
         return is_string($userId) ? $this->rows->find($userId) : null;
     }
 
-    private function toDto(UserProfileModel $row, UserModel $owner): PublicProfileDTO
+    /**
+     * What the access rule needs to know about a profile and its owner; ProfileCardService (core#744)
+     * describes it the same way.
+     */
+    public static function describe(UserProfileModel $row, UserModel $owner): PublicProfileDTO
     {
         return new PublicProfileDTO(
             userId: (string) $owner->id,

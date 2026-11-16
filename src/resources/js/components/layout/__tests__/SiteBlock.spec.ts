@@ -64,7 +64,7 @@ describe('SiteBlock', () => {
         expect(wrapper.find('[data-site-block="newsletter.subscribe"]').exists()).toBe(true);
     });
 
-    it.each(['footer', 'popup'] as const)(
+    it.each(['footer', 'popup', 'link_page'] as const)(
         'tells the block it is drawn in the %s',
         async (placement) => {
             const wrapper = mount(SiteBlock, {

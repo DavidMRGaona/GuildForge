@@ -8,7 +8,7 @@ import type { ResolvedSiteBlock, SiteBlockPlacement } from '@/types/siteBlocks';
 import { resolveSiteBlockComponent } from '@/utils/siteBlockComponents';
 
 /**
- * Draws one site block resolved on the server (footer column, popup). Like ModuleSlot, a block
+ * Draws one site block resolved on the server (footer column, popup, link page). Like ModuleSlot, a block
  * that fails to load or render is left out and never breaks the page around it.
  *
  * `placement` says where it is drawn (`footer` by default); the block reads it with
