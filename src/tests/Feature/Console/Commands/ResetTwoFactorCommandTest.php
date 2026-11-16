@@ -10,6 +10,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserTwoFactorModel;
 use App\Notifications\TwoFactor\TwoFactorResetNotification;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Mockery;
@@ -54,7 +55,7 @@ final class ResetTwoFactorCommandTest extends TestCase
         $log = Log::spy();
 
         $this->artisanCommand('users:reset-two-factor', ['email' => 'ana@example.org'])
-            ->expectsConfirmation('¿Quitar el doble factor de la cuenta ana@example.org?', 'yes')
+            ->expectsConfirmation($this->question(), 'yes')
             ->expectsOutputToContain('Doble factor quitado')
             ->assertSuccessful();
 
@@ -70,7 +71,7 @@ final class ResetTwoFactorCommandTest extends TestCase
         Notification::fake();
 
         $this->artisanCommand('users:reset-two-factor', ['email' => 'ana@example.org'])
-            ->expectsConfirmation('¿Quitar el doble factor de la cuenta ana@example.org?', 'no')
+            ->expectsConfirmation($this->question(), 'no')
             ->expectsOutputToContain('Cancelado')
             ->assertFailed();
 
@@ -89,14 +90,44 @@ final class ResetTwoFactorCommandTest extends TestCase
         Notification::assertSentTo($this->user, TwoFactorResetNotification::class);
     }
 
-    public function test_it_also_works_on_a_deactivated_account(): void
+    public function test_it_also_works_on_a_deactivated_account_and_still_tells_the_owner(): void
     {
         $this->user->delete();
+        Notification::fake();
 
         $this->artisanCommand('users:reset-two-factor', ['email' => 'ana@example.org', '--force' => true])
             ->assertSuccessful();
 
         $this->assertNull(UserTwoFactorModel::query()->find($this->user->id));
+        Notification::assertSentTo($this->user, TwoFactorResetNotification::class);
+    }
+
+    public function test_the_exact_address_wins_over_one_that_differs_in_capitals(): void
+    {
+        $upper = $this->accountWithCapitals();
+        Notification::fake();
+
+        $this->artisanCommand('users:reset-two-factor', ['email' => 'ana@example.org', '--force' => true])
+            ->assertSuccessful();
+
+        $this->assertNull(UserTwoFactorModel::query()->find($this->user->id));
+        $this->assertTrue(UserTwoFactorModel::query()->whereKey($upper->id)->exists());
+        Notification::assertSentTo($this->user, TwoFactorResetNotification::class);
+        Notification::assertNotSentTo($upper, TwoFactorResetNotification::class);
+    }
+
+    public function test_addresses_that_differ_only_in_capitals_are_never_guessed(): void
+    {
+        $upper = $this->accountWithCapitals();
+        Notification::fake();
+
+        $this->artisanCommand('users:reset-two-factor', ['email' => 'ANA@EXAMPLE.ORG', '--force' => true])
+            ->expectsOutputToContain('Hay 2 cuentas cuyo correo solo se distingue en las mayúsculas')
+            ->assertFailed();
+
+        $this->assertTrue(UserTwoFactorModel::query()->whereKey($this->user->id)->exists());
+        $this->assertTrue(UserTwoFactorModel::query()->whereKey($upper->id)->exists());
+        Notification::assertNothingSent();
     }
 
     public function test_an_unknown_address_fails_and_says_so(): void
@@ -128,5 +159,30 @@ final class ResetTwoFactorCommandTest extends TestCase
         $this->expectException(RuntimeException::class);
 
         $this->artisanCommand('users:reset-two-factor');
+    }
+
+    /**
+     * The model lowercases addresses, so one that differs only in capitals (it can come from elsewhere)
+     * is written straight to the table.
+     */
+    private function accountWithCapitals(): UserModel
+    {
+        $account = UserModel::factory()->create();
+        DB::table('users')->where('id', $account->id)->update(['email' => 'Ana@Example.org']);
+        $this->enable($account);
+
+        return $account;
+    }
+
+    private function question(): string
+    {
+        return sprintf('¿Quitar el doble factor de la cuenta ana@example.org (%s, id %s)?', $this->user->display_name ?: $this->user->name, $this->user->id);
+    }
+
+    private function enable(UserModel $user): void
+    {
+        $service = $this->app->make(TwoFactorServiceInterface::class);
+        $setup = $service->beginSetup((string) $user->id);
+        $service->confirmSetup((string) $user->id, (new Google2FA)->oathTotp($setup->secret, intdiv(self::NOW, 30)));
     }
 }

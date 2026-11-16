@@ -13,4 +13,12 @@ final class TwoFactorResetNotification extends TwoFactorSecurityNotification
     {
         return 'reset';
     }
+
+    /**
+     * It was the administration, not the person, who did it: the general line («si no has sido tú») would not fit.
+     */
+    protected function notYouKey(): string
+    {
+        return 'two_factor.mail.reset.not_you';
+    }
 }

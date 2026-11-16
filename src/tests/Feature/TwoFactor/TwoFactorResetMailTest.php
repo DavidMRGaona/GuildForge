@@ -63,13 +63,39 @@ final class TwoFactorResetMailTest extends TestCase
             $this->assertSame('La administración ha quitado el doble factor de tu cuenta de Example *site*', $mail->subject);
             $this->assertStringContainsString('La administración de Example \*site\* ha quitado', $text);
             $this->assertStringContainsString(app(TimezoneServiceInterface::class)->format(Carbon::createFromTimestamp(self::NOW)), $text);
-            $this->assertStringContainsString('Si no has sido tú', $text);
+            // Its own closing line: it was the administration, not the person
+            $this->assertStringContainsString('Si no lo has pedido tú, cambia tu contraseña', $text);
+            $this->assertStringNotContainsString('Si no has sido tú', $text);
             $this->assertStringNotContainsString((string) $actor->name, $text);
             $this->assertSame(route('profile.show'), $mail->actionUrl);
 
             return true;
         });
         Notification::assertCount(1);
+    }
+
+    public function test_a_deactivated_account_is_told_too(): void
+    {
+        $user = UserModel::factory()->create();
+        $this->enable($user);
+        $user->delete();
+        Notification::fake();
+
+        $this->app->make(TwoFactorResetInterface::class)->reset((string) $user->id, null);
+
+        Notification::assertSentTo($user, TwoFactorResetNotification::class);
+    }
+
+    public function test_an_anonymized_account_is_never_mailed(): void
+    {
+        $user = UserModel::factory()->create();
+        $this->enable($user);
+        $user->forceFill(['anonymized_at' => now(), 'deleted_at' => now()])->save();
+        Notification::fake();
+
+        $this->app->make(TwoFactorResetInterface::class)->reset((string) $user->id, null);
+
+        Notification::assertNothingSent();
     }
 
     public function test_an_account_without_two_factor_gets_no_mail(): void

@@ -283,7 +283,8 @@ class UserResource extends BaseResource
                     ->trueColor('success')
                     ->falseColor('gray')
                     ->getStateUsing($hasTwoFactor)
-                    ->visibleFrom('md'),
+                    // With the sidebar open, 1024 px leaves about 640: from `xl`, like the verified-email column
+                    ->visibleFrom('xl'),
                 TextColumn::make('status')
                     ->label(__('filament.users.fields.status'))
                     ->badge()

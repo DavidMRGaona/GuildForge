@@ -15,6 +15,7 @@ return [
         'reset' => [
             'subject' => 'The administrators removed two-factor authentication from your :site account',
             'body' => 'The administrators of :site removed two-factor authentication from your account on :when. Every open session of your account has been closed. Your password is enough to sign in; you can turn two-factor authentication on again from your account settings.',
+            'not_you' => 'If you did not ask for this, change your password as soon as possible and tell the site\'s administrators.',
         ],
         'recovery_code_used' => [
             'subject' => 'A recovery code was used at :site',
@@ -32,7 +33,8 @@ return [
 
     'command' => [
         'not_found' => 'There is no account with that email.',
-        'confirm' => 'Remove the two-factor authentication of :email?',
+        'confirm' => 'Remove the two-factor authentication of :email (:name, id :id)?',
+        'ambiguous' => 'There are :count accounts whose email differs only in capitals: type the exact email of the one you mean.',
         'cancelled' => 'Cancelled: nothing was changed.',
         'refused' => 'Two-factor authentication could not be reset.',
         'nothing' => 'The account :email has no two-factor authentication on: nothing to remove.',

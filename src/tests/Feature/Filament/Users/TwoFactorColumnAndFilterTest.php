@@ -22,7 +22,7 @@ use Tests\TestCase;
 
 /**
  * The users list shows who has two-factor authentication on and filters by it (core#771). The column
- * hides below `md` like the other secondary ones, and «Ver detalles» still shows it.
+ * hides below `xl` like the other secondary ones, and «Ver detalles» still shows it.
  */
 final class TwoFactorColumnAndFilterTest extends TestCase
 {
@@ -58,12 +58,12 @@ final class TwoFactorColumnAndFilterTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_the_column_is_a_centred_icon_shown_from_md(): void
+    public function test_the_column_is_a_centred_icon_shown_from_xl(): void
     {
         $column = $this->table()->getColumn('two_factor');
 
         $this->assertInstanceOf(IconColumn::class, $column);
-        $this->assertSame('md', $column->getVisibleFrom());
+        $this->assertSame('xl', $column->getVisibleFrom());
         $this->assertSame(Alignment::Center, $column->getAlignment());
         $this->assertSame('Doble factor', $column->getLabel());
     }

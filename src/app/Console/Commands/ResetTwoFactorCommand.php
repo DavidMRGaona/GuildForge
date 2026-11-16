@@ -9,6 +9,7 @@ use App\Console\Concerns\ReadsTypedInput;
 use App\Domain\TwoFactor\Exceptions\TwoFactorException;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -29,18 +30,33 @@ final class ResetTwoFactorCommand extends Command
 
     public function handle(TwoFactorResetInterface $reset): int
     {
-        $email = mb_strtolower(trim($this->stringArgument('email')));
+        $email = trim($this->stringArgument('email'));
 
         // Deactivated accounts too: reactivating one must not bring its second factor back
-        $user = $email === '' ? null : UserModel::query()->withTrashed()->whereRaw('lower(email) = ?', [$email])->first();
+        $accounts = $email === '' ? collect() : $this->accountsWithEmail($email);
 
-        if (! $user instanceof UserModel) {
+        if ($accounts->isEmpty()) {
             $this->components->error((string) __('two_factor.command.not_found'));
 
             return self::FAILURE;
         }
 
-        if (! $this->flag('force') && ! $this->components->confirm((string) __('two_factor.command.confirm', ['email' => $email]))) {
+        // Two addresses that differ only in capitals: never pick one for the person
+        if ($accounts->count() > 1) {
+            $this->components->error((string) __('two_factor.command.ambiguous', ['count' => $accounts->count()]));
+
+            return self::FAILURE;
+        }
+
+        $user = $accounts->first();
+
+        $email = (string) $user->email;
+
+        if (! $this->flag('force') && ! $this->components->confirm((string) __('two_factor.command.confirm', [
+            'email' => $email,
+            'name' => $user->display_name ?: $user->name,
+            'id' => (string) $user->getKey(),
+        ]))) {
             $this->components->warn((string) __('two_factor.command.cancelled'));
 
             return self::FAILURE;
@@ -68,5 +84,21 @@ final class ResetTwoFactorCommand extends Command
         $this->components->info((string) __('two_factor.command.done', ['email' => $email]));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * The account with exactly that address; with none, the ones that match it without telling capitals apart.
+     *
+     * @return Collection<int, UserModel>
+     */
+    private function accountsWithEmail(string $email): Collection
+    {
+        $exact = UserModel::query()->withTrashed()->where('email', $email)->get();
+
+        if ($exact->isNotEmpty()) {
+            return $exact;
+        }
+
+        return UserModel::query()->withTrashed()->whereRaw('lower(email) = ?', [mb_strtolower($email)])->get();
     }
 }

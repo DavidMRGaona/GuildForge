@@ -60,9 +60,11 @@ final readonly class SendTwoFactorSecurityNotice
      */
     private function send(string $userId, Closure $notification): void
     {
-        $user = UserModel::query()->find($userId);
+        // Deactivated accounts too (the administration may reset one, and its owner is still told);
+        // never an anonymized one, which has no address left to write to
+        $user = UserModel::query()->withTrashed()->find($userId);
 
-        if (! $user instanceof UserModel) {
+        if (! $user instanceof UserModel || $user->anonymized_at !== null) {
             return;
         }
 

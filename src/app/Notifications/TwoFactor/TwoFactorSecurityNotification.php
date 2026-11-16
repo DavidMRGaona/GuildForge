@@ -31,7 +31,7 @@ abstract class TwoFactorSecurityNotification extends Notification implements Has
     ) {}
 
     /**
-     * Key under two_factor.mail: enabled, disabled, recovery_code_used, recovery_codes_regenerated.
+     * Key under two_factor.mail: enabled, disabled, reset, recovery_code_used, recovery_codes_regenerated.
      */
     abstract protected function type(): string;
 
@@ -57,13 +57,21 @@ abstract class TwoFactorSecurityNotification extends Notification implements Has
         }
 
         return $message
-            ->line(__('two_factor.mail.not_you'))
+            ->line(__($this->notYouKey()))
             ->action(__('two_factor.mail.action'), route('profile.show'));
     }
 
     public function mailCategory(): string
     {
         return CoreMailCategories::ACCOUNT_SECURITY;
+    }
+
+    /**
+     * The closing line about not having done it: the same for every change unless a type needs its own.
+     */
+    protected function notYouKey(): string
+    {
+        return 'two_factor.mail.not_you';
     }
 
     /**
