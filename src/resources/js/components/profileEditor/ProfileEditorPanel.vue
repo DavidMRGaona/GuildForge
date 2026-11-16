@@ -13,7 +13,7 @@ import { useMediaQuery } from '@/composables/useMediaQuery';
 import { useDialogHistoryEntry } from '@/composables/useDialogHistoryEntry';
 import { useModalDialog } from '@/composables/useModalDialog';
 import { codePointLength } from '@/utils/profilePreview';
-import type { ProfileEditor, ProfileEditorForm } from '@/types/profileEditor';
+import type { BannerChange, ProfileEditor, ProfileEditorForm } from '@/types/profileEditor';
 
 /**
  * The owner's editor of their public profile (core#743): a panel on the right, the whole screen on a
@@ -23,9 +23,11 @@ import type { ProfileEditor, ProfileEditorForm } from '@/types/profileEditor';
  *
  * A modal dialog: the whole page behind (`#app`, header and footer included) is inert and a veil over it
  * takes the clicks, Tab stays inside, and Escape, the veil, Back or a visit elsewhere ask first when
- * changes would be lost (so does leaving the site). Back closes it: it opens on an entry of its own in
- * the history (`useDialogHistoryEntry`). The page behind still scrolls, except on a phone-sized screen,
- * where the panel covers it whole.
+ * changes would be lost, a banner change still on its way included (so does leaving the site). Back
+ * closes it: it opens on an entry of its own in the history (`useDialogHistoryEntry`). Leaving that
+ * entry, once accepted, cancels the banner's change on its way, whose answer would otherwise take the
+ * page's entry (core#759); saving waits for it. The page behind still scrolls, except on a phone-sized
+ * screen, where the panel covers it whole.
  */
 const props = defineProps<{
     editor: ProfileEditor;
@@ -97,16 +99,48 @@ let appRootWasInert = false;
 /** The person accepted to leave and lose the changes: until the draft is reset, nothing asks again */
 const leaving = ref(false);
 
-/** Whether changes would be lost: not while they are being saved, nor once leaving was accepted */
-const unsaved = computed(() => form.isDirty && !form.processing && !leaving.value);
+/** A banner change on its way: leaving cancels it, so it counts as unsaved, and saving waits for it */
+const bannerPending = ref<BannerChange | null>(null);
+
+/** Whether something would be lost: not while the form is being saved, nor once leaving was accepted */
+const unsaved = computed(
+    () => (form.isDirty || bannerPending.value !== null) && !form.processing && !leaving.value
+);
 
 watch(
-    () => form.isDirty,
-    (dirty) => {
-        if (!dirty) {
+    () => form.isDirty || bannerPending.value !== null,
+    (changed) => {
+        if (!changed) {
             leaving.value = false;
         }
     }
+);
+
+/** Nothing is left to lose (the banner's change ended meanwhile): the question has nothing to ask */
+watch(unsaved, (value) => {
+    if (!value) {
+        confirmDiscard.value = false;
+    }
+});
+
+function reportBannerPending(change: BannerChange | null): void {
+    bannerPending.value = change;
+}
+
+/** What a banner change on its way adds to the question before leaving */
+const pendingNotice = computed(() => {
+    if (bannerPending.value === 'upload') {
+        return t('publicProfile.editor.banner.pendingUpload');
+    }
+
+    return bannerPending.value === 'remove' ? t('publicProfile.editor.banner.pendingRemove') : '';
+});
+
+/** The dialog's text: what would be lost */
+const discardMessage = computed(() =>
+    form.isDirty
+        ? [t('publicProfile.editor.discardMessage'), pendingNotice.value].join(' ').trim()
+        : pendingNotice.value
 );
 
 /** The editor's own requests (saving, the banner) are never a visit elsewhere */
@@ -133,7 +167,11 @@ function mayLeave(): boolean {
         return true;
     }
 
-    if (!window.confirm(t('publicProfile.editor.leaveConfirm'))) {
+    const question = form.isDirty
+        ? t('publicProfile.editor.leaveConfirm')
+        : t('publicProfile.editor.leaveAnyway');
+
+    if (!window.confirm([pendingNotice.value, question].join(' ').trim())) {
         return false;
     }
 
@@ -192,10 +230,10 @@ function requestClose(): void {
 }
 
 /** Between leaving the panel's entry and sending: a second press must not save twice */
-let sending = false;
+const sending = ref(false);
 
 async function save(): Promise<void> {
-    if (sending || form.processing) {
+    if (sending.value || form.processing || bannerPending.value !== null) {
         return;
     }
 
@@ -209,10 +247,10 @@ async function save(): Promise<void> {
     }
 
     form.clearErrors();
-    sending = true;
+    sending.value = true;
     // The saved page takes the page's own entry, so the panel's is left first: no extra step back
     await historyEntry.release();
-    sending = false;
+    sending.value = false;
 
     let saved = false;
     form.put(props.editor.urls.update, {
@@ -391,7 +429,12 @@ onBeforeUnmount(() => {
                     </p>
                 </div>
 
-                <ProfileBannerField :editor="editor" />
+                <ProfileBannerField
+                    :editor="editor"
+                    :cancel-on-close="historyEntry.cancelOnLeave"
+                    :report-pending="reportBannerPending"
+                    :locked="form.processing || sending"
+                />
 
                 <div v-if="editor.canShowMembership" data-field="show_membership">
                     <div class="flex items-start gap-3">
@@ -471,7 +514,7 @@ onBeforeUnmount(() => {
                         type="submit"
                         :form="`${uid}-form`"
                         class="rounded-md bg-(--button-primary-bg) px-4 py-2 text-sm font-medium text-(--button-primary-text) inset-ring inset-ring-(--button-primary-border) transition-colors hover:bg-(--button-primary-hover-bg) hover:text-(--button-primary-hover-text) focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-bg-surface) disabled:opacity-50 motion-reduce:transition-none"
-                        :disabled="form.processing"
+                        :disabled="form.processing || bannerPending !== null"
                         data-testid="profile-editor-save"
                     >
                         {{
@@ -486,7 +529,7 @@ onBeforeUnmount(() => {
             <ConfirmDialog
                 v-model="confirmDiscard"
                 :title="t('publicProfile.editor.discardTitle')"
-                :message="t('publicProfile.editor.discardMessage')"
+                :message="discardMessage"
                 :confirm-label="t('publicProfile.editor.discardConfirm')"
                 :cancel-label="t('publicProfile.editor.keepEditing')"
                 confirm-variant="danger"

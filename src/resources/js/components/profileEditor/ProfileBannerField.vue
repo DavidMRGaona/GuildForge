@@ -4,16 +4,27 @@ import { router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { ImagePlus, LoaderCircle, Trash2 } from '@lucide/vue';
 import { buildImageUrl } from '@/utils/cloudinary';
-import type { ProfileEditor } from '@/types/profileEditor';
+import type { BannerChange, ProfileEditor } from '@/types/profileEditor';
 
 /**
  * «Banner»: uploaded as soon as it is chosen, with the chosen image shown meanwhile, or taken away.
  * Type and size are checked here for a quick answer and again on the server, which stores it; the
  * 1500 × 500 crop is only how it is shown. The page reloads its props after each change, so the
  * preview behind shows the new banner, and the rest of the editor keeps what is being written.
+ * A change on its way is told to the panel (`reportPending`), which asks before leaving and cancels it
+ * once leaving was accepted (`cancelOnClose`, core#759). Both are functions rather than events, so the
+ * end of a request still reaches the panel if this field was drawn again meanwhile.
  */
 const props = defineProps<{
     editor: ProfileEditor;
+    /** Hands the panel what cancels the request on its way; returns what to call once it finished */
+    cancelOnClose: (cancel: () => void) => () => void;
+    /** A change is on its way (`upload`, `remove`), or none any more */
+    reportPending: (change: BannerChange | null) => void;
+    /**
+     * The panel is saving: Inertia runs one visit at a time, so a banner change now would interrupt it
+     */
+    locked: boolean;
 }>();
 
 const { t } = useI18n();
@@ -23,8 +34,29 @@ const MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const input = ref<HTMLInputElement | null>(null);
 const localPreview = ref<string | null>(null);
-const busy = ref(false);
+const pending = ref<BannerChange | null>(null);
+const busy = computed(() => pending.value !== null);
+/** Neither chosen nor taken away: a change is on its way, or the panel is saving */
+const disabled = computed(() => busy.value || props.locked);
 const error = ref<string | null>(null);
+
+function setPending(change: BannerChange | null): void {
+    pending.value = change;
+    props.reportPending(change);
+}
+
+/** The request on its way is done: closing the panel no longer has to cancel it */
+let finished: (() => void) | null = null;
+
+function track(cancel: () => void): void {
+    finished?.();
+    finished = props.cancelOnClose(cancel);
+}
+
+function untrack(): void {
+    finished?.();
+    finished = null;
+}
 
 const sizeMb = computed(() => Math.round(props.editor.limits.bannerKilobytes / 1024));
 const storedUrl = computed(() =>
@@ -46,6 +78,10 @@ function forgetLocalPreview(): void {
 }
 
 function choose(): void {
+    if (disabled.value) {
+        return;
+    }
+
     input.value?.click();
 }
 
@@ -55,7 +91,7 @@ function onChosen(event: Event): void {
     // The same file can be chosen again after an error
     target.value = '';
 
-    if (!file) {
+    if (!file || disabled.value) {
         return;
     }
 
@@ -72,7 +108,7 @@ function onChosen(event: Event): void {
     error.value = null;
     forgetLocalPreview();
     localPreview.value = URL.createObjectURL(file);
-    busy.value = true;
+    setPending('upload');
 
     router.post(
         props.editor.urls.banner,
@@ -81,11 +117,13 @@ function onChosen(event: Event): void {
             forceFormData: true,
             preserveScroll: true,
             preserveState: true,
+            onCancelToken: (token) => track(() => token.cancel()),
             onError: (errors) => {
                 error.value = errors.banner ?? t('publicProfile.editor.banner.failed');
             },
             onFinish: () => {
-                busy.value = false;
+                untrack();
+                setPending(null);
                 forgetLocalPreview();
             },
         }
@@ -93,14 +131,20 @@ function onChosen(event: Event): void {
 }
 
 function remove(): void {
+    if (disabled.value) {
+        return;
+    }
+
     error.value = null;
-    busy.value = true;
+    setPending('remove');
 
     router.delete(props.editor.urls.banner, {
         preserveScroll: true,
         preserveState: true,
+        onCancelToken: (token) => track(() => token.cancel()),
         onFinish: () => {
-            busy.value = false;
+            untrack();
+            setPending(null);
         },
     });
 }
@@ -145,7 +189,7 @@ onBeforeUnmount(forgetLocalPreview);
             <button
                 type="button"
                 class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-base-primary inset-ring inset-ring-(--color-border) transition-colors hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-bg-surface) disabled:opacity-50 motion-reduce:transition-none"
-                :disabled="busy"
+                :disabled="disabled"
                 data-testid="banner-upload"
                 @click="choose"
             >
@@ -160,7 +204,7 @@ onBeforeUnmount(forgetLocalPreview);
                 v-if="editor.bannerPublicId"
                 type="button"
                 class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-bg-surface) disabled:opacity-50 motion-reduce:transition-none dark:text-red-400 dark:hover:bg-red-950/40"
-                :disabled="busy"
+                :disabled="disabled"
                 data-testid="banner-remove"
                 @click="remove"
             >

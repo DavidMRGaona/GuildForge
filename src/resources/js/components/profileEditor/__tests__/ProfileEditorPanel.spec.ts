@@ -3,6 +3,7 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import { router } from '@inertiajs/vue3';
 import ProfileEditorPanel from '../ProfileEditorPanel.vue';
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
 import en from '@/locales/en';
 import es from '@/locales/es';
 import type { ProfileEditor, ProfileEditorForm } from '@/types/profileEditor';
@@ -372,6 +373,326 @@ describe('ProfileEditorPanel', () => {
         expect(window.location.pathname).toBe('/miembros/ana-prueba');
         expect(window.history.state).not.toEqual({ page: { url: '/login' } });
         expect(inertia).toHaveBeenCalledTimes(1);
+    });
+
+    interface BannerChangeInFlight {
+        /** Inertia's answer on a page: written to the history unless the change was cancelled */
+        answerOn(url: string): void;
+        cancelled(): boolean;
+    }
+
+    type BannerVisitUrl = Parameters<typeof router.delete>[0];
+    type BannerVisitOptions = Parameters<typeof router.delete>[1];
+
+    /**
+     * The banner's upload (`post`) or removal (`delete`) as Inertia 3 sends it: `before` first (where the
+     * panel marks it), then its cancel token. Inertia takes `replace` when sending and writes the history
+     * with it once the answer arrives.
+     */
+    function bannerChangeInFlight(method: 'post' | 'delete' = 'post'): BannerChangeInFlight {
+        let answerOn: (url: string) => void = () => undefined;
+        let cancelled = false;
+
+        function send(url: BannerVisitUrl, options: BannerVisitOptions): void {
+            const visit: { url: URL; method: string; replace?: boolean } = {
+                url: new URL(
+                    typeof url === 'string' || url instanceof URL ? url : url.url,
+                    window.location.origin
+                ),
+                method,
+            };
+            document.dispatchEvent(
+                new CustomEvent('inertia:before', { cancelable: true, detail: { visit } })
+            );
+            const replace = visit.replace === true;
+
+            options?.onCancelToken?.({
+                cancel: () => {
+                    if (!cancelled) {
+                        cancelled = true;
+                        options?.onCancel?.();
+                        options?.onFinish?.({} as never);
+                    }
+                },
+            } as never);
+
+            answerOn = (to: string): void => {
+                if (cancelled) {
+                    return;
+                }
+                const state = { page: { url: to } };
+                if (replace) {
+                    window.history.replaceState(state, '', to);
+                } else {
+                    window.history.pushState(state, '', to);
+                }
+                options?.onFinish?.({} as never);
+                document.dispatchEvent(new CustomEvent('inertia:finish', { detail: { visit } }));
+            };
+        }
+
+        if (method === 'post') {
+            vi.spyOn(router, 'post').mockImplementation((url, _data, options) =>
+                send(url, options)
+            );
+        } else {
+            vi.spyOn(router, 'delete').mockImplementation((url, options) => send(url, options));
+        }
+
+        return { answerOn: (url) => answerOn(url), cancelled: () => cancelled };
+    }
+
+    async function chooseBanner(wrapper: VueWrapper): Promise<void> {
+        URL.createObjectURL = vi.fn(() => 'blob:banner');
+        URL.revokeObjectURL = vi.fn();
+        const input = wrapper.get('[data-testid="banner-input"]');
+        Object.defineProperty(input.element, 'files', {
+            value: [new File(['banner'], 'banner.png', { type: 'image/png' })],
+            configurable: true,
+        });
+        await input.trigger('change');
+    }
+
+    /** The profile in the history after another page, as it is when the panel opens on it */
+    function onTheProfile(): void {
+        window.history.pushState({ page: { url: '/eventos' } }, '', '/eventos');
+        window.history.pushState(
+            { page: { url: '/miembros/ana-prueba' } },
+            '',
+            '/miembros/ana-prueba'
+        );
+    }
+
+    async function pressInDialog(wrapper: VueWrapper, label: string): Promise<void> {
+        const button = wrapper.findAll('button').find((candidate) => candidate.text() === label);
+        expect(button).toBeDefined();
+        await button?.trigger('click');
+    }
+
+    /**
+     * Whether the panel asks «¿Descartar los cambios?»: the dialog is always drawn, and the test's stub of
+     * Teleport draws it anew on every render, so what the panel asks is read from its `modelValue`
+     */
+    function questionOpen(wrapper: VueWrapper): boolean {
+        return wrapper.getComponent(ConfirmDialog).props('modelValue') === true;
+    }
+
+    const UPLOADING = 'El banner aún se está subiendo y puede que no llegue a guardarse.';
+
+    it('closing it while the banner uploads asks first: staying lets it go on, leaving cancels it', async () => {
+        onTheProfile();
+        const upload = bannerChangeInFlight();
+        const inertia = inertiaHearsPopstate();
+        const wrapper = mountPanel();
+        await chooseBanner(wrapper);
+
+        await wrapper.get('[data-testid="profile-editor"]').trigger('keydown', { key: 'Escape' });
+        expect(wrapper.emitted('close')).toBeUndefined();
+        expect(questionOpen(wrapper)).toBe(true);
+        expect(wrapper.text()).toContain(UPLOADING);
+
+        await pressInDialog(wrapper, 'Seguir editando');
+        expect(questionOpen(wrapper)).toBe(false);
+        expect(wrapper.emitted('close')).toBeUndefined();
+        expect(upload.cancelled()).toBe(false);
+
+        await wrapper.get('[data-testid="profile-editor"]').trigger('keydown', { key: 'Escape' });
+        await pressInDialog(wrapper, 'Descartar');
+        expect(wrapper.emitted('close')).toHaveLength(1);
+        wrapper.unmount();
+
+        expect(upload.cancelled()).toBe(true);
+        // The session expired meanwhile: Inertia would send the upload's answer to the sign-in page
+        upload.answerOn('/login');
+        expect(window.location.pathname).toBe('/miembros/ana-prueba');
+        expect(window.history.state).not.toEqual({ page: { url: '/login' } });
+        expect(inertia).not.toHaveBeenCalled();
+    });
+
+    it('going back while the banner uploads asks first: staying lets it go on, leaving cancels it', async () => {
+        onTheProfile();
+        const confirm = vi.fn<(message?: string) => boolean>(() => false);
+        vi.stubGlobal('confirm', confirm);
+        const upload = bannerChangeInFlight();
+        const inertia = inertiaHearsPopstate();
+        const wrapper = mountPanel();
+        await chooseBanner(wrapper);
+
+        window.history.back();
+        expect(confirm).toHaveBeenCalledWith(`${UPLOADING} ¿Salir igualmente?`);
+        expect(wrapper.emitted('close')).toBeUndefined();
+        expect(upload.cancelled()).toBe(false);
+        expect(inertia).not.toHaveBeenCalled();
+
+        confirm.mockReturnValue(true);
+        window.history.back();
+        expect(wrapper.emitted('close')).toHaveLength(1);
+        expect(upload.cancelled()).toBe(true);
+        wrapper.unmount();
+
+        upload.answerOn('/login');
+        expect(window.location.pathname).toBe('/miembros/ana-prueba');
+        expect(inertia).not.toHaveBeenCalled();
+
+        // Back from the profile leaves it, as it would without the panel
+        window.history.back();
+        expect(window.location.pathname).toBe('/eventos');
+    });
+
+    it('asks about changes and the banner together', async () => {
+        const confirm = vi.fn<(message?: string) => boolean>(() => false);
+        vi.stubGlobal('confirm', confirm);
+        bannerChangeInFlight();
+        const wrapper = mountPanel();
+        await chooseBanner(wrapper);
+        await wrapper.get('[data-testid="bio-input"]').setValue('Hola');
+
+        window.history.back();
+        expect(confirm).toHaveBeenCalledWith(
+            `${UPLOADING} Tienes cambios sin guardar en tu perfil. ¿Salir y descartarlos?`
+        );
+
+        await wrapper.get('[data-testid="profile-editor"]').trigger('keydown', { key: 'Escape' });
+        expect(wrapper.text()).toContain(
+            `Lo que has cambiado y no has guardado se perderá. ${UPLOADING}`
+        );
+        wrapper.unmount();
+    });
+
+    it('a visit elsewhere while the banner uploads asks first, and leaving cancels it', async () => {
+        const confirm = vi.fn<(message?: string) => boolean>(() => false);
+        vi.stubGlobal('confirm', confirm);
+        const upload = bannerChangeInFlight();
+        const wrapper = mountPanel();
+        await chooseBanner(wrapper);
+
+        expect(visitTo('/eventos').defaultPrevented).toBe(true);
+        expect(confirm).toHaveBeenCalledWith(`${UPLOADING} ¿Salir igualmente?`);
+        expect(upload.cancelled()).toBe(false);
+
+        confirm.mockReturnValue(true);
+        const elsewhere = visitTo('/eventos');
+        expect(elsewhere.defaultPrevented).toBe(false);
+        expect((elsewhere.detail as { visit: { replace?: boolean } }).visit.replace).toBe(true);
+        expect(upload.cancelled()).toBe(true);
+        wrapper.unmount();
+    });
+
+    it('saving waits for the banner: it cannot be pressed while the banner uploads', async () => {
+        onTheProfile();
+        const upload = bannerChangeInFlight();
+        const put = vi.spyOn(router, 'put').mockImplementation(() => undefined);
+        const wrapper = mountPanel();
+        await chooseBanner(wrapper);
+        await wrapper.get('[data-testid="bio-input"]').setValue('Hola');
+
+        // Asked for each time: the test's stub of Teleport draws the panel anew on every render
+        const save = (): ReturnType<VueWrapper['get']> =>
+            wrapper.get('[data-testid="profile-editor-save"]');
+        expect(save().attributes('disabled')).toBeDefined();
+        await wrapper.get('form').trigger('submit');
+        await flushPromises();
+        expect(put).not.toHaveBeenCalled();
+        expect(upload.cancelled()).toBe(false);
+
+        // Answered on the profile itself, on the panel's entry: saving is possible again
+        upload.answerOn('/miembros/ana-prueba');
+        await flushPromises();
+        expect(save().attributes('disabled')).toBeUndefined();
+        await wrapper.get('form').trigger('submit');
+        await flushPromises();
+        expect(put).toHaveBeenCalledTimes(1);
+        wrapper.unmount();
+    });
+
+    it('taking the banner away counts as well, and leaving cancels it', async () => {
+        onTheProfile();
+        const removal = bannerChangeInFlight('delete');
+        const inertia = inertiaHearsPopstate();
+        const wrapper = mountPanel(editorFixture({ bannerPublicId: 'profiles/banners/old.png' }));
+        await wrapper.get('[data-testid="banner-remove"]').trigger('click');
+
+        await wrapper.get('[data-testid="profile-editor"]').trigger('keydown', { key: 'Escape' });
+        expect(wrapper.text()).toContain(
+            'El banner aún se está quitando y puede que no llegue a quitarse.'
+        );
+        await pressInDialog(wrapper, 'Descartar');
+        wrapper.unmount();
+
+        expect(removal.cancelled()).toBe(true);
+        removal.answerOn('/login');
+        expect(window.location.pathname).toBe('/miembros/ana-prueba');
+        expect(inertia).not.toHaveBeenCalled();
+    });
+
+    it('closes at once and leaves alone an upload that already answered', async () => {
+        onTheProfile();
+        const upload = bannerChangeInFlight();
+        const wrapper = mountPanel();
+        await chooseBanner(wrapper);
+
+        // Answered on the profile itself, on the panel's entry
+        upload.answerOn('/miembros/ana-prueba');
+        await wrapper.get('[data-testid="profile-editor"]').trigger('keydown', { key: 'Escape' });
+        expect(wrapper.emitted('close')).toHaveLength(1);
+        wrapper.unmount();
+
+        expect(upload.cancelled()).toBe(false);
+        expect(window.location.pathname).toBe('/miembros/ana-prueba');
+    });
+
+    it('closes its question once the banner’s change ends and nothing is left to lose', async () => {
+        onTheProfile();
+        const upload = bannerChangeInFlight();
+        const wrapper = mountPanel();
+        await chooseBanner(wrapper);
+
+        await wrapper.get('[data-testid="profile-editor"]').trigger('keydown', { key: 'Escape' });
+        expect(questionOpen(wrapper)).toBe(true);
+
+        upload.answerOn('/miembros/ana-prueba');
+        await flushPromises();
+        expect(questionOpen(wrapper)).toBe(false);
+        expect(wrapper.emitted('close')).toBeUndefined();
+        wrapper.unmount();
+    });
+
+    it('keeps its question while changes are still unsaved once the banner’s change ends', async () => {
+        onTheProfile();
+        const upload = bannerChangeInFlight();
+        const wrapper = mountPanel();
+        await chooseBanner(wrapper);
+        await wrapper.get('[data-testid="bio-input"]').setValue('Hola');
+
+        await wrapper.get('[data-testid="profile-editor"]').trigger('keydown', { key: 'Escape' });
+        upload.answerOn('/miembros/ana-prueba');
+        await flushPromises();
+        expect(questionOpen(wrapper)).toBe(true);
+        expect(wrapper.text()).toContain('Lo que has cambiado y no has guardado se perderá.');
+        expect(wrapper.text()).not.toContain(UPLOADING);
+        wrapper.unmount();
+    });
+
+    it('lets no banner be chosen or taken away while saving, which it would interrupt', async () => {
+        const post = vi.spyOn(router, 'post');
+        const remove = vi.spyOn(router, 'delete');
+        // Inertia's form marks itself as processing when its request starts, and the answer never comes
+        vi.spyOn(router, 'put').mockImplementation((_url, _data, options) => {
+            options?.onStart?.({} as never);
+        });
+        const wrapper = mountPanel(editorFixture({ bannerPublicId: 'profiles/banners/old.png' }));
+        await wrapper.get('[data-testid="bio-input"]').setValue('Hola');
+        await wrapper.get('form').trigger('submit');
+        await flushPromises();
+
+        expect(wrapper.get('[data-testid="banner-upload"]').attributes('disabled')).toBeDefined();
+        expect(wrapper.get('[data-testid="banner-remove"]').attributes('disabled')).toBeDefined();
+
+        await chooseBanner(wrapper);
+        await wrapper.get('[data-testid="banner-remove"]').trigger('click');
+        expect(post).not.toHaveBeenCalled();
+        expect(remove).not.toHaveBeenCalled();
+        wrapper.unmount();
     });
 
     it('takes a new fragment in the address for the same page, still keeping its latest state', () => {
