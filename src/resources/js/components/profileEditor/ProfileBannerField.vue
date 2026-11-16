@@ -21,6 +21,10 @@ const props = defineProps<{
     cancelOnClose: (cancel: () => void) => () => void;
     /** A change is on its way (`upload`, `remove`), or none any more */
     reportPending: (change: BannerChange | null) => void;
+    /**
+     * The panel is saving: Inertia runs one visit at a time, so a banner change now would interrupt it
+     */
+    locked: boolean;
 }>();
 
 const { t } = useI18n();
@@ -32,6 +36,8 @@ const input = ref<HTMLInputElement | null>(null);
 const localPreview = ref<string | null>(null);
 const pending = ref<BannerChange | null>(null);
 const busy = computed(() => pending.value !== null);
+/** Neither chosen nor taken away: a change is on its way, or the panel is saving */
+const disabled = computed(() => busy.value || props.locked);
 const error = ref<string | null>(null);
 
 function setPending(change: BannerChange | null): void {
@@ -72,6 +78,10 @@ function forgetLocalPreview(): void {
 }
 
 function choose(): void {
+    if (disabled.value) {
+        return;
+    }
+
     input.value?.click();
 }
 
@@ -81,7 +91,7 @@ function onChosen(event: Event): void {
     // The same file can be chosen again after an error
     target.value = '';
 
-    if (!file) {
+    if (!file || disabled.value) {
         return;
     }
 
@@ -121,6 +131,10 @@ function onChosen(event: Event): void {
 }
 
 function remove(): void {
+    if (disabled.value) {
+        return;
+    }
+
     error.value = null;
     setPending('remove');
 
@@ -175,7 +189,7 @@ onBeforeUnmount(forgetLocalPreview);
             <button
                 type="button"
                 class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-base-primary inset-ring inset-ring-(--color-border) transition-colors hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-bg-surface) disabled:opacity-50 motion-reduce:transition-none"
-                :disabled="busy"
+                :disabled="disabled"
                 data-testid="banner-upload"
                 @click="choose"
             >
@@ -190,7 +204,7 @@ onBeforeUnmount(forgetLocalPreview);
                 v-if="editor.bannerPublicId"
                 type="button"
                 class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-bg-surface) disabled:opacity-50 motion-reduce:transition-none dark:text-red-400 dark:hover:bg-red-950/40"
-                :disabled="busy"
+                :disabled="disabled"
                 data-testid="banner-remove"
                 @click="remove"
             >

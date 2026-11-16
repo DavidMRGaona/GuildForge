@@ -3,6 +3,7 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import { router } from '@inertiajs/vue3';
 import ProfileEditorPanel from '../ProfileEditorPanel.vue';
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
 import en from '@/locales/en';
 import es from '@/locales/es';
 import type { ProfileEditor, ProfileEditorForm } from '@/types/profileEditor';
@@ -468,7 +469,15 @@ describe('ProfileEditorPanel', () => {
         await button?.trigger('click');
     }
 
-    const UPLOADING = 'El banner aún se está subiendo y se cancelará.';
+    /**
+     * Whether the panel asks «¿Descartar los cambios?»: the dialog is always drawn, and the test's stub of
+     * Teleport draws it anew on every render, so what the panel asks is read from its `modelValue`
+     */
+    function questionOpen(wrapper: VueWrapper): boolean {
+        return wrapper.getComponent(ConfirmDialog).props('modelValue') === true;
+    }
+
+    const UPLOADING = 'El banner aún se está subiendo y puede que no llegue a guardarse.';
 
     it('closing it while the banner uploads asks first: staying lets it go on, leaving cancels it', async () => {
         onTheProfile();
@@ -479,10 +488,11 @@ describe('ProfileEditorPanel', () => {
 
         await wrapper.get('[data-testid="profile-editor"]').trigger('keydown', { key: 'Escape' });
         expect(wrapper.emitted('close')).toBeUndefined();
-        expect(wrapper.text()).toContain('¿Descartar los cambios?');
+        expect(questionOpen(wrapper)).toBe(true);
         expect(wrapper.text()).toContain(UPLOADING);
 
         await pressInDialog(wrapper, 'Seguir editando');
+        expect(questionOpen(wrapper)).toBe(false);
         expect(wrapper.emitted('close')).toBeUndefined();
         expect(upload.cancelled()).toBe(false);
 
@@ -603,7 +613,9 @@ describe('ProfileEditorPanel', () => {
         await wrapper.get('[data-testid="banner-remove"]').trigger('click');
 
         await wrapper.get('[data-testid="profile-editor"]').trigger('keydown', { key: 'Escape' });
-        expect(wrapper.text()).toContain('El banner aún se está quitando y se cancelará.');
+        expect(wrapper.text()).toContain(
+            'El banner aún se está quitando y puede que no llegue a quitarse.'
+        );
         await pressInDialog(wrapper, 'Descartar');
         wrapper.unmount();
 
@@ -627,6 +639,60 @@ describe('ProfileEditorPanel', () => {
 
         expect(upload.cancelled()).toBe(false);
         expect(window.location.pathname).toBe('/miembros/ana-prueba');
+    });
+
+    it('closes its question once the banner’s change ends and nothing is left to lose', async () => {
+        onTheProfile();
+        const upload = bannerChangeInFlight();
+        const wrapper = mountPanel();
+        await chooseBanner(wrapper);
+
+        await wrapper.get('[data-testid="profile-editor"]').trigger('keydown', { key: 'Escape' });
+        expect(questionOpen(wrapper)).toBe(true);
+
+        upload.answerOn('/miembros/ana-prueba');
+        await flushPromises();
+        expect(questionOpen(wrapper)).toBe(false);
+        expect(wrapper.emitted('close')).toBeUndefined();
+        wrapper.unmount();
+    });
+
+    it('keeps its question while changes are still unsaved once the banner’s change ends', async () => {
+        onTheProfile();
+        const upload = bannerChangeInFlight();
+        const wrapper = mountPanel();
+        await chooseBanner(wrapper);
+        await wrapper.get('[data-testid="bio-input"]').setValue('Hola');
+
+        await wrapper.get('[data-testid="profile-editor"]').trigger('keydown', { key: 'Escape' });
+        upload.answerOn('/miembros/ana-prueba');
+        await flushPromises();
+        expect(questionOpen(wrapper)).toBe(true);
+        expect(wrapper.text()).toContain('Lo que has cambiado y no has guardado se perderá.');
+        expect(wrapper.text()).not.toContain(UPLOADING);
+        wrapper.unmount();
+    });
+
+    it('lets no banner be chosen or taken away while saving, which it would interrupt', async () => {
+        const post = vi.spyOn(router, 'post');
+        const remove = vi.spyOn(router, 'delete');
+        // Inertia's form marks itself as processing when its request starts, and the answer never comes
+        vi.spyOn(router, 'put').mockImplementation((_url, _data, options) => {
+            options?.onStart?.({} as never);
+        });
+        const wrapper = mountPanel(editorFixture({ bannerPublicId: 'profiles/banners/old.png' }));
+        await wrapper.get('[data-testid="bio-input"]').setValue('Hola');
+        await wrapper.get('form').trigger('submit');
+        await flushPromises();
+
+        expect(wrapper.get('[data-testid="banner-upload"]').attributes('disabled')).toBeDefined();
+        expect(wrapper.get('[data-testid="banner-remove"]').attributes('disabled')).toBeDefined();
+
+        await chooseBanner(wrapper);
+        await wrapper.get('[data-testid="banner-remove"]').trigger('click');
+        expect(post).not.toHaveBeenCalled();
+        expect(remove).not.toHaveBeenCalled();
+        wrapper.unmount();
     });
 
     it('takes a new fragment in the address for the same page, still keeping its latest state', () => {

@@ -116,6 +116,13 @@ watch(
     }
 );
 
+/** Nothing is left to lose (the banner's change ended meanwhile): the question has nothing to ask */
+watch(unsaved, (value) => {
+    if (!value) {
+        confirmDiscard.value = false;
+    }
+});
+
 function reportBannerPending(change: BannerChange | null): void {
     bannerPending.value = change;
 }
@@ -223,10 +230,10 @@ function requestClose(): void {
 }
 
 /** Between leaving the panel's entry and sending: a second press must not save twice */
-let sending = false;
+const sending = ref(false);
 
 async function save(): Promise<void> {
-    if (sending || form.processing || bannerPending.value !== null) {
+    if (sending.value || form.processing || bannerPending.value !== null) {
         return;
     }
 
@@ -240,10 +247,10 @@ async function save(): Promise<void> {
     }
 
     form.clearErrors();
-    sending = true;
+    sending.value = true;
     // The saved page takes the page's own entry, so the panel's is left first: no extra step back
     await historyEntry.release();
-    sending = false;
+    sending.value = false;
 
     let saved = false;
     form.put(props.editor.urls.update, {
@@ -426,6 +433,7 @@ onBeforeUnmount(() => {
                     :editor="editor"
                     :cancel-on-close="historyEntry.cancelOnLeave"
                     :report-pending="reportBannerPending"
+                    :locked="form.processing || sending"
                 />
 
                 <div v-if="editor.canShowMembership" data-field="show_membership">
