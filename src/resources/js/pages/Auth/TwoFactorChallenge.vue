@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import type { AuthLayoutProps } from '@/types/layouts';
 import BaseButton from '@/components/ui/BaseButton.vue';
+import HelpLink from '@/components/knowledge/HelpLink.vue';
 import { useRoutes } from '@/composables/useRoutes';
 import type { TwoFactorChallengeFormData } from '@/types/models';
 
@@ -50,9 +51,12 @@ const submit = (): void => {
 
 <template>
     <form class="space-y-6" @submit.prevent="submit">
-        <p id="two-factor-description" class="text-sm text-base-secondary">
-            {{ description }}
-        </p>
+        <div class="flex items-start justify-between gap-3">
+            <p id="two-factor-description" class="text-sm text-base-secondary">
+                {{ description }}
+            </p>
+            <HelpLink guide="core.site.two-factor" />
+        </div>
 
         <div>
             <label for="code" class="block text-sm font-medium text-base-secondary">

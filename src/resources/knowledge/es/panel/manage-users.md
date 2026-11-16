@@ -5,7 +5,7 @@ summary: Busca cuentas, crea usuarios, dales roles, desactívalas y, si hace fal
 category: users-and-roles
 audience: panel
 order: 10
-keywords: [usuarios, usuario, cuentas, cuenta, crear usuario, dar rol, asignar rol, quitar rol, desactivar, bloquear, restaurar, anonimizar, borrar cuenta, rgpd, gdpr, contraseña olvidada, verificación, cambiar correo, cambiar email, correo verificado, perfil público, restablecer perfil, sobre mí, banner, moderar perfil]
+keywords: [usuarios, usuario, cuentas, cuenta, crear usuario, dar rol, asignar rol, quitar rol, desactivar, bloquear, restaurar, anonimizar, borrar cuenta, rgpd, gdpr, contraseña olvidada, verificación, cambiar correo, cambiar email, correo verificado, perfil público, restablecer perfil, sobre mí, banner, moderar perfil, doble factor, restablecer doble factor, perdió el móvil, códigos de recuperación, 2fa]
 related: [core.panel.roles-and-permissions, core.panel.association-role]
 conditions:
   permissions:
@@ -86,6 +86,29 @@ Se borran el «Sobre mí» y el banner. La dirección del perfil, quién puede v
 
 > [!IMPORTANT]
 > Necesitas el permiso «Restablecer perfiles públicos», que no tiene ningún rol de entrada: se concede en el editor de roles. Además tienes que poder editar esa cuenta, porque la acción está en su página: no sale en cuentas con permisos que tú no tienes, ni en las de administración si tú no eres de la administración.
+
+## Restablecer el doble factor
+
+Si alguien ha perdido el móvil y sus códigos de recuperación, no puede entrar en su cuenta. Abre la cuenta y pulsa **Restablecer el doble factor** arriba. Confirma en el diálogo y marca la casilla **Entiendo que la cuenta quedará sin doble factor**.
+
+Se borran su app de autenticación y sus códigos de recuperación, se cierran todas sus sesiones abiertas y le llega un correo que lo avisa. Entra después solo con su contraseña y puede volver a activarlo desde los ajustes de la cuenta. Si alguno de sus roles exige el doble factor, ese rol queda en pausa hasta entonces. Queda registrado quién lo hizo.
+
+> [!IMPORTANT]
+> Antes de hacerlo, comprueba que quien lo pide es esa persona **por otro medio** que no sea el correo ni la contraseña: una llamada, o en persona. Este paso es la única salida cuando se pierde el doble factor, y quien tenga la contraseña de otra persona y un cómplice en el panel podría usarlo para saltárselo.
+
+Solo lo pueden hacer las cuentas del rol `admin`, porque el permiso «Restablecer el doble factor» está reservado a la administración. La acción solo sale en cuentas que tienen el doble factor activo, no en la tuya (para eso están los ajustes de la cuenta) ni en cuentas anonimizadas. En una impersonación de solo lectura, tampoco.
+
+En la lista de usuarios, la columna **Doble factor** y el filtro **Con doble factor** / **Sin doble factor** te dicen quién lo tiene activo.
+
+### Si la cuenta es la única de administración
+
+Si quien lo pierde es la única cuenta de administración, nadie puede usar el botón. Quien tenga acceso a la consola del servidor ejecuta:
+
+```
+php artisan users:reset-two-factor correo@ejemplo.org
+```
+
+Pide confirmación antes de quitarlo; con `--force` no la pide. Hace lo mismo que el botón y deja constancia.
 
 ## Historial de roles
 
