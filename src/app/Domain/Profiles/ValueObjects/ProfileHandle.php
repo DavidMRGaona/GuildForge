@@ -98,7 +98,10 @@ final readonly class ProfileHandle implements Stringable
         return $this->value;
     }
 
-    private static function normalise(string $value): string
+    /**
+     * As every handle is compared: trimmed and lowercase. Not a check that it is valid.
+     */
+    public static function normalise(string $value): string
     {
         return strtolower(trim($value));
     }

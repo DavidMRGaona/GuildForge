@@ -186,6 +186,23 @@ final readonly class MessagesProfileStat implements ProfileStatInterface
 
 Return `null`, never `0`, when the viewer cannot see the things counted: a 0 would say «this person wrote nothing» when they wrote in a category the viewer cannot read. A real 0 the viewer could check is fine.
 
+**Optional description** (core ≥ the release with #743): a stat may also implement `App\Application\Profiles\Contracts\DescribesProfileStat`, whose `description(): string` is one translated line the profile editor shows under its label («Mensajes que ha escrito en el foro»). It is a separate interface on purpose, so a stat written for the contract of 3.79 keeps working unchanged; without it the editor shows only the label. The interface only exists from that release on: a module that implements it must set `requires.core` to it, since on an older core the class would not load.
+
+```php
+use App\Application\Profiles\Contracts\DescribesProfileStat;
+use App\Application\Profiles\Contracts\ProfileStatInterface;
+
+final readonly class MessagesProfileStat implements ProfileStatInterface, DescribesProfileStat
+{
+    public function description(): string
+    {
+        return __('forum::messages.profile.messages_description');
+    }
+
+    // ...
+}
+```
+
 The page shows every stat in the owner's order; a summary card (the forum's user card) shows the first four (`ResolvedProfileDTO::CARD_STATS`).
 
 ## Checklist for every section and stat
@@ -208,6 +225,12 @@ The owner's choices are stored with their profile (`user_profiles.layout`, `Prof
 - **On or off**: the layout's choice, or `enabledByDefault()` when the layout does not mention the key.
 - **Unknown keys** (a disabled or uninstalled module): ignored when drawing and kept in the layout, so turning the module on again brings the owner's choice back.
 - Sections are ordered within their own region: the layout's order only decides among the sections of one column.
+
+### The profile editor
+
+The owner edits their profile from the profile itself («Editar perfil», core ≥ the release with #743). The editor lists every section and every stat that is registered and available now (`isAvailable()`), in the owner's order, each with its `label()`, its description (a section's `description()`; a stat's only when it implements `DescribesProfileStat`), a switch and buttons to move it up or down. To list them the core builds each one from the container once per request (`ProfileLayoutOptionsInterface`) and reads only those methods, never `props()` or `stat()`; keep the constructor and `isAvailable()` cheap. One that cannot be built, has another key than it was registered with, or throws is not offered (warned once a day, like the renderer).
+
+Saving (`PUT /miembros/{handle}`) accepts only the keys offered at that moment: anything else is refused with a field error. What the layout said of keys not offered now (a disabled module, an unavailable section) is kept after the new choice, so it comes back with its module. The editor's preview can only show what the page already drew: a section or stat turned on there appears once saved, except «Sobre mí», which the preview draws from the text being written.
 
 ## How the core draws a profile
 

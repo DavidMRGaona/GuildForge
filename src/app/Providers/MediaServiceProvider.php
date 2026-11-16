@@ -39,11 +39,13 @@ use App\Infrastructure\Media\Services\MediaLibraryQueryInterface;
 use App\Infrastructure\Media\Services\MediaSourceRegistry;
 use App\Infrastructure\Media\Services\MediaUrlExtractor;
 use App\Infrastructure\Media\Sources\AvatarMediaSource;
+use App\Infrastructure\Media\Sources\ProfileBannerMediaSource;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\HeroSlideModel;
 use App\Infrastructure\Persistence\Eloquent\Models\PhotoModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
 use Cloudinary\Cloudinary;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
@@ -99,6 +101,7 @@ final class MediaServiceProvider extends ServiceProvider
             AvatarMediaSource::class,
             RichTextMediaSource::class,
             FooterMediaSource::class,
+            ProfileBannerMediaSource::class,
         ]);
 
         // Observer instances carry their arguments, so they are attached as model event listeners
@@ -125,6 +128,22 @@ final class MediaServiceProvider extends ServiceProvider
 
             return $relevant ? [(string) $user->getKey()] : [];
         }));
+
+        // Profiles are saved for every choice of their owner: only a change of banner or of the address (the
+        // title without a public name) is refreshed (core#743)
+        $this->refreshOnChange(UserProfileModel::class, new RefreshMediaUsagesObserver(ProfileBannerMediaSource::TYPE, static function (Model $profile): array {
+            $banner = $profile->getAttribute('banner_public_id');
+            $relevant = ! $profile->exists
+                || $profile->wasChanged(['banner_public_id', 'handle'])
+                || ($profile->wasRecentlyCreated && is_string($banner) && $banner !== '');
+
+            return $relevant ? [(string) $profile->getKey()] : [];
+        }));
+        // The public name titles the banner too; a profile without a banner refreshes to nothing
+        $this->refreshOnChange(UserModel::class, new RefreshMediaUsagesObserver(
+            ProfileBannerMediaSource::TYPE,
+            static fn (Model $user): array => $user->exists && $user->wasChanged('display_name') ? [(string) $user->getKey()] : [],
+        ));
 
         // A module's sources come and go with it: the library syncs instead of waiting for the night (core#517)
         foreach ([ModuleEnabled::class, ModuleDisabled::class, ModuleUpdated::class, ModuleUninstalled::class, ModuleUpdateCompleted::class] as $event) {

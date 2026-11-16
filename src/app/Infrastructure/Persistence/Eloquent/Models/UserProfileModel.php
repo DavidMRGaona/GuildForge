@@ -19,6 +19,7 @@ use JsonException;
  * @property string $user_id
  * @property string $handle
  * @property bool $handle_chosen
+ * @property Carbon|null $handle_changed_at when the owner last chose the address (core#743)
  * @property ProfileVisibility $visibility
  * @property string|null $bio
  * @property string|null $banner_public_id
@@ -43,6 +44,7 @@ final class UserProfileModel extends Model
         'user_id',
         'handle',
         'handle_chosen',
+        'handle_changed_at',
         'visibility',
         'bio',
         'banner_public_id',
@@ -65,6 +67,7 @@ final class UserProfileModel extends Model
     {
         return [
             'handle_chosen' => 'boolean',
+            'handle_changed_at' => 'datetime',
             'show_membership' => 'boolean',
         ];
     }

@@ -5,7 +5,14 @@ declare(strict_types=1);
 namespace App\Application\Profiles\Services;
 
 use App\Application\Profiles\DTOs\ProfileCreationResultDTO;
+use App\Application\Profiles\DTOs\ProfileUpdateDTO;
+use App\Domain\Profiles\Exceptions\InvalidProfileHandleException;
+use App\Domain\Profiles\Exceptions\ProfileHandleChangeTooSoonException;
+use App\Domain\Profiles\Exceptions\ProfileHandleTakenException;
 use App\Domain\Profiles\Exceptions\ProfileHandleUnavailableException;
+use App\Domain\Profiles\ProfileHandleAvailability;
+use Illuminate\Http\UploadedFile;
+use RuntimeException;
 
 /**
  * The public profile row of each account (core#740): created with the account, its address following the
@@ -13,7 +20,10 @@ use App\Domain\Profiles\Exceptions\ProfileHandleUnavailableException;
  *
  * The address comes from `display_name` only, never from `name`; without a public name it is random
  * (`miembro-xxxxxx`). Every address given is written to the history in the same transaction, whose
- * primary key keeps it reserved for ever: it is never given to anybody else.
+ * primary key keeps it reserved for ever: it is never given to anybody else, also when the owner chooses
+ * one in the editor (core#743).
+ *
+ * Whoever calls the editing methods has already decided that the person is the owner: they only save.
  */
 interface UserProfileServiceInterface
 {
@@ -51,4 +61,44 @@ interface UserProfileServiceInterface
      * failed.
      */
     public function createMissing(bool $dryRun, int $chunk): ProfileCreationResultDTO;
+
+    /**
+     * Whether the owner could choose this address now: their current one, one free for them (never held
+     * by anybody else; their own old ones are), or unavailable, which says the same for an address
+     * somebody holds, held before, and a reserved word. The 30-day limit is not part of it.
+     */
+    public function handleAvailability(string $userId, string $handle): ProfileHandleAvailability;
+
+    /**
+     * When the owner may choose another address, or null when they may now (or have no profile).
+     */
+    public function nextHandleChangeAt(string $userId): ?\DateTimeImmutable;
+
+    /**
+     * Saves the owner's choices in one transaction. A new address goes through the history like any
+     * other (its primary key decides who gets it), marks the address as chosen, so the public name no
+     * longer moves it, and starts the 30 days again; the old one is retired and redirects. The layout
+     * keeps what it said of keys not offered now. When it throws, nothing is saved.
+     *
+     * @throws InvalidProfileHandleException when the address is malformed or a reserved word
+     * @throws ProfileHandleTakenException when anybody else holds or held the address
+     * @throws ProfileHandleChangeTooSoonException when the owner chose an address under 30 days ago
+     * @throws RuntimeException when the account has no profile
+     */
+    public function update(string $userId, ProfileUpdateDTO $update): void;
+
+    /**
+     * Stores a new banner (already validated) through the `images` disk under `profiles/banners/<Y>/<m>/`
+     * and puts it in place of the previous one, which is released to the media library.
+     *
+     * @return string the stored path
+     *
+     * @throws RuntimeException when it cannot be stored or the account has no profile
+     */
+    public function replaceBanner(string $userId, UploadedFile $banner): string;
+
+    /**
+     * Takes the banner away (the accent gradient shows again) and releases it to the media library.
+     */
+    public function removeBanner(string $userId): void;
 }

@@ -116,4 +116,57 @@ final class ProfileLayoutTest extends TestCase
         $this->assertSame($data, ProfileLayout::fromArray($data)->toArray());
         $this->assertSame(['sections' => [], 'stats' => []], ProfileLayout::empty()->toArray());
     }
+
+    public function test_a_new_choice_replaces_what_is_offered_and_keeps_what_is_not(): void
+    {
+        $stored = ProfileLayout::fromArray([
+            'sections' => [['key' => 'forum.latest-posts', 'enabled' => true], ['key' => 'core.about', 'enabled' => true]],
+            'stats' => [['key' => 'forum.posts', 'enabled' => false]],
+        ]);
+
+        $layout = $stored->chosen(
+            [new ProfileLayoutEntry('core.about', false), new ProfileLayoutEntry('gametables.tables', true)],
+            [new ProfileLayoutEntry('gametables.count', true)],
+            ['core.about', 'gametables.tables'],
+            ['gametables.count'],
+        );
+
+        // The forum is not offered now (a disabled module): its choices wait, after the new ones
+        $this->assertSame([
+            'sections' => [
+                ['key' => 'core.about', 'enabled' => false],
+                ['key' => 'gametables.tables', 'enabled' => true],
+                ['key' => 'forum.latest-posts', 'enabled' => true],
+            ],
+            'stats' => [
+                ['key' => 'gametables.count', 'enabled' => true],
+                ['key' => 'forum.posts', 'enabled' => false],
+            ],
+        ], $layout->toArray());
+    }
+
+    public function test_a_new_choice_drops_keys_not_offered_and_repeated_ones(): void
+    {
+        $layout = ProfileLayout::empty()->chosen(
+            [new ProfileLayoutEntry('core.about', true), new ProfileLayoutEntry('forged.section', true), new ProfileLayoutEntry('core.about', false)],
+            [],
+            ['core.about'],
+            [],
+        );
+
+        $this->assertSame(['sections' => [['key' => 'core.about', 'enabled' => true]], 'stats' => []], $layout->toArray());
+    }
+
+    public function test_a_new_choice_never_grows_past_the_limit(): void
+    {
+        $stored = ProfileLayout::fromArray([
+            'sections' => array_map(static fn (int $i): array => ['key' => 'old.section-'.$i, 'enabled' => true], range(1, ProfileLayout::MAX_ENTRIES)),
+            'stats' => [],
+        ]);
+
+        $layout = $stored->chosen([new ProfileLayoutEntry('core.about', true)], [], ['core.about'], []);
+
+        $this->assertCount(ProfileLayout::MAX_ENTRIES, $layout->sections);
+        $this->assertSame('core.about', $layout->sections[0]->key);
+    }
 }

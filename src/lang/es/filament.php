@@ -1396,6 +1396,7 @@ return [
             'avatars' => 'Avatares',
             'rich_text' => 'Textos',
             'footer' => 'Pie de página',
+            'profile_banners' => 'Banners de perfil',
         ],
         'footer_titles' => [
             'logo' => 'Pie de página · logotipo «:alt»',
@@ -1413,6 +1414,7 @@ return [
             'featured_image' => 'Imagen destacada',
             'photo' => 'Foto',
             'avatar' => 'Avatar',
+            'banner' => 'Banner',
             'site_logo_light' => 'Logo claro',
             'site_logo_dark' => 'Logo oscuro',
             'site_logo_email' => 'Logo del correo',
