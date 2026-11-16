@@ -74,5 +74,8 @@ export interface ProfileEditorForm {
 }
 
 /** What the editor says about the address being typed */
+/** A change of the banner still on its way: it counts as unsaved, since leaving cancels it */
+export type BannerChange = 'upload' | 'remove';
+
 export type HandleAvailabilityStatus =
     'idle' | 'checking' | 'available' | 'current' | 'unavailable' | 'malformed' | 'failed';

@@ -4,19 +4,23 @@ import { router } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { ImagePlus, LoaderCircle, Trash2 } from '@lucide/vue';
 import { buildImageUrl } from '@/utils/cloudinary';
-import type { ProfileEditor } from '@/types/profileEditor';
+import type { BannerChange, ProfileEditor } from '@/types/profileEditor';
 
 /**
  * «Banner»: uploaded as soon as it is chosen, with the chosen image shown meanwhile, or taken away.
  * Type and size are checked here for a quick answer and again on the server, which stores it; the
  * 1500 × 500 crop is only how it is shown. The page reloads its props after each change, so the
  * preview behind shows the new banner, and the rest of the editor keeps what is being written.
- * Closing the panel while a change is on its way cancels it (`cancelOnClose`, core#759).
+ * A change on its way is told to the panel (`reportPending`), which asks before leaving and cancels it
+ * once leaving was accepted (`cancelOnClose`, core#759). Both are functions rather than events, so the
+ * end of a request still reaches the panel if this field was drawn again meanwhile.
  */
 const props = defineProps<{
     editor: ProfileEditor;
     /** Hands the panel what cancels the request on its way; returns what to call once it finished */
     cancelOnClose: (cancel: () => void) => () => void;
+    /** A change is on its way (`upload`, `remove`), or none any more */
+    reportPending: (change: BannerChange | null) => void;
 }>();
 
 const { t } = useI18n();
@@ -26,8 +30,15 @@ const MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const input = ref<HTMLInputElement | null>(null);
 const localPreview = ref<string | null>(null);
-const busy = ref(false);
+const pending = ref<BannerChange | null>(null);
+const busy = computed(() => pending.value !== null);
 const error = ref<string | null>(null);
+
+function setPending(change: BannerChange | null): void {
+    pending.value = change;
+    props.reportPending(change);
+}
+
 /** The request on its way is done: closing the panel no longer has to cancel it */
 let finished: (() => void) | null = null;
 
@@ -87,7 +98,7 @@ function onChosen(event: Event): void {
     error.value = null;
     forgetLocalPreview();
     localPreview.value = URL.createObjectURL(file);
-    busy.value = true;
+    setPending('upload');
 
     router.post(
         props.editor.urls.banner,
@@ -102,7 +113,7 @@ function onChosen(event: Event): void {
             },
             onFinish: () => {
                 untrack();
-                busy.value = false;
+                setPending(null);
                 forgetLocalPreview();
             },
         }
@@ -111,7 +122,7 @@ function onChosen(event: Event): void {
 
 function remove(): void {
     error.value = null;
-    busy.value = true;
+    setPending('remove');
 
     router.delete(props.editor.urls.banner, {
         preserveScroll: true,
@@ -119,7 +130,7 @@ function remove(): void {
         onCancelToken: (token) => track(() => token.cancel()),
         onFinish: () => {
             untrack();
-            busy.value = false;
+            setPending(null);
         },
     });
 }

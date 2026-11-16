@@ -621,6 +621,7 @@ export default {
             discardConfirm: 'Discard',
             keepEditing: 'Keep editing',
             leaveConfirm: 'You have unsaved changes to your profile. Leave and discard them?',
+            leaveAnyway: 'Leave anyway?',
             visibility: {
                 legend: 'Who can see it',
                 public: {
@@ -667,6 +668,8 @@ export default {
                 replace: 'Change banner',
                 remove: 'Remove banner',
                 uploading: 'Uploading banner…',
+                pendingUpload: 'The banner is still uploading and will be cancelled.',
+                pendingRemove: 'The banner is still being removed and will be cancelled.',
                 wrongType: 'The banner must be a JPEG, PNG or WebP image.',
                 tooBig: 'The banner can take {size} MB at most.',
                 failed: 'The banner could not be uploaded. Please try again.',

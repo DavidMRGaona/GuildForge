@@ -621,6 +621,7 @@ export default {
             discardConfirm: 'Descartar',
             keepEditing: 'Seguir editando',
             leaveConfirm: 'Tienes cambios sin guardar en tu perfil. ¿Salir y descartarlos?',
+            leaveAnyway: '¿Salir igualmente?',
             visibility: {
                 legend: 'Quién puede verlo',
                 public: {
@@ -667,6 +668,8 @@ export default {
                 replace: 'Cambiar banner',
                 remove: 'Quitar banner',
                 uploading: 'Subiendo banner…',
+                pendingUpload: 'El banner aún se está subiendo y se cancelará.',
+                pendingRemove: 'El banner aún se está quitando y se cancelará.',
                 wrongType: 'El banner tiene que ser una imagen JPEG, PNG o WebP.',
                 tooBig: 'El banner puede ocupar {size} MB como mucho.',
                 failed: 'No se ha podido subir el banner. Inténtalo de nuevo.',
