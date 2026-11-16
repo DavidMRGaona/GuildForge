@@ -26,6 +26,7 @@ use App\Infrastructure\TwoFactor\SignIn\TwoFactorChallenge;
 use App\Infrastructure\TwoFactor\TwoFactorService;
 use App\Infrastructure\TwoFactor\TwoFactorSessionSeal;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Contracts\Auth\Factory as AuthFactory;
 use Illuminate\Contracts\Cookie\QueueingFactory as CookieJar;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -47,7 +48,10 @@ final class TwoFactorServiceProvider extends ServiceProvider
         ));
 
         $this->app->bind(TwoFactorChallengeInterface::class, TwoFactorChallenge::class);
-        $this->app->bind(PendingTwoFactorLoginInterface::class, SessionPendingTwoFactorLogin::class);
+        $this->app->bind(PendingTwoFactorLoginInterface::class, static fn ($app): SessionPendingTwoFactorLogin => new SessionPendingTwoFactorLogin(
+            $app->make(AuthFactory::class),
+            (string) config('app.key'),
+        ));
 
         $this->app->bind(TotpQrCodeRendererInterface::class, static fn ($app): TotpQrCodeRendererInterface => new TotpQrCodeRenderer(
             new QrCodeContentPolicy((string) config('app.url'), $app->environment('local', 'testing')),

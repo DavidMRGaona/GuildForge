@@ -251,6 +251,37 @@ final class TwoFactorChallengeControllerTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_attempts_are_also_throttled_per_account_across_pending_sign_ins(): void
+    {
+        $user = $this->userWithTwoFactor();
+        $this->postPassword($user);
+        for ($attempt = 1; $attempt < TwoFactorChallengeRule::ATTEMPTS_PER_MINUTE; $attempt++) {
+            $this->post(self::CHALLENGE, ['code' => '000000'])->assertSessionHasErrors('code');
+        }
+
+        // A new pending sign-in from another address does not give the attempts back
+        $this->flushSession();
+        $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.9']);
+        $this->postPassword($user);
+        $this->post(self::CHALLENGE, ['code' => '000000'])->assertSessionHasErrors('code');
+
+        $this->post(self::CHALLENGE, ['code' => $this->codeAt(1)])->assertStatus(Response::HTTP_TOO_MANY_REQUESTS);
+        $this->assertGuest();
+    }
+
+    public function test_a_password_changed_meanwhile_ends_the_pending_sign_in(): void
+    {
+        $user = $this->userWithTwoFactor();
+        $this->postPassword($user);
+        $user->update(['password' => 'a brand new password']);
+
+        $this->post(self::CHALLENGE, ['code' => $this->codeAt(1)])
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('warning', __('auth.two_factor.sign_in_again'));
+
+        $this->assertGuest();
+    }
+
     public function test_ten_failures_discard_the_pending_sign_in(): void
     {
         $user = $this->userWithTwoFactor();

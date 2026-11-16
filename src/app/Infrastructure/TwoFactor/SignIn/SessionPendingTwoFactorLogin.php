@@ -8,13 +8,25 @@ use App\Application\TwoFactor\DTOs\PendingTwoFactorLoginDTO;
 use App\Application\TwoFactor\Services\PendingTwoFactorLoginInterface;
 use App\Domain\TwoFactor\TwoFactorChallengeRule;
 use App\Infrastructure\TwoFactor\TwoFactorSessionSeal;
+use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Contracts\Auth\Factory as AuthFactory;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
+/**
+ * Keeps, next to the pending sign-in, a keyed fingerprint of the account's password hash as it was
+ * when the password was given: a password changed or reset meanwhile (or the account gone) ends
+ * it, as the panel's login, which checks the password again with the code.
+ */
 final readonly class SessionPendingTwoFactorLogin implements PendingTwoFactorLoginInterface
 {
     public const string SESSION_KEY = 'two_factor_login';
+
+    public function __construct(
+        private AuthFactory $auth,
+        #[\SensitiveParameter] private string $key,
+    ) {}
 
     public function begin(Session $session, string $userId, bool $remember): PendingTwoFactorLoginDTO
     {
@@ -24,16 +36,19 @@ final readonly class SessionPendingTwoFactorLogin implements PendingTwoFactorLog
         // and no seal from an earlier sign-in: only the challenge stamps it
         $session->regenerate();
         $session->forget(TwoFactorSessionSeal::SESSION_KEY);
-        $this->write($session, $pending);
+        $this->write($session, $pending, $this->fingerprintOf($userId) ?? '');
 
         return $pending;
     }
 
     public function current(Session $session): ?PendingTwoFactorLoginDTO
     {
-        $pending = $this->read($session->get(self::SESSION_KEY));
+        $stored = $session->get(self::SESSION_KEY);
+        $pending = $this->read($stored);
 
-        if (! $pending instanceof PendingTwoFactorLoginDTO || TwoFactorChallengeRule::hasExpired($pending->startedAt, $this->now())) {
+        if (! $pending instanceof PendingTwoFactorLoginDTO
+            || TwoFactorChallengeRule::hasExpired($pending->startedAt, $this->now())
+            || ! $this->passwordUnchanged($pending->userId, $stored)) {
             $this->forget($session);
 
             return null;
@@ -58,13 +73,7 @@ final readonly class SessionPendingTwoFactorLogin implements PendingTwoFactorLog
             return false;
         }
 
-        $this->write($session, new PendingTwoFactorLoginDTO(
-            $pending->token,
-            $pending->userId,
-            $pending->remember,
-            $pending->startedAt,
-            $failures,
-        ));
+        $session->put(self::SESSION_KEY.'.failures', $failures);
 
         return true;
     }
@@ -74,7 +83,7 @@ final readonly class SessionPendingTwoFactorLogin implements PendingTwoFactorLog
         $session->forget(self::SESSION_KEY);
     }
 
-    private function write(Session $session, PendingTwoFactorLoginDTO $pending): void
+    private function write(Session $session, PendingTwoFactorLoginDTO $pending, string $fingerprint): void
     {
         $session->put(self::SESSION_KEY, [
             'token' => $pending->token,
@@ -82,7 +91,25 @@ final readonly class SessionPendingTwoFactorLogin implements PendingTwoFactorLog
             'remember' => $pending->remember,
             'started_at' => $pending->startedAt,
             'failures' => $pending->failures,
+            'fingerprint' => $fingerprint,
         ]);
+    }
+
+    private function passwordUnchanged(string $userId, mixed $stored): bool
+    {
+        $current = $this->fingerprintOf($userId);
+        $kept = is_array($stored) ? ($stored['fingerprint'] ?? null) : null;
+
+        return $current !== null && is_string($kept) && hash_equals($current, $kept);
+    }
+
+    private function fingerprintOf(string $userId): ?string
+    {
+        $user = $this->auth->guard('web')->getProvider()->retrieveById($userId);
+
+        return $user instanceof Authenticatable
+            ? hash_hmac('sha256', $user->getAuthPassword(), $this->key)
+            : null;
     }
 
     private function read(mixed $stored): ?PendingTwoFactorLoginDTO

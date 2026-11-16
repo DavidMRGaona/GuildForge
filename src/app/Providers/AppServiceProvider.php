@@ -522,22 +522,30 @@ class AppServiceProvider extends ServiceProvider
         // Rate limiter for login: 5 attempts per minute per IP + email combo
         RateLimiter::for(
             'login',
+            // The email as the account is found (trimmed, in lower case), so writing it another way
+            // does not give the attempts back
             static fn (Request $request) => Limit::perMinute(5)->by(
-                ($request->input('email', '') ?: '').'|'.($request->ip() ?? 'unknown')
+                (is_string($email = $request->input('email')) ? mb_strtolower(trim($email)) : '').'|'.($request->ip() ?? 'unknown')
             )
         );
 
-        // The sign-in challenge (core#770): per pending sign-in and address, so one cannot use up
-        // another's attempts; the pending sign-in itself is dropped after ten wrong codes
+        // The sign-in challenge (core#770): per pending sign-in and address, and per account, so
+        // opening new pending sign-ins from other addresses does not give the attempts back (the
+        // panel's challenge is limited per account by Filament). A pending sign-in is dropped after
+        // ten wrong codes
         RateLimiter::for(
             'two-factor-challenge',
-            static function (Request $request): Limit {
+            static function (Request $request): array {
                 $pending = $request->hasSession()
                     ? app(PendingTwoFactorLoginInterface::class)->current($request->session())
                     : null;
 
-                return Limit::perMinute(TwoFactorChallengeRule::ATTEMPTS_PER_MINUTE)
-                    ->by('pending:'.($pending->token ?? 'none').'|'.($request->ip() ?? 'unknown'));
+                return [
+                    Limit::perMinute(TwoFactorChallengeRule::ATTEMPTS_PER_MINUTE)
+                        ->by('pending:'.($pending->token ?? 'none').'|'.($request->ip() ?? 'unknown')),
+                    Limit::perMinute(TwoFactorChallengeRule::ATTEMPTS_PER_MINUTE)
+                        ->by('account:'.($pending->userId ?? 'none')),
+                ];
             }
         );
 
