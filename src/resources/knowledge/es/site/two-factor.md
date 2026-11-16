@@ -108,6 +108,14 @@ Pide a la administración de {{site_name}} que restablezca el doble factor de tu
 
 ## Por qué tu rol lo exige
 
-<!-- #772: texto pendiente de que la issue esté en main -->
+La administración puede exigir el doble factor a ciertos roles, como los que ven datos personales o cuotas de la asociación. Si tienes uno de esos roles y aún no lo has activado:
+
+- **El rol queda en pausa**: no te da sus permisos, ni en la web ni en el panel, hasta que actives el doble factor. El resto de la web sigue funcionando.
+- **Te avisan** con un correo y un aviso en la campana, con un enlace a la pestaña **Seguridad**. Si entras al panel, ves el mensaje «Tu rol exige doble factor» con el enlace en lugar de un acceso denegado.
+- **En Seguridad** verás un aviso con el nombre del rol mientras falte.
+
+Para recuperarlo, sigue los pasos de **Activar paso a paso**. En cuanto termines, el rol vuelve a funcionar al momento.
+
+Mientras tengas un rol que lo exige, no puedes desactivar el doble factor: solo cambiar de app. Si pierdes el móvil, la administración puede restablecerlo; el rol queda en pausa hasta que lo actives otra vez.
 
 [[action:profile.show?tab=seguridad|Ir a la pestaña Seguridad]]
