@@ -268,6 +268,18 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         $this->assertStringContainsString("frame-ancestors 'none'", $csp);
     }
 
+    public function test_a_report_only_policy_is_not_taken_for_the_response_own_policy(): void
+    {
+        $reportOnly = "default-src 'none'; report-uri /csp";
+        Route::get('/test-report-only-csp', fn () => response('file', 200, ['Content-Security-Policy-Report-Only' => $reportOnly]))
+            ->middleware('web');
+
+        $response = $this->get('/test-report-only-csp');
+
+        $response->assertHeader('Content-Security-Policy-Report-Only', $reportOnly);
+        $this->assertStringContainsString("default-src 'self'", (string) $response->headers->get('Content-Security-Policy'));
+    }
+
     public function test_it_does_not_add_hsts_header_for_non_secure_requests(): void
     {
         $response = $this->get('/test-security-headers');
