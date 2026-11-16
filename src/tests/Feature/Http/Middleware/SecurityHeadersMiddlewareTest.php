@@ -241,6 +241,33 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         $this->assertMatchesRegularExpression("/connect-src 'self'[^;]* wss:\\/\\/ws\\.example\\.test(;|$)/", $csp);
     }
 
+    public function test_a_response_keeps_its_own_content_security_policy(): void
+    {
+        $ownPolicy = "default-src 'none'; img-src 'self'; sandbox";
+        Route::get('/test-own-csp', fn () => response('file', 200, ['Content-Security-Policy' => $ownPolicy]))
+            ->middleware('web');
+
+        $response = $this->get('/test-own-csp');
+
+        $response->assertStatus(200);
+        $response->assertHeader('Content-Security-Policy', $ownPolicy);
+        $response->assertHeader('X-Frame-Options', 'DENY');
+        $response->assertHeader('X-Content-Type-Options', 'nosniff');
+        $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+        $this->assertTrue($response->headers->has('Permissions-Policy'));
+    }
+
+    public function test_a_response_with_a_blank_content_security_policy_gets_the_site_one(): void
+    {
+        Route::get('/test-blank-csp', fn () => response('file', 200, ['Content-Security-Policy' => '  ']))
+            ->middleware('web');
+
+        $csp = (string) $this->get('/test-blank-csp')->headers->get('Content-Security-Policy');
+
+        $this->assertStringContainsString("default-src 'self'", $csp);
+        $this->assertStringContainsString("frame-ancestors 'none'", $csp);
+    }
+
     public function test_it_does_not_add_hsts_header_for_non_secure_requests(): void
     {
         $response = $this->get('/test-security-headers');

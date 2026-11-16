@@ -26,13 +26,25 @@ final readonly class SecurityHeadersMiddleware
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
-        $response->headers->set('Content-Security-Policy', $this->buildCsp());
+
+        if (! $this->hasOwnPolicy($response)) {
+            $response->headers->set('Content-Security-Policy', $this->buildCsp());
+        }
 
         if ($request->isSecure()) {
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
         }
 
         return $response;
+    }
+
+    /**
+     * A response that set its own policy (a stricter one for an uploaded file, for instance) keeps it.
+     * A blank one is no policy at all, so it gets the site's.
+     */
+    private function hasOwnPolicy(Response $response): bool
+    {
+        return trim((string) $response->headers->get('Content-Security-Policy')) !== '';
     }
 
     private function buildCsp(): string

@@ -1,6 +1,6 @@
 # Content Security Policy
 
-The core sends one Content Security Policy for every page (`SecurityHeadersMiddleware`). Modules cannot change it, with one exception: a module that shows content of another service in a frame (a video player, a post) can add the origins of those frames to `frame-src`. For the rest of the module SDK, see the [module development guide](./README.md).
+The core sends one Content Security Policy for every page (`SecurityHeadersMiddleware`). Modules cannot change it, with two exceptions: a module that shows content of another service in a frame (a video player, a post) can add the origins of those frames to `frame-src`, and a single response can bring a stricter policy of its own (see [A response with its own policy](#a-response-with-its-own-policy)). For the rest of the module SDK, see the [module development guide](./README.md).
 
 Requirement: set `requires.core` in `module.json` to the core release that introduces the registry (the one with core#538). On an older core there is no `frame-src` directive, frames fall back to `default-src 'self'` and a third-party player stays blank.
 
@@ -26,6 +26,22 @@ $this->callAfterResolving(ContentSecurityPolicySourcesInterface::class, function
 - Anything else is left out with a warning in the log, never widened: `http://`, wildcards (`*`, `https://*.example.com`), bare schemes (`https:`, `data:`, `blob:`), keywords (`'self'`, `'unsafe-inline'`), IP addresses, `localhost`, paths, query strings, credentials, spaces, `;` and line breaks. Nothing a module returns can add or change another directive.
 - A function that throws adds none of its origins (even the ones it produced before failing); the other modules' origins and the page stay as they are.
 - Origins from every module are merged, each once, sorted.
+
+## A response with its own policy
+
+A response that already carries a `Content-Security-Policy` header keeps it: the middleware only adds the site's policy when there is none (a blank header counts as none). The other security headers (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS) are added as usual.
+
+Use it for responses that must be stricter than a page, such as a file people uploaded and the site serves back:
+
+```php
+return response()->file($path, [
+    'Content-Type' => $mimeType,
+    'Content-Security-Policy' => "default-src 'none'; img-src 'self'; sandbox",
+]);
+```
+
+- Only ever stricter than the site's policy, never looser: the core does not compare them, so a looser policy here weakens that response. Keep `frame-ancestors` out or `'none'` (`X-Frame-Options: DENY` is sent anyway).
+- Requirement: core ≥ the release with core#784. On an older core the site's policy replaces the response's, so the file is served with the page policy (no `sandbox`).
 
 ## Frames that respect the reader
 
