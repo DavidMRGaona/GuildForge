@@ -13,7 +13,10 @@ export interface DialogHistoryEntry {
      * page takes the page's entry, so nothing is left to go back to. Resolved once the browser is there.
      */
     release(): Promise<void>;
-    /** Puts the dialog's entry back, after a request that `release()` made room for left it open */
+    /**
+     * Puts the dialog's entry back, after a request that `release()` made room for left it open: only
+     * while the page is still the one in the address bar and no reload is under way
+     */
     restore(): void;
 }
 
@@ -31,6 +34,16 @@ export interface DialogHistoryEntry {
  * of the current entry when it saves the scroll, so whether the entry is still the dialog's is known
  * here, not read from the history. Closing the dialog any other way goes back over its entry, and the
  * page's entry is given the state Inertia kept last (a new banner, say), so it never goes stale.
+ *
+ * Going back several steps at once (the browser's list of pages) and staying puts the dialog's entry
+ * back over that other page's: the page's own entry is gone. From then on the dialog's entry becomes
+ * the page's in place (`replaceState`) instead of going back, so the address bar never shows one page
+ * while another is drawn. The entry is never put back once the address is no longer the page's (Back
+ * while saving) or Inertia is reloading the document (a new version answers with a 409).
+ *
+ * Known limit: reloading with the dialog open loads its entry as the page, so one Back stays on the
+ * same address. Telling it apart would need a mark in the history that Inertia's own writes would
+ * erase, and going back from a reloaded document reloads it again, so it is left as it is.
  */
 export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): DialogHistoryEntry {
     let pageHref = '';
@@ -41,6 +54,10 @@ export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): Di
     let mounted = false;
     /** A Back the dialog asked for itself: the page under it must not hear of it */
     let ownBack: (() => void) | null = null;
+    /** Whether the entry under the dialog's is the page's own (false after staying from another page) */
+    let pageBelow = true;
+    /** Inertia is loading a document again (`location`): no entry is put back */
+    let reloading = false;
     let stopListening: () => void = () => undefined;
 
     function push(): void {
@@ -70,6 +87,7 @@ export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): Di
 
         if (!onLeave(toPage)) {
             event.stopImmediatePropagation();
+            pageBelow = toPage;
             push();
             return;
         }
@@ -86,6 +104,9 @@ export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): Di
             pageState = window.history.state as unknown;
         }
     });
+    const stopWatchingReloads = router.on('location', () => {
+        reloading = true;
+    });
 
     function release(): Promise<void> {
         if (!current) {
@@ -94,6 +115,12 @@ export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): Di
 
         pageState = window.history.state as unknown;
         current = false;
+
+        if (!pageBelow) {
+            // Another page is under it: the dialog's entry becomes the page's own, where it is
+            window.history.replaceState(pageState, '', pageHref);
+            return Promise.resolve();
+        }
 
         return new Promise((resolve) => {
             ownBack = resolve;
@@ -112,6 +139,7 @@ export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): Di
     onBeforeUnmount(() => {
         mounted = false;
         stopTracking();
+        stopWatchingReloads();
 
         if (current) {
             void release();
@@ -132,8 +160,16 @@ export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): Di
         },
         release,
         restore(): void {
-            if (mounted && !current && !ownBack) {
+            if (
+                mounted &&
+                !current &&
+                !ownBack &&
+                !reloading &&
+                window.location.href === pageHref
+            ) {
                 pageState = window.history.state as unknown;
+                // Over the page's own entry, wherever the dialog's was before
+                pageBelow = true;
                 push();
             }
         },

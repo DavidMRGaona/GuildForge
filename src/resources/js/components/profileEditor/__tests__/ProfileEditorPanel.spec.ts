@@ -255,6 +255,120 @@ describe('ProfileEditorPanel', () => {
         expect(back).not.toHaveBeenCalled();
     });
 
+    /** Two pages in the history, the profile last: going back two steps lands on the other one */
+    function behindAnotherPage(): void {
+        window.history.pushState({ page: { url: '/eventos' } }, '', '/eventos');
+        window.history.pushState(
+            { page: { url: '/miembros/ana-prueba' } },
+            '',
+            '/miembros/ana-prueba'
+        );
+    }
+
+    /** Back several steps (the browser's list of pages) to another page, and staying */
+    async function stayAfterGoingBackTwoSteps(wrapper: VueWrapper): Promise<void> {
+        vi.stubGlobal(
+            'confirm',
+            vi.fn(() => false)
+        );
+        await wrapper.get('[data-testid="bio-input"]').setValue('Hola');
+        window.history.go(-2);
+        expect(window.location.pathname).toBe('/miembros/ana-prueba');
+    }
+
+    it('after staying from several steps back, closing keeps the page in place and Back leaves it', async () => {
+        behindAnotherPage();
+        const inertia = inertiaHearsPopstate();
+        const wrapper = mountPanel();
+        await stayAfterGoingBackTwoSteps(wrapper);
+
+        // What is under the panel's entry now is the other page: never go back onto it
+        const back = vi.spyOn(window.history, 'back');
+        wrapper.unmount();
+        expect(back).not.toHaveBeenCalled();
+        expect(window.location.pathname).toBe('/miembros/ana-prueba');
+        expect(window.history.state).toEqual({ page: { url: '/miembros/ana-prueba' } });
+        expect(inertia).not.toHaveBeenCalled();
+
+        back.mockRestore();
+        window.history.back();
+        expect(window.location.pathname).toBe('/eventos');
+        expect(inertia).toHaveBeenCalledTimes(1);
+    });
+
+    it('after staying from several steps back, saving stays on the page and Back leaves it', async () => {
+        behindAnotherPage();
+        const inertia = inertiaHearsPopstate();
+        const put = vi.spyOn(router, 'put').mockImplementation((_url, _data, options) => {
+            options?.onSuccess?.({} as never);
+            options?.onFinish?.({} as never);
+        });
+        const wrapper = mountPanel();
+        await stayAfterGoingBackTwoSteps(wrapper);
+        const back = vi.spyOn(window.history, 'back');
+
+        await wrapper.get('form').trigger('submit');
+        await flushPromises();
+
+        expect(put).toHaveBeenCalledTimes(1);
+        expect(back).not.toHaveBeenCalled();
+        expect(window.location.pathname).toBe('/miembros/ana-prueba');
+        wrapper.unmount();
+        expect(back).not.toHaveBeenCalled();
+
+        back.mockRestore();
+        window.history.back();
+        expect(window.location.pathname).toBe('/eventos');
+        expect(inertia).toHaveBeenCalledTimes(1);
+    });
+
+    it('going back while saving goes where Back goes, and the cancelled save puts nothing back', async () => {
+        behindAnotherPage();
+        const inertia = inertiaHearsPopstate();
+        let finish: (() => void) | undefined;
+        vi.spyOn(router, 'put').mockImplementation((_url, _data, options) => {
+            finish = (): void => options?.onFinish?.({} as never);
+        });
+        const wrapper = mountPanel();
+        await wrapper.get('[data-testid="bio-input"]').setValue('Hola');
+        await wrapper.get('form').trigger('submit');
+        await flushPromises();
+
+        window.history.back();
+        expect(window.location.pathname).toBe('/eventos');
+        expect(inertia).toHaveBeenCalledTimes(1);
+
+        // Inertia cancels the save: the panel's entry is never put back over the other page
+        const push = vi.spyOn(window.history, 'pushState');
+        finish?.();
+        expect(push).not.toHaveBeenCalled();
+        expect(window.location.pathname).toBe('/eventos');
+        wrapper.unmount();
+    });
+
+    it('puts nothing back once Inertia is reloading the page (a new version)', async () => {
+        let finish: (() => void) | undefined;
+        vi.spyOn(router, 'put').mockImplementation((_url, _data, options) => {
+            finish = (): void => options?.onFinish?.({} as never);
+        });
+        const wrapper = mountPanel();
+        await wrapper.get('[data-testid="bio-input"]').setValue('Hola');
+        await wrapper.get('form').trigger('submit');
+        await flushPromises();
+
+        expect(finish).toBeDefined();
+        document.dispatchEvent(
+            new CustomEvent('inertia:location', {
+                cancelable: true,
+                detail: { url: new URL(window.location.href), versionChange: true },
+            })
+        );
+        const push = vi.spyOn(window.history, 'pushState');
+        finish?.();
+        expect(push).not.toHaveBeenCalled();
+        wrapper.unmount();
+    });
+
     it('saves from the page’s own entry, so the saved page leaves no extra step back', async () => {
         const back = vi.spyOn(window.history, 'back');
         const put = vi.spyOn(router, 'put').mockImplementation((_url, _data, options) => {
