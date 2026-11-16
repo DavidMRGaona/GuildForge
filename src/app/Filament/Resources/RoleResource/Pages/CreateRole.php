@@ -41,7 +41,7 @@ class CreateRole extends CreateRecord
         }
 
         if (! app(RoleRestrictionRule::class)->canRequireTwoFactor((string) ($data['name'] ?? ''))) {
-            unset($data['requires_two_factor']);
+            $data['requires_two_factor'] = false;
         }
 
         // Synced after creating (afterCreate), never written to the role itself

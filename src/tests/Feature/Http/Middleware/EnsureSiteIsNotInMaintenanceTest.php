@@ -6,6 +6,7 @@ namespace Tests\Feature\Http\Middleware;
 
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\TwoFactor\Services\TwoFactorServiceInterface;
+use App\Infrastructure\Authorization\Services\TwoFactorPanelAccess;
 use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -13,6 +14,7 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use Livewire\Livewire;
 use PragmaRX\Google2FA\Google2FA;
+use RuntimeException;
 use Tests\TestCase;
 
 final class EnsureSiteIsNotInMaintenanceTest extends TestCase
@@ -198,6 +200,30 @@ final class EnsureSiteIsNotInMaintenanceTest extends TestCase
         $this->actingAs($member)->get(route('profile.show', ['tab' => 'seguridad']))->assertStatus(503);
         $this->actingAs(UserModel::factory()->create())->get(route('profile.show', ['tab' => 'seguridad']))->assertStatus(503);
         $this->get(route('profile.show', ['tab' => 'seguridad']))->assertStatus(503);
+    }
+
+    public function test_the_security_tab_stays_closed_when_the_check_fails(): void
+    {
+        $this->enableMaintenance();
+        $user = $this->holderOfPanelRoleRequiringTwoFactor();
+        $this->app->bind(TwoFactorPanelAccess::class, static fn () => throw new RuntimeException('check failed'));
+
+        $this->actingAs($user)->get(route('profile.show', ['tab' => 'seguridad']))->assertStatus(503);
+    }
+
+    public function test_the_security_tab_alone_is_sent_during_maintenance(): void
+    {
+        $this->enableMaintenance();
+        $user = $this->holderOfPanelRoleRequiringTwoFactor();
+
+        $this->actingAs($user)->get(route('profile.show', ['tab' => 'seguridad']))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Profile/Show')
+                ->where('securityOnly', true)
+                ->has('security.twoFactor')
+                ->missing('calendarFeed')
+                ->missing('proposals')
+                ->missing('mailPreferences'));
     }
 
     private function holderOfPanelRoleRequiringTwoFactor(): UserModel

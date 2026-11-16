@@ -176,7 +176,8 @@ final class BaseRoleProtectionTest extends TestCase
         $data = (new ReflectionMethod($page, 'mutateFormDataBeforeSave'))
             ->invoke($page, ['name' => 'registrado', 'display_name' => 'Registrado']);
 
-        $this->assertSame(['display_name' => 'Registrado'], $data);
+        // The two-factor requirement is cleared on the base role, never left as stored (core#772)
+        $this->assertSame(['display_name' => 'Registrado', 'requires_two_factor' => false], $data);
     }
 
     private function member(): RoleModel

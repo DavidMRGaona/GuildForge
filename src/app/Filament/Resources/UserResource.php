@@ -12,7 +12,6 @@ use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\DTOs\ImageOptimizationSettingsDTO;
 use App\Application\Services\ImageOptimizationServiceInterface;
 use App\Application\Services\UserServiceInterface;
-use App\Application\TwoFactor\Services\TwoFactorStatusReaderInterface;
 use App\Filament\Actions\ImpersonateAction;
 use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Resources\UserResource\Pages\CreateUser;
@@ -226,31 +225,24 @@ class UserResource extends BaseResource
 
     public static function table(Table $table): Table
     {
-        // The ids with two-factor authentication on among those the page lists: one query for all the rows
+        // The ids with two-factor authentication on among those the page lists: one query for all
+        // the rows, through TwoFactorHolders (core#772), so a reader that fails shows it off and
+        // the roles that require it paused, like the access, instead of breaking the table
         $twoFactorOn = null;
         $hasTwoFactor = static function (UserModel $record, HasTable $livewire) use (&$twoFactorOn): bool {
-            $twoFactorOn ??= array_flip(app(TwoFactorStatusReaderInterface::class)->enabledAmong(self::pageUserIds($livewire)));
+            $twoFactorOn ??= app(TwoFactorHolders::class)->among(self::pageUserIds($livewire));
 
             return isset($twoFactorOn[strtolower((string) $record->getKey())]);
         };
 
-        // Paused roles count with roles that require two-factor authentication (core#772): asked
-        // through TwoFactorHolders, so a reader that fails shows them paused, like the access
-        $twoFactorHolders = null;
-        $holdsTwoFactor = static function (UserModel $record, HasTable $livewire) use (&$twoFactorHolders): bool {
-            $twoFactorHolders ??= app(TwoFactorHolders::class)->among(self::pageUserIds($livewire));
-
-            return isset($twoFactorHolders[strtolower((string) $record->getKey())]);
-        };
-
         // Read once per table render, on first use: every row asks for it
         $associationRole = false;
-        $inactiveRoles = static function (UserModel $record, HasTable $livewire) use (&$associationRole, $holdsTwoFactor): array {
+        $inactiveRoles = static function (UserModel $record, HasTable $livewire) use (&$associationRole, $hasTwoFactor): array {
             if ($associationRole === false) {
                 $associationRole = app(AssociationMembershipServiceInterface::class)->roleName();
             }
 
-            return self::inactiveRoles($record, $associationRole, static fn (): bool => $holdsTwoFactor($record, $livewire));
+            return self::inactiveRoles($record, $associationRole, static fn (): bool => $hasTwoFactor($record, $livewire));
         };
 
         return $table

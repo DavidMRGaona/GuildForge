@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Authorization\Services;
 
+use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
@@ -14,9 +15,15 @@ use Illuminate\Support\Facades\DB;
  * them) without being members: they lack the association member role. Also (core#772) the
  * accounts that hold a role requiring two-factor authentication with it off, asked through
  * TwoFactorHolders. Deactivated (soft-deleted) and anonymized accounts are left out.
+ *
+ * Each reason is counted on its own: a role waiting for membership is listed under membership,
+ * and under two-factor only once membership would no longer hold it back.
  */
-final readonly class InactiveRoleHolders
+final class InactiveRoleHolders
 {
+    /** @var array<string, list<string>> withoutTwoFactorIds() per role filter, for the request (bound scoped) */
+    private array $withoutTwoFactor = [];
+
     /**
      * @param  string|null  $associationRoleName  the association member role; null means nobody is a member
      * @return Builder<UserModel>
@@ -40,28 +47,17 @@ final readonly class InactiveRoleHolders
 
     /**
      * Ids of the accounts that hold a role requiring two-factor authentication (one of
-     * $roleNames, when given) and have it off, as stored.
+     * $roleNames, when given), have it off, and would have that role in force with it on (so
+     * not one only waiting for membership), as stored. Read once per request and filter.
      *
      * @param  list<string>|null  $roleNames
      * @return list<string>
      */
     public function withoutTwoFactorIds(?array $roleNames = null): array
     {
-        /** @var list<string> $ids */
-        $ids = UserModel::query()
-            ->whereNull('anonymized_at')
-            ->whereHas('roles', static function (Builder $roles) use ($roleNames): void {
-                $roles->where('requires_two_factor', true)
-                    ->when($roleNames !== null, static fn (Builder $query): Builder => $query->whereIn('name', $roleNames ?? []));
-            })
-            ->orderBy('id')
-            ->pluck('id')
-            ->map(strval(...))
-            ->all();
+        $key = $roleNames === null ? '*' : implode("\0", array_unique($roleNames));
 
-        $on = app(TwoFactorHolders::class)->among($ids);
-
-        return array_values(array_filter($ids, static fn (string $id): bool => ! isset($on[strtolower($id)])));
+        return $this->withoutTwoFactor[$key] ??= $this->readWithoutTwoFactor($roleNames);
     }
 
     /**
@@ -73,6 +69,52 @@ final readonly class InactiveRoleHolders
     public function withoutTwoFactorQuery(?array $roleNames = null): Builder
     {
         return UserModel::query()->whereIn('users.id', $this->withoutTwoFactorIds($roleNames));
+    }
+
+    /**
+     * @param  list<string>|null  $roleNames
+     * @return list<string>
+     */
+    private function readWithoutTwoFactor(?array $roleNames): array
+    {
+        $holders = UserModel::query()
+            ->whereNull('anonymized_at')
+            ->whereHas('roles', static function (Builder $roles) use ($roleNames): void {
+                $roles->where('requires_two_factor', true)
+                    ->when($roleNames !== null, static fn (Builder $query): Builder => $query->whereIn('name', $roleNames ?? []));
+            })
+            ->with('roles')
+            ->orderBy('id')
+            ->get();
+
+        /** @var list<string> $ids */
+        $ids = $holders->map(static fn (UserModel $holder): string => (string) $holder->getKey())->all();
+        $on = app(TwoFactorHolders::class)->among($ids);
+        $resolver = app(ActiveRoleResolver::class);
+        $associationRole = $ids === [] ? null : $resolver->associationMemberRoleName();
+
+        $paused = [];
+
+        foreach ($holders as $holder) {
+            $id = (string) $holder->getKey();
+
+            if (isset($on[strtolower($id)])) {
+                continue;
+            }
+
+            $inForceWithTwoFactor = $resolver->filter(
+                $holder->roles,
+                static fn (): ?string => $associationRole,
+                static fn (): bool => true,
+            );
+
+            if ($inForceWithTwoFactor->contains(static fn (RoleModel $role): bool => $role->requires_two_factor
+                && ($roleNames === null || in_array($role->name, $roleNames, true)))) {
+                $paused[] = $id;
+            }
+        }
+
+        return $paused;
     }
 
     public function count(?string $associationRoleName): int

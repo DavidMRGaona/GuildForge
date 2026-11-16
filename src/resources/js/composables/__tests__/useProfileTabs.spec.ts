@@ -77,6 +77,16 @@ describe('useProfileTabs', () => {
         page.props = {};
     });
 
+    it('offers «Seguridad» alone when the server says so (maintenance, core#772)', () => {
+        page.url = '/perfil?tab=seguridad';
+        page.props = { securityOnly: true, calendarFeed: { available: true, issuedAt: null } };
+
+        const { tabs, activeTabId } = mountTabs();
+
+        expect(tabs.value.map((tab) => tab.id)).toEqual(['seguridad']);
+        expect(activeTabId.value).toBe('seguridad');
+    });
+
     it('asks the server for the mail preferences when the mail tab is opened without them', () => {
         const tabs = mountTabs();
 

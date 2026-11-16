@@ -8,6 +8,7 @@ use App\Application\Impersonation\Services\ImpersonationServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\TwoFactor\Services\TwoFactorDisableRule;
 use App\Application\TwoFactor\Services\TwoFactorServiceInterface;
+use App\Domain\Authorization\Repositories\RoleRepositoryInterface;
 use App\Domain\Impersonation\Enums\ImpersonationMode;
 use App\Domain\TwoFactor\Events\RecoveryCodesRegenerated;
 use App\Domain\TwoFactor\Events\TwoFactorDisabled;
@@ -23,6 +24,7 @@ use Illuminate\Support\Facades\Event;
 use Inertia\Testing\AssertableInertia as Assert;
 use Mockery;
 use PragmaRX\Google2FA\Google2FA;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -351,6 +353,30 @@ final class ProfileTwoFactorControllerTest extends TestCase
         $this->enable($user);
 
         $this->assertFalse(app(TwoFactorDisableRule::class)->allowed((string) $user->id));
+    }
+
+    public function test_the_disable_rule_refuses_when_the_roles_cannot_be_read(): void
+    {
+        $roles = $this->createStub(RoleRepositoryInterface::class);
+        $roles->method('getRoleNamesForUser')->willThrowException(new RuntimeException('database down'));
+        $rule = new TwoFactorDisableRule($roles);
+
+        $this->assertFalse($rule->allowed('any-account'));
+    }
+
+    public function test_the_security_tab_refuses_and_names_none_when_the_roles_cannot_be_read(): void
+    {
+        $user = UserModel::factory()->create();
+        $this->enable($user);
+        $roles = $this->createStub(RoleRepositoryInterface::class);
+        $roles->method('getRoleNamesForUser')->willThrowException(new RuntimeException('database down'));
+        $this->app->instance(TwoFactorDisableRule::class, new TwoFactorDisableRule($roles));
+        $this->asSealed($user);
+
+        $this->get(route('profile.show', ['tab' => 'seguridad']))
+            ->assertInertia(fn (Assert $inertia) => $inertia
+                ->where('security.twoFactor.canDisable', false)
+                ->where('security.twoFactor.requiredBy', []));
     }
 
     public function test_the_security_tab_names_the_roles_that_require_it_while_it_is_off(): void

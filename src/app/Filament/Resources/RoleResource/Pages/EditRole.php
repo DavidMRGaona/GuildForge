@@ -72,8 +72,9 @@ class EditRole extends EditRecord
             unset($data['requires_association_member'], $data['max_holders']);
         }
 
+        // Cleared, not just left out: a mark written there by other means can still be taken away
         if (! RoleResource::canRequireTwoFactor($record)) {
-            unset($data['requires_two_factor']);
+            $data['requires_two_factor'] = false;
         }
 
         // Also when the field's own rule was skipped: nobody pauses a role they hold by mistake

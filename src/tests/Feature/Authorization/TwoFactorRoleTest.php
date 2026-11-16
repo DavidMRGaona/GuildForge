@@ -9,13 +9,16 @@ use App\Application\Impersonation\DTOs\ViewedRoleDTO;
 use App\Application\TwoFactor\Services\TwoFactorResetInterface;
 use App\Application\TwoFactor\Services\TwoFactorServiceInterface;
 use App\Application\TwoFactor\Services\TwoFactorStatusReaderInterface;
+use App\Domain\TwoFactor\Events\TwoFactorAppChanged;
 use App\Infrastructure\Authorization\Services\ActiveRoleResolver;
+use App\Infrastructure\Authorization\Services\PermissionHolderFinder;
 use App\Infrastructure\Impersonation\RoleViewAccount;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use RuntimeException;
 use Tests\Support\Authorization\ManagesTwoFactorRoles;
 use Tests\TestCase;
@@ -95,20 +98,82 @@ final class TwoFactorRoleTest extends TestCase
         $this->assertFalse($this->authorization->can($user, self::PERMISSION));
     }
 
+    public function test_a_reset_while_deactivated_is_not_undone_by_restoring(): void
+    {
+        $user = $this->accountHolding(['treasury']);
+        $this->turnOnTwoFactor($user);
+        $this->assertTrue($this->authorization->can($user, self::PERMISSION));
+
+        $user->delete();
+        $this->newRequest();
+        app(TwoFactorResetInterface::class)->reset((string) $user->id, null);
+        $user->restore();
+        $this->newRequest();
+
+        $this->assertFalse(app(AuthorizationServiceInterface::class)->can(UserModel::query()->findOrFail($user->id), self::PERMISSION));
+    }
+
+    public function test_restoring_an_account_drops_its_cached_authorization(): void
+    {
+        $editor = RoleModel::query()->firstOrCreate(['name' => 'editor'], ['display_name' => 'Editor']);
+        $this->givePermissions($editor, ['articles.create']);
+        $user = $this->accountHolding(['editor']);
+        $this->assertTrue($this->authorization->can($user, 'articles.create'));
+
+        $user->delete();
+        // Changed while deactivated, around the services: only the restore may refresh it
+        $user->roles()->detach($editor->id);
+        $user->restore();
+        $this->newRequest();
+
+        $this->assertFalse(app(AuthorizationServiceInterface::class)->can($user, 'articles.create'));
+    }
+
+    public function test_changing_the_app_drops_the_cached_authorization(): void
+    {
+        $editor = RoleModel::query()->firstOrCreate(['name' => 'editor'], ['display_name' => 'Editor']);
+        $this->givePermissions($editor, ['articles.create']);
+        $user = $this->accountHolding(['editor']);
+        $this->assertTrue($this->authorization->can($user, 'articles.create'));
+        $user->roles()->detach($editor->id);
+
+        Event::dispatch(new TwoFactorAppChanged((string) $user->id));
+        $this->newRequest();
+
+        $this->assertFalse(app(AuthorizationServiceInterface::class)->can($user, 'articles.create'));
+    }
+
+    public function test_an_answer_read_while_the_reader_failed_is_not_cached(): void
+    {
+        $user = $this->accountHolding(['treasury']);
+        $this->turnOnTwoFactor($user);
+        $this->newRequest();
+        $real = app(TwoFactorStatusReaderInterface::class);
+        $this->app->instance(TwoFactorStatusReaderInterface::class, $this->failingReader());
+
+        $this->assertFalse(app(AuthorizationServiceInterface::class)->can($user, self::PERMISSION));
+
+        $this->app->instance(TwoFactorStatusReaderInterface::class, $real);
+        $this->newRequest();
+
+        $this->assertTrue(app(AuthorizationServiceInterface::class)->can($user, self::PERMISSION));
+    }
+
+    public function test_permission_holders_leave_out_a_paused_holder(): void
+    {
+        $paused = $this->accountHolding(['treasury']);
+        $active = $this->accountHolding(['treasury']);
+        $this->turnOnTwoFactor($active);
+
+        $holders = app(PermissionHolderFinder::class)->usersWhoCan(self::PERMISSION);
+
+        $this->assertTrue($holders->contains('id', $active->id));
+        $this->assertFalse($holders->contains('id', $paused->id));
+    }
+
     public function test_a_check_that_fails_leaves_the_role_paused(): void
     {
-        $this->app->instance(TwoFactorStatusReaderInterface::class, new class implements TwoFactorStatusReaderInterface
-        {
-            public function isEnabled(string $userId): bool
-            {
-                throw new RuntimeException('store down');
-            }
-
-            public function enabledAmong(array $userIds): array
-            {
-                throw new RuntimeException('store down');
-            }
-        });
+        $this->app->instance(TwoFactorStatusReaderInterface::class, $this->failingReader());
 
         $this->roleRequiringTwoFactor('junta')->update(['requires_two_factor' => false]);
         $this->givePermissions(RoleModel::query()->where('name', 'junta')->firstOrFail(), ['articles.create']);
@@ -190,5 +255,29 @@ final class TwoFactorRoleTest extends TestCase
 
         // Only the throwaway account: a real holder still needs it
         $this->assertFalse($this->authorization->can($this->accountHolding(['treasury']), self::PERMISSION));
+    }
+
+    /**
+     * A new request: scoped bindings (cache tokens, two-factor reads) start again.
+     */
+    private function newRequest(): void
+    {
+        $this->app->forgetScopedInstances();
+    }
+
+    private function failingReader(): TwoFactorStatusReaderInterface
+    {
+        return new class implements TwoFactorStatusReaderInterface
+        {
+            public function isEnabled(string $userId): bool
+            {
+                throw new RuntimeException('store down');
+            }
+
+            public function enabledAmong(array $userIds): array
+            {
+                throw new RuntimeException('store down');
+            }
+        };
     }
 }

@@ -15,6 +15,7 @@ use Filament\Facades\Filament;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 /**
  * Closes the public site while maintenance mode is enabled in the site settings.
@@ -57,6 +58,9 @@ final readonly class EnsureSiteIsNotInMaintenance
 
     private const string SECURITY_TAB = 'seguridad';
 
+    /** Set on a request let through only for «Seguridad»; the account settings page reads it */
+    public const string SECURITY_ONLY_ATTRIBUTE = 'maintenance_security_only';
+
     /** Turning two-factor authentication on (core#769) */
     private const string TWO_FACTOR_ROUTES = 'profile.two-factor.*';
 
@@ -79,6 +83,9 @@ final readonly class EnsureSiteIsNotInMaintenance
             if ($request->routeIs(self::SECURITY_PAGE_ROUTE) && $request->query('tab') !== self::SECURITY_TAB) {
                 return redirect()->route(self::SECURITY_PAGE_ROUTE, ['tab' => self::SECURITY_TAB]);
             }
+
+            // The page then sends «Seguridad» alone: no other tab nor its data
+            $request->attributes->set(self::SECURITY_ONLY_ATTRIBUTE, true);
 
             return $next($request);
         }
@@ -120,7 +127,12 @@ final readonly class EnsureSiteIsNotInMaintenance
     {
         $user = $request->user();
 
-        return $user instanceof UserModel && app(TwoFactorPanelAccess::class)->pausedOnlyByTwoFactor($user);
+        try {
+            return $user instanceof UserModel && app(TwoFactorPanelAccess::class)->pausedOnlyByTwoFactor($user);
+        } catch (Throwable) {
+            // Fails closed: the maintenance page, as for anyone else
+            return false;
+        }
     }
 
     private function canAccessPanel(Request $request): bool

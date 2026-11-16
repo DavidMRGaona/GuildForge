@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament\Users;
 
+use App\Application\TwoFactor\Services\TwoFactorStatusReaderInterface;
 use App\Filament\Resources\UserResource\Pages\EditUser;
 use App\Filament\Resources\UserResource\Pages\ListUsers;
 use App\Filament\Widgets\InactiveRolesWidget;
@@ -14,6 +15,7 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\Component;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
+use RuntimeException;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
 use Tests\Support\Authorization\ManagesTwoFactorRoles;
 use Tests\TestCase;
@@ -121,6 +123,60 @@ final class TwoFactorPausedRolesVisibilityTest extends TestCase
         $this->actingAs($this->editorWithPermissions(self::PERMISSIONS));
 
         $this->assertFalse(InactiveRolesWidget::canView());
+    }
+
+    public function test_a_failing_reader_shows_every_holder_as_paused_in_list_filter_and_widget(): void
+    {
+        $holder = $this->accountHolding(['treasury']);
+        $this->turnOnTwoFactor($holder);
+        $this->app->instance(TwoFactorStatusReaderInterface::class, new class implements TwoFactorStatusReaderInterface
+        {
+            public function isEnabled(string $userId): bool
+            {
+                throw new RuntimeException('store down');
+            }
+
+            public function enabledAmong(array $userIds): array
+            {
+                throw new RuntimeException('store down');
+            }
+        });
+        $this->actingAs($this->editorWithPermissions(self::PERMISSIONS));
+
+        Livewire::test(ListUsers::class)
+            ->assertSuccessful()
+            ->assertCanSeeTableRecords([$holder]);
+        Livewire::test(ListUsers::class)
+            ->filterTable('inactive_roles', 'two_factor')
+            ->assertCanSeeTableRecords([$holder]);
+        Livewire::test(InactiveRolesWidget::class)
+            ->assertCanSeeTableRecords([$holder])
+            ->assertSee('Treasury: sin doble factor');
+        $this->assertSame(
+            'Requiere doble factor · En pausa: sin doble factor',
+            $this->rolesField(Livewire::test(EditUser::class, ['record' => $holder->getRouteKey()]))->getDescription('treasury'),
+        );
+    }
+
+    public function test_a_role_waiting_for_membership_is_counted_under_membership_only(): void
+    {
+        $this->actingAs($this->editorWithPermissions(self::PERMISSIONS));
+        RoleModel::query()->firstOrCreate(['name' => 'socio'], ['display_name' => 'Socio']);
+        $this->roleRequiringTwoFactor('secretaria', ['events.create'], requiresMembership: true);
+        $notMember = $this->accountHolding(['secretaria']);
+        $member = $this->accountHolding(['secretaria', 'socio']);
+
+        Livewire::test(ListUsers::class)
+            ->filterTable('inactive_roles', 'two_factor')
+            ->assertCanSeeTableRecords([$member])
+            ->assertCanNotSeeTableRecords([$notMember]);
+        Livewire::test(ListUsers::class)
+            ->filterTable('inactive_roles', 'membership')
+            ->assertCanSeeTableRecords([$notMember])
+            ->assertCanNotSeeTableRecords([$member]);
+        Livewire::test(InactiveRolesWidget::class)
+            ->assertSee('Secretaria: no es socio')
+            ->assertSee('Secretaria: sin doble factor');
     }
 
     /**

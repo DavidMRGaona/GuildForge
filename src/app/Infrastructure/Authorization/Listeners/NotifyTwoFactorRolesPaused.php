@@ -29,7 +29,8 @@ final readonly class NotifyTwoFactorRolesPaused
             return;
         }
 
-        $person = UserModel::query()->whereNull('anonymized_at')->find($event->userId);
+        // A deactivated account is told too: the notice is waiting if it is restored
+        $person = UserModel::withTrashed()->whereNull('anonymized_at')->find($event->userId);
         if (! $person instanceof UserModel) {
             return;
         }

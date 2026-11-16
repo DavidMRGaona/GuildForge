@@ -36,6 +36,8 @@ interface Props {
     security: SecurityProps;
     /** The banner of the own public profile (core#764); none without one. */
     bannerPublicId?: string | null;
+    /** Maintenance mode let the account in only for «Seguridad» (core#772): no other tab. */
+    securityOnly?: boolean;
 }
 
 withDefaults(defineProps<Props>(), {
@@ -43,6 +45,7 @@ withDefaults(defineProps<Props>(), {
     mailPreferences: null,
     proposals: null,
     bannerPublicId: null,
+    securityOnly: false,
 });
 
 const { t } = useI18n();

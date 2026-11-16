@@ -25,6 +25,7 @@ use App\Domain\Mail\ValueObjects\MailPause;
 use App\Domain\Mail\ValueObjects\MutedMailSubject;
 use App\Domain\Proposals\Enums\ProposalType;
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\EnsureSiteIsNotInMaintenance;
 use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Http\Resources\OwnProposalResource;
@@ -64,6 +65,21 @@ final class ProfileController extends Controller
     {
         /** @var UserModel $user */
         $user = $request->user();
+
+        // During maintenance mode, someone let in only to turn two-factor on (core#772) gets
+        // «Seguridad» alone: no other tab, nor the data behind them
+        if ($request->attributes->get(EnsureSiteIsNotInMaintenance::SECURITY_ONLY_ATTRIBUTE) === true) {
+            return Inertia::render('Profile/Show', [
+                'user' => $this->dtoFactory->createUserDTO($user),
+                'bannerPublicId' => $this->ownBanner->for($user),
+                'seo' => $this->seo->forPage(new SeoPageDTO(
+                    title: (string) __('seo.titles.profile'),
+                    noindex: true,
+                ))->toArray(),
+                'security' => $this->securityFor($user),
+                'securityOnly' => true,
+            ]);
+        }
 
         $props = [
             'user' => $this->dtoFactory->createUserDTO($user),

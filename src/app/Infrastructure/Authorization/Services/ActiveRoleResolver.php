@@ -25,29 +25,48 @@ use Throwable;
  */
 final readonly class ActiveRoleResolver
 {
+    /** The role columns the decision needs, for callers that load roles themselves */
+    public const array ROLE_COLUMNS = ['roles.id', 'roles.name', 'roles.requires_association_member', 'roles.requires_two_factor'];
+
     /**
      * @param  bool  $assumeTwoFactor  answer as if the account had two-factor authentication on
      * @return Collection<int, RoleModel>
      */
     public function activeRoles(UserModel $user, bool $assumeTwoFactor = false): Collection
     {
-        $roles = $user->roles()->get(['roles.id', 'roles.name', 'roles.requires_association_member', 'roles.requires_two_factor']);
+        return $this->filter(
+            $user->roles()->get(self::ROLE_COLUMNS),
+            $this->associationMemberRoleName(...),
+            static fn (): bool => $assumeTwoFactor || app(TwoFactorHolders::class)->has((string) $user->getKey()),
+        );
+    }
+
+    /**
+     * Which of the roles an account holds count, for callers that read many accounts at once:
+     * the association member role and the account's two-factor state are asked only when one
+     * of the roles needs them.
+     *
+     * @param  Collection<int, RoleModel>  $roles  every role the account holds, with ROLE_COLUMNS
+     * @param  callable(): ?string  $associationRole
+     * @param  callable(): bool  $hasTwoFactor
+     * @return Collection<int, RoleModel>
+     */
+    public function filter(Collection $roles, callable $associationRole, callable $hasTwoFactor): Collection
+    {
         $requiresMembership = static fn (RoleModel $role): bool => $role->requires_association_member === true;
         $requiresTwoFactor = static fn (RoleModel $role): bool => $role->requires_two_factor === true;
 
         if ($roles->contains($requiresMembership)) {
-            $associationRole = $this->associationMemberRoleName();
-            $isAssociationMember = $associationRole !== null
-                && $roles->contains(fn (RoleModel $role): bool => $role->name === $associationRole);
+            $associationRoleName = $associationRole();
+            $isAssociationMember = $associationRoleName !== null
+                && $roles->contains(static fn (RoleModel $role): bool => $role->name === $associationRoleName);
 
             if (! $isAssociationMember) {
                 $roles = $roles->reject($requiresMembership)->values();
             }
         }
 
-        if (! $assumeTwoFactor
-            && $roles->contains($requiresTwoFactor)
-            && ! app(TwoFactorHolders::class)->has((string) $user->getKey())) {
+        if ($roles->contains($requiresTwoFactor) && ! $hasTwoFactor()) {
             return $roles->reject($requiresTwoFactor)->values();
         }
 

@@ -8,6 +8,7 @@ use App\Infrastructure\Authorization\Services\TwoFactorPanelAccess;
 use Filament\Facades\Filament;
 use Filament\Http\Middleware\Authenticate;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Throwable;
 
 /**
  * Filament's panel authentication (core#772): a signed-in account kept out only because roles
@@ -25,14 +26,26 @@ final class AuthenticatePanel extends Authenticate
      */
     protected function authenticate($request, array $guards): void
     {
-        $user = Filament::auth()->user();
-
-        if ($user !== null && app(TwoFactorPanelAccess::class)->pausedOnlyByTwoFactor($user)) {
+        if ($this->pausedOnlyByTwoFactor()) {
             throw new HttpResponseException(redirect()
                 ->route('profile.show', ['tab' => 'seguridad'])
                 ->with('warning', __('two_factor.roles.panel_paused')));
         }
 
         parent::authenticate($request, $guards);
+    }
+
+    /**
+     * Fails closed to Filament's own answer: a check that throws never opens anything.
+     */
+    private function pausedOnlyByTwoFactor(): bool
+    {
+        try {
+            $user = Filament::auth()->user();
+
+            return $user !== null && app(TwoFactorPanelAccess::class)->pausedOnlyByTwoFactor($user);
+        } catch (Throwable) {
+            return false;
+        }
     }
 }

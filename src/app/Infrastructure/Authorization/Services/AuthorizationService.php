@@ -140,6 +140,7 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
         /** @var UserModel $user */
         DB::transaction(function () use ($user, $roleName): void {
             $role = RoleModel::where('name', $roleName)->firstOrFail();
+            $pausedBefore = app(ActiveRoleResolver::class)->pausedByTwoFactor($user);
 
             // Already held: no new holder, nothing to check, nothing to log
             $before = null;
@@ -154,7 +155,7 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
 
             if ($before !== null) {
                 $this->announceRolesChanged($user, $before, $this->storedRoleNames($user));
-                $this->announceTwoFactorPause($user, [$role->name]);
+                $this->announceTwoFactorPause($user, $pausedBefore);
             }
         });
     }
@@ -204,6 +205,7 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
             // Read from the database, not the cache: a user who has the base role of every account keeps it
             $currentIds = $user->roles()->pluck('roles.id')->all();
             $before = $this->storedRoleNames($user);
+            $pausedBefore = app(ActiveRoleResolver::class)->pausedByTwoFactor($user);
             $hasBaseRole = $user->roles()->where('roles.name', BaseRoleRule::NAME)->exists();
 
             if ($hasBaseRole && ! in_array(BaseRoleRule::NAME, $roleNames, true)) {
@@ -244,10 +246,9 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
                 $user,
                 array_values(array_map(static fn (int|string $roleId): string => (string) $namesById[$roleId], $changes['detached'])),
             );
-            $this->announceTwoFactorPause(
-                $user,
-                array_values(array_map(static fn (int|string $roleId): string => (string) $namesById[$roleId], $changes['attached'])),
-            );
+            if ($changes['attached'] !== []) {
+                $this->announceTwoFactorPause($user, $pausedBefore);
+            }
         });
     }
 
@@ -306,25 +307,19 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
     }
 
     /**
-     * After the commit, tells the person that roles just given to them wait for two-factor
-     * authentication (core#772): those that would count with it on and do not now. Read then,
-     * from the database, so a rollback or a later change in the same transaction is seen.
+     * After the commit, tells the person that roles wait for two-factor authentication
+     * (core#772) that did not before the change: a role just given, or one that waited for
+     * membership and now only for two-factor (the association member role was given). Read
+     * then, from the database, so a rollback or a later change in the same transaction is seen.
      *
-     * @param  list<string>  $attachedRoleNames
+     * @param  list<string>  $pausedBefore  ActiveRoleResolver::pausedByTwoFactor() before the change
      */
-    private function announceTwoFactorPause(UserModel $user, array $attachedRoleNames): void
+    private function announceTwoFactorPause(UserModel $user, array $pausedBefore): void
     {
-        if ($attachedRoleNames === []) {
-            return;
-        }
-
         $userId = (string) $user->getKey();
 
-        DB::afterCommit(static function () use ($user, $userId, $attachedRoleNames): void {
-            $paused = array_values(array_intersect(
-                app(ActiveRoleResolver::class)->pausedByTwoFactor($user),
-                $attachedRoleNames,
-            ));
+        DB::afterCommit(static function () use ($user, $userId, $pausedBefore): void {
+            $paused = array_values(array_diff(app(ActiveRoleResolver::class)->pausedByTwoFactor($user), $pausedBefore));
 
             if ($paused !== []) {
                 Event::dispatch(new TwoFactorRolesPaused($userId, $paused));
@@ -358,6 +353,8 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
     /**
      * The cache only saves queries: when it is unreachable or holds anything but a list of
      * names, the answer comes from the database, so a cache problem can never grant access.
+     * Nor is an answer kept that was computed while the two-factor reader failed: it paused
+     * roles for a passing failure, and would keep them paused for the cache's lifetime.
      *
      * @param  callable(): array<string>  $query
      * @return array<string>
@@ -383,9 +380,12 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
             $key = null;
         }
 
+        // An answer computed while the two-factor reader failed is served, never kept (core#772)
+        $twoFactor = app(TwoFactorHolders::class);
+        $failuresBefore = $twoFactor->failures();
         $fresh = array_values(array_map(strval(...), $query()));
 
-        if ($key !== null) {
+        if ($key !== null && $twoFactor->failures() === $failuresBefore) {
             try {
                 Cache::put($key, $fresh, self::CACHE_TTL);
             } catch (Throwable) {

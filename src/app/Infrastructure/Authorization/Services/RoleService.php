@@ -114,6 +114,12 @@ final readonly class RoleService implements RoleServiceInterface
         return $this->toResponseDTO($role);
     }
 
+    /**
+     * Keeps the role's requirements as they are: UpdateRoleDTO carries neither the association
+     * member requirement nor the two-factor one (core#772), which only the role editor changes.
+     * Should it ever carry the two-factor one, turning it on must go through
+     * TwoFactorRequirementGuard (nobody pauses a role they hold), like EditRole does.
+     */
     public function update(string $id, UpdateRoleDTO $dto): RoleResponseDTO
     {
         $existingRole = $this->roleRepository->findById(RoleId::fromString($id));

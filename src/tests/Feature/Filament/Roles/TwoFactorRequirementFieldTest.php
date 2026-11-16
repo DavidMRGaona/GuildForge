@@ -139,6 +139,31 @@ final class TwoFactorRequirementFieldTest extends TestCase
             ->assertSee('2 personas quedarán con este rol en pausa hasta que activen el doble factor.');
     }
 
+    public function test_the_impact_leaves_out_holders_already_waiting_for_membership(): void
+    {
+        RoleModel::query()->firstOrCreate(['name' => 'socio'], ['display_name' => 'Socio']);
+        $role = $this->role('tesoreria');
+        $role->update(['requires_association_member' => true]);
+        $this->accountHolding(['tesoreria']);
+        $this->accountHolding(['tesoreria', 'socio']);
+
+        Livewire::test(EditRole::class, ['record' => $role->getRouteKey()])
+            ->fillForm(['requires_two_factor' => true])
+            ->assertSee('1 persona quedará con este rol en pausa hasta que active el doble factor.');
+    }
+
+    public function test_a_mark_on_the_association_role_written_by_other_means_is_cleared_on_save(): void
+    {
+        $socio = $this->role('socio');
+        $socio->update(['requires_two_factor' => true]);
+
+        Livewire::test(EditRole::class, ['record' => $socio->getRouteKey()])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertFalse($socio->refresh()->requires_two_factor);
+    }
+
     public function test_turning_it_on_tells_the_holders_without_two_factor_and_the_modules(): void
     {
         $role = $this->role('tesoreria');

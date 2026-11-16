@@ -7,12 +7,15 @@ namespace Tests\Feature\Authorization;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\TwoFactor\Services\TwoFactorResetInterface;
 use App\Domain\Events\UserActiveRolesChanged;
+use App\Infrastructure\Authorization\Services\RoleChangeAnnouncer;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Notifications\TwoFactor\TwoFactorResetNotification;
 use App\Notifications\TwoFactorRolesPausedNotification;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
+use RuntimeException;
 use Tests\Support\Authorization\ManagesTwoFactorRoles;
 use Tests\TestCase;
 
@@ -122,5 +125,98 @@ final class TwoFactorRoleNotificationsTest extends TestCase
 
         $this->assertStringEndsWith('/perfil?tab=seguridad', (string) $mail->actionUrl);
         $this->assertStringContainsString('Tesorería', implode(' ', $mail->introLines));
+    }
+
+    public function test_the_mail_escapes_the_role_names(): void
+    {
+        $mail = (new TwoFactorRolesPausedNotification('Example guild', '*Tesorería* [aquí](https://example.test)'))->toMail(UserModel::factory()->create());
+        $body = implode(' ', $mail->introLines);
+
+        $this->assertStringContainsString('\*Tesorería\*', $body);
+        $this->assertStringContainsString('\[aquí\]\(https://example\.test\)', $body);
+    }
+
+    public function test_a_failing_role_listener_never_costs_the_security_mail(): void
+    {
+        $person = $this->accountHolding(['tesoreria']);
+        $this->turnOnTwoFactor($person);
+        Notification::fake();
+        // A synchronous module listener that throws, reached from the role listener
+        Event::listen(UserActiveRolesChanged::class, static function (): void {
+            throw new RuntimeException('module listener');
+        });
+
+        app(TwoFactorResetInterface::class)->reset((string) $person->id, null);
+
+        Notification::assertSentTo($person, TwoFactorResetNotification::class);
+    }
+
+    public function test_a_reset_of_a_deactivated_account_still_tells_the_person(): void
+    {
+        $person = $this->accountHolding(['tesoreria']);
+        $this->turnOnTwoFactor($person);
+        $person->delete();
+        Notification::fake();
+
+        app(TwoFactorResetInterface::class)->reset((string) $person->id, null);
+
+        Notification::assertSentTo($person, TwoFactorRolesPausedNotification::class);
+    }
+
+    public function test_becoming_a_member_tells_the_role_now_waits_for_two_factor(): void
+    {
+        RoleModel::query()->firstOrCreate(['name' => 'socio'], ['display_name' => 'Socio']);
+        $this->roleRequiringTwoFactor('secretaria', [], requiresMembership: true);
+        $person = $this->accountHolding(['secretaria']);
+        Notification::fake();
+
+        $this->authorization->assignRole($person, 'socio');
+
+        Notification::assertSentTo($person, TwoFactorRolesPausedNotification::class, static fn (TwoFactorRolesPausedNotification $notification): bool => str_contains($notification->toSiteNotification($person)->body ?? '', 'Secretaria'));
+    }
+
+    public function test_switching_the_association_role_never_announces_a_role_still_waiting_for_two_factor(): void
+    {
+        RoleModel::query()->firstOrCreate(['name' => 'socio'], ['display_name' => 'Socio']);
+        RoleModel::query()->firstOrCreate(['name' => 'otro'], ['display_name' => 'Otro']);
+        $this->roleRequiringTwoFactor('secretaria', [], requiresMembership: true);
+        $person = $this->accountHolding(['secretaria', 'otro']);
+        Notification::fake();
+        Event::fake([UserActiveRolesChanged::class]);
+
+        app(RoleChangeAnnouncer::class)->announceAssociationRoleSwitch('socio', 'otro');
+
+        Event::assertNotDispatched(UserActiveRolesChanged::class);
+        Notification::assertSentTo($person, TwoFactorRolesPausedNotification::class);
+    }
+
+    public function test_switching_the_association_role_announces_it_for_who_has_two_factor_on(): void
+    {
+        RoleModel::query()->firstOrCreate(['name' => 'socio'], ['display_name' => 'Socio']);
+        RoleModel::query()->firstOrCreate(['name' => 'otro'], ['display_name' => 'Otro']);
+        $this->roleRequiringTwoFactor('secretaria', [], requiresMembership: true);
+        $person = $this->accountHolding(['secretaria', 'otro']);
+        $this->turnOnTwoFactor($person);
+        Event::fake([UserActiveRolesChanged::class]);
+
+        app(RoleChangeAnnouncer::class)->announceAssociationRoleSwitch('socio', 'otro');
+
+        Event::assertDispatched(UserActiveRolesChanged::class, fn (UserActiveRolesChanged $event): bool => $event->userId === $person->id
+            && $event->rolesActivated === ['secretaria']);
+    }
+
+    public function test_dropping_the_membership_requirement_tells_the_role_waits_for_two_factor(): void
+    {
+        RoleModel::query()->firstOrCreate(['name' => 'socio'], ['display_name' => 'Socio']);
+        $role = $this->roleRequiringTwoFactor('secretaria', [], requiresMembership: true);
+        $person = $this->accountHolding(['secretaria']);
+        $role->update(['requires_association_member' => false]);
+        Notification::fake();
+        Event::fake([UserActiveRolesChanged::class]);
+
+        app(RoleChangeAnnouncer::class)->announceRequirementChange('secretaria', false, 'socio');
+
+        Event::assertNotDispatched(UserActiveRolesChanged::class);
+        Notification::assertSentTo($person, TwoFactorRolesPausedNotification::class);
     }
 }

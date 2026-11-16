@@ -16,6 +16,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 /**
  * The panel's login page (core#770). Filament asks for the second factor in its own step, through
@@ -159,7 +160,14 @@ final class PanelLogin extends Login
             return true;
         }
 
-        if (app(TwoFactorPanelAccess::class)->pausedOnlyByTwoFactor($user)) {
+        try {
+            $pausedOnlyByTwoFactor = app(TwoFactorPanelAccess::class)->pausedOnlyByTwoFactor($user);
+        } catch (Throwable) {
+            // The generic refusal, as for any account without access
+            $pausedOnlyByTwoFactor = false;
+        }
+
+        if ($pausedOnlyByTwoFactor) {
             Notification::make()
                 ->title(__('two_factor.roles.panel_paused'))
                 ->warning()
