@@ -123,7 +123,7 @@ final class PermissionCatalogTest extends TestCase
         $content = ['events', 'articles', 'galleries', 'hero_slides', 'tags', 'menu_items', 'pages'];
         $site = ['settings', 'updates', 'mail', 'modules', 'dashboard'];
         $this->assertSame($content, $order('content', $content));
-        $this->assertSame(['users', 'roles'], $order('users', ['users', 'roles']));
+        $this->assertSame(['users', 'profiles', 'roles'], $order('users', ['users', 'profiles', 'roles']));
         $this->assertSame($site, $order('site', $site));
     }
 

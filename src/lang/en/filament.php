@@ -298,6 +298,15 @@ return [
             'cancelPendingEmail' => 'Withdraw the email change',
             'cancelPendingEmailConfirm' => 'Withdraw the pending change to :email? The account keeps its current email and the link sent to that address stops working.',
             'pendingEmailCancelled' => 'Email change withdrawn',
+            'resetPublicProfile' => [
+                'label' => 'Reset public profile',
+                'heading' => 'Reset the public profile of :name',
+                'description' => 'The "About me" text and the banner of their public profile are deleted. The address, the visibility and the layout do not change.',
+                'confirmation' => 'I understand the "About me" text and the banner are deleted and cannot be recovered',
+                'confirm' => 'Reset',
+                'done' => 'Public profile reset',
+                'nothing' => 'The public profile had neither an "About me" text nor a banner',
+            ],
         ],
     ],
 

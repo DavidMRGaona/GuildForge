@@ -317,6 +317,67 @@ final class UserProfileEditingTest extends TestCase
         $this->releaser->shouldHaveReceived('release')->once()->with('profiles/banners/2026/10/old.jpg');
     }
 
+    public function test_resetting_takes_away_the_bio_and_the_banner_and_keeps_everything_else(): void
+    {
+        $owner = $this->owner();
+        $this->service()->update($owner->id, $this->update(
+            handle: 'ana-rol',
+            visibility: ProfileVisibility::Public,
+            bio: 'Un texto que no debería estar aquí.',
+            showMembership: true,
+            sections: [new ProfileLayoutEntry('core.about', false)],
+        ));
+        UserProfileModel::query()->findOrFail($owner->id)->update(['banner_public_id' => 'profiles/banners/2026/10/old.jpg']);
+        $before = $this->profileOf($owner);
+
+        // Later on: a handle_changed_at written again by mistake would no longer match
+        Carbon::setTestNow('2026-11-20 18:00:00');
+        $this->assertTrue($this->service()->resetContent($owner->id));
+
+        $profile = $this->profileOf($owner);
+        $this->assertNull($profile->bio);
+        $this->assertNull($profile->banner_public_id);
+        $this->assertSame('ana-rol', $profile->handle);
+        $this->assertTrue($profile->handle_chosen);
+        $this->assertEquals($before->handle_changed_at, $profile->handle_changed_at);
+        $this->assertSame(ProfileVisibility::Public, $profile->visibility);
+        $this->assertTrue($profile->show_membership);
+        $this->assertSame($before->layout->toArray(), $profile->layout->toArray());
+        $this->releaser->shouldHaveReceived('release')->once()->with('profiles/banners/2026/10/old.jpg');
+    }
+
+    public function test_resetting_only_the_bio_releases_nothing(): void
+    {
+        $owner = $this->owner();
+        $this->service()->update($owner->id, $this->update(bio: 'Algo que retirar.'));
+
+        $this->assertTrue($this->service()->resetContent($owner->id));
+
+        $this->assertNull($this->profileOf($owner)->bio);
+        $this->releaser->shouldNotHaveReceived('release');
+    }
+
+    public function test_resetting_a_profile_with_nothing_to_take_away_changes_nothing(): void
+    {
+        $owner = $this->owner();
+        $before = $this->profileOf($owner)->updated_at;
+
+        Carbon::setTestNow('2026-11-15 11:00:00');
+        $this->assertFalse($this->service()->resetContent($owner->id));
+
+        $this->assertEquals($before, $this->profileOf($owner)->updated_at);
+        $this->releaser->shouldNotHaveReceived('release');
+    }
+
+    public function test_resetting_an_account_without_a_profile_does_nothing(): void
+    {
+        $owner = $this->owner();
+        UserProfileModel::query()->whereKey($owner->id)->delete();
+
+        $this->assertFalse($this->service()->resetContent($owner->id));
+        $this->releaser->shouldNotHaveReceived('release');
+    }
+
     private function owner(): UserModel
     {
         $owner = UserModel::factory()->create(['name' => 'Nombre de cuenta', 'display_name' => 'Ana Prueba']);

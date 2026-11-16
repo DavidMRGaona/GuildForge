@@ -28,6 +28,7 @@ return [
         'dashboard' => 'Dashboard',
         'pages' => 'Pages',
         'footer' => 'Footer',
+        'profiles' => 'Public profiles',
     ],
 
     'actions' => [
@@ -145,6 +146,9 @@ return [
         'footer' => [
             'manage' => 'Compose the footer',
         ],
+        'profiles' => [
+            'moderate' => 'Reset public profiles',
+        ],
     ],
 
     'permission_descriptions' => [
@@ -175,6 +179,9 @@ return [
         ],
         'footer' => [
             'manage' => 'Columns and blocks of the site footer, and names of the footer menus.',
+        ],
+        'profiles' => [
+            'moderate' => 'Take away the "About me" text and the banner of the public profile of an account one may edit. The address does not change.',
         ],
         'admin' => [
             'access' => 'Enter the admin panel.',

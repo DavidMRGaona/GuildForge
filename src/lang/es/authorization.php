@@ -38,6 +38,7 @@ return [
         'dashboard' => 'Escritorio',
         'pages' => 'Páginas',
         'footer' => 'Pie de página',
+        'profiles' => 'Perfiles públicos',
     ],
 
     'actions' => [
@@ -155,6 +156,9 @@ return [
         'footer' => [
             'manage' => 'Componer el pie de página',
         ],
+        'profiles' => [
+            'moderate' => 'Restablecer perfiles públicos',
+        ],
     ],
 
     'permission_descriptions' => [
@@ -185,6 +189,9 @@ return [
         ],
         'footer' => [
             'manage' => 'Columnas y bloques del pie de la web, y nombres de los menús del pie.',
+        ],
+        'profiles' => [
+            'moderate' => 'Quitar el «Sobre mí» y el banner del perfil público de una cuenta que se pueda editar. La dirección no cambia.',
         ],
         'admin' => [
             'access' => 'Entrar en el panel de administración.',

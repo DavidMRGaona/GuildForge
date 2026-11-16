@@ -461,6 +461,15 @@ final class CorePermissionDefinitions
                 description: __('authorization.permission_descriptions.users.impersonate'),
             ),
 
+            // Public profile moderation (core#746): no default role, granted by hand in the role editor
+            new PermissionDefinitionDTO(
+                key: 'profiles.moderate',
+                label: __('authorization.permissions.profiles.moderate'),
+                resource: 'profiles',
+                action: 'moderate',
+                description: __('authorization.permission_descriptions.profiles.moderate'),
+            ),
+
             // Admin panel access
             new PermissionDefinitionDTO(
                 key: 'admin.access',
