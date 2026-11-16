@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'unavailable' => 'El doble factor no está disponible ahora mismo. Inténtalo de nuevo en unos segundos.',
     'mail' => [
         'enabled' => [
             'subject' => 'Doble factor activado en :site',

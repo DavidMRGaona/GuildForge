@@ -41,6 +41,10 @@ $app = Application::configure(basePath: dirname(__DIR__))
                      Request::HEADER_X_FORWARDED_AWS_ELB
         );
 
+        // Prepended, so it wraps the whole group: its headers reach every answer, also those given
+        // before the controllers run (CSRF 419, guest redirects, the two-factor check's 503 and
+        // sign-out redirect, the impersonation's refusals). Appended, the middleware priority would
+        // still put StartSession, CSRF, Authenticate and SubstituteBindings ahead of it
         $middleware->web(append: [
             // Before the impersonation applies: the seal checked is the session owner's, and a session
             // without it ends the impersonation outside the safety net, so its log entry is closed
@@ -52,10 +56,12 @@ $app = Application::configure(basePath: dirname(__DIR__))
             // «Solo mirar»: the site only reads (core#574); needs the context ApplyImpersonation fills
             BlockSiteWritesWhenImpersonatingReadOnly::class,
             HandleInertiaRequests::class,
-            SecurityHeadersMiddleware::class,
             EnsureSiteIsNotInMaintenance::class,
             EnsureEmailIsVerifiedWhenRequired::class,
-        ]);
+        ],
+            prepend: [
+                SecurityHeadersMiddleware::class,
+            ]);
 
         // Bot protection - runs on ALL requests
         $middleware->append(BlockBotsMiddleware::class);

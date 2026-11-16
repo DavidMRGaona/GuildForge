@@ -30,7 +30,10 @@ use Throwable;
  * Signs out a session that does not hold its account's current seal (TwoFactorSessionSealInterface):
  * one opened before two-factor authentication was turned on, off or reset, or one of an account
  * with it on that skipped the challenge. An account that never had a seal is left alone. A seal
- * that cannot be read (the database failing) answers 503 and closes nothing.
+ * that cannot be read (the database failing) answers 503 with Retry-After (callers asking for JSON
+ * also get `error` = JSON_ERROR_CODE; Livewire, which does not, gets the HTML page for its modal)
+ * and closes nothing, except that signing out (ApplyImpersonation::LOGOUT_ROUTES, site and panel)
+ * still goes through then.
  *
  * In the web group and the panel's middleware. Not inside the AuthenticateSession subclasses: the
  * web group does not run AuthenticateSession, and adding it there would also start signing out
@@ -45,6 +48,15 @@ use Throwable;
  */
 final readonly class EnsureSessionPassedTwoFactor
 {
+    /** Machine-readable code of the JSON 503 (`error` field), like `email_verification_required` */
+    public const string JSON_ERROR_CODE = 'two_factor_unavailable';
+
+    /** Header set to `1` on the JSON 503, so a fetch() caller can recognise it without the body */
+    public const string JSON_ERROR_HEADER = 'X-Two-Factor-Unavailable';
+
+    /** A failing database is usually back within a minute */
+    public const int RETRY_AFTER_SECONDS = 30;
+
     public function __construct(
         private AuthFactory $auth,
         private ImpersonationContextInterface $impersonation,
@@ -64,8 +76,15 @@ final readonly class EnsureSessionPassedTwoFactor
         try {
             $passes = $this->seal->passes($request->session(), $owner);
         } catch (TwoFactorUnavailableException) {
+            // Signing out is never unsafe, so it goes through while the seal cannot be read. Only
+            // then: a session known to lack the seal is signed out below, from this device alone,
+            // where the sign-out route would rotate the remember token of every device
+            if ($request->routeIs(...ApplyImpersonation::LOGOUT_ROUTES)) {
+                return $next($request);
+            }
+
             // Unknown, not a mismatch: refused for now, with the session and its cookies left alone
-            throw new HttpException(503);
+            return $this->unavailable($request);
         }
 
         if ($passes) {
@@ -113,6 +132,21 @@ final readonly class EnsureSessionPassedTwoFactor
         }
 
         return new JsonResponse(['components' => $answered, 'assets' => []]);
+    }
+
+    private function unavailable(Request $request): Response
+    {
+        $headers = ['Retry-After' => (string) self::RETRY_AFTER_SECONDS];
+
+        if ($request->expectsJson() && ! $request->hasHeader('X-Inertia')) {
+            return new JsonResponse(
+                ['message' => __('two_factor.unavailable'), 'error' => self::JSON_ERROR_CODE],
+                Response::HTTP_SERVICE_UNAVAILABLE,
+                $headers + [self::JSON_ERROR_HEADER => '1'],
+            );
+        }
+
+        throw new HttpException(Response::HTTP_SERVICE_UNAVAILABLE, '', null, $headers);
     }
 
     private function signOut(Request $request): void

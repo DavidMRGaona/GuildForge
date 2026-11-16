@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 return [
+    'unavailable' => 'Two-factor authentication is unavailable right now. Try again in a few seconds.',
     'mail' => [
         'enabled' => [
             'subject' => 'Two-factor authentication turned on at :site',

@@ -393,6 +393,9 @@ final class PublicProfileControllerTest extends TestCase
     private function requireEmailVerification(): void
     {
         app(SettingsServiceInterface::class)->set('auth_email_verification_required', '1');
+        // Fixed here, not left to the migration: it stamps the time it ran, and a test running first
+        // with a clock moved to the future would leave it after the accounts' creation
+        app(SettingsServiceInterface::class)->set('email_verification_enforced_since', '2026-01-01T00:00:00+00:00');
     }
 
     private function assertBadge(bool $expected): void

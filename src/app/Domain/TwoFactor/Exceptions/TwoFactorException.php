@@ -21,8 +21,16 @@ class TwoFactorException extends DomainException
         parent::__construct($message !== '' ? $message : sprintf('Two-factor authentication change refused: %s', $reason->value));
     }
 
+    /**
+     * Unavailable is always a TwoFactorUnavailableException, the class callers (and the session
+     * check) recognise it by; any other reason is a refusal.
+     */
     public static function because(TwoFactorFailure $reason): self
     {
+        if ($reason === TwoFactorFailure::Unavailable) {
+            return new TwoFactorUnavailableException;
+        }
+
         return new self($reason);
     }
 }
