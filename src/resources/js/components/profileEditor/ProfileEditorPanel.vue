@@ -10,6 +10,7 @@ import ProfileHandleField from './ProfileHandleField.vue';
 import ProfileLayoutList from './ProfileLayoutList.vue';
 import ProfileVisibilityField from './ProfileVisibilityField.vue';
 import { useMediaQuery } from '@/composables/useMediaQuery';
+import { useDialogHistoryEntry } from '@/composables/useDialogHistoryEntry';
 import { useModalDialog } from '@/composables/useModalDialog';
 import { codePointLength } from '@/utils/profilePreview';
 import type { ProfileEditor, ProfileEditorForm } from '@/types/profileEditor';
@@ -21,9 +22,10 @@ import type { ProfileEditor, ProfileEditorForm } from '@/types/profileEditor';
  * field and a notice once saved; the banner is uploaded or taken away on its own, at once.
  *
  * A modal dialog: the whole page behind (`#app`, header and footer included) is inert and a veil over it
- * takes the clicks, Tab stays inside, and Escape, the veil or a visit elsewhere ask first when changes
- * would be lost (so does leaving the site). The page behind still scrolls, except on a phone-sized
- * screen, where the panel covers it whole.
+ * takes the clicks, Tab stays inside, and Escape, the veil, Back or a visit elsewhere ask first when
+ * changes would be lost (so does leaving the site). Back closes it: it opens on an entry of its own in
+ * the history (`useDialogHistoryEntry`). The page behind still scrolls, except on a phone-sized screen,
+ * where the panel covers it whole.
  */
 const props = defineProps<{
     editor: ProfileEditor;
@@ -117,26 +119,59 @@ const ownPaths = computed(
         )
 );
 
-/**
- * A visit elsewhere while changes would be lost asks first; refusing cancels it. A native dialog: the
- * visit is decided at once, before anything leaves.
- */
-const stopGuardingVisits = router.on('before', (event) => {
-    const url = event.detail.visit.url;
+/** Leaving with changes was accepted: they are gone, so nothing asks again */
+function discardChanges(): void {
+    // Also when the visit ends in a full reload (a new deploy answers Inertia with a 409 and the browser
+    // loads the page itself): `beforeunload` must not ask either
+    leaving.value = true;
+    form.reset();
+}
 
-    if (!unsaved.value || ownPaths.value.has(url.pathname)) {
-        return;
+/** Leaving with changes asks first. A native dialog: it is decided at once, before anything leaves */
+function mayLeave(): boolean {
+    if (!unsaved.value) {
+        return true;
     }
 
     if (!window.confirm(t('publicProfile.editor.leaveConfirm'))) {
+        return false;
+    }
+
+    discardChanges();
+
+    return true;
+}
+
+/**
+ * Back (or Forward) from the panel: to the page under it closes the panel, to another page leaves with
+ * it; with changes, asking first either way.
+ */
+const historyEntry = useDialogHistoryEntry((toPage) => {
+    if (!mayLeave()) {
+        return false;
+    }
+
+    if (toPage) {
+        emit('close');
+    }
+
+    return true;
+});
+
+/** A visit elsewhere while changes would be lost asks first; refusing cancels it */
+const stopGuardingVisits = router.on('before', (event) => {
+    const visit = event.detail.visit;
+
+    if (ownPaths.value.has(visit.url.pathname)) {
+        return;
+    }
+
+    if (!mayLeave()) {
         event.preventDefault();
         return;
     }
 
-    // Accepted: the changes are gone, so nothing asks again if the visit ends in a full reload (a
-    // new deploy answers Inertia with a 409 and the browser loads the page itself)
-    leaving.value = true;
-    form.reset();
+    historyEntry.handOver(visit);
 });
 
 /** Closing or reloading the tab with changes: the browser's own question */
@@ -155,7 +190,14 @@ function requestClose(): void {
     emit('close');
 }
 
-function save(): void {
+/** Between leaving the panel's entry and sending: a second press must not save twice */
+let sending = false;
+
+async function save(): Promise<void> {
+    if (sending || form.processing) {
+        return;
+    }
+
     if (bioTooLong.value) {
         form.setError(
             'bio',
@@ -166,10 +208,24 @@ function save(): void {
     }
 
     form.clearErrors();
+    sending = true;
+    // The saved page takes the page's own entry, so the panel's is left first: no extra step back
+    await historyEntry.release();
+    sending = false;
+
+    let saved = false;
     form.put(props.editor.urls.update, {
         preserveScroll: true,
-        onSuccess: () => emit('close'),
+        onSuccess: () => {
+            saved = true;
+            emit('close');
+        },
         onError: () => focusFirstError(),
+        onFinish: () => {
+            if (!saved) {
+                historyEntry.restore();
+            }
+        },
     });
 }
 

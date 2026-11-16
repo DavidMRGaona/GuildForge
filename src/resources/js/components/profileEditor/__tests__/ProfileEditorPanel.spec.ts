@@ -119,6 +119,162 @@ describe('ProfileEditorPanel', () => {
         wrapper.unmount();
     });
 
+    const listeners: Array<() => void> = [];
+
+    /** What Inertia would hear of the browser's Back and Forward: it must not swap the page under the panel */
+    function inertiaHearsPopstate(): ReturnType<typeof vi.fn> {
+        const heard = vi.fn();
+        window.addEventListener('popstate', heard);
+        listeners.push(heard);
+
+        return heard;
+    }
+
+    afterEach(() => {
+        listeners.splice(0).forEach((listener) => {
+            window.removeEventListener('popstate', listener);
+        });
+    });
+
+    it('opens on an entry of its own in the history, so going back closes it', () => {
+        const before = window.history.length;
+        const href = window.location.href;
+        const wrapper = mountPanel();
+        const inertia = inertiaHearsPopstate();
+
+        expect(window.history.length).toBe(before + 1);
+        expect(window.location.href).toBe(href);
+
+        window.history.back();
+        expect(wrapper.emitted('close')).toHaveLength(1);
+        expect(inertia).not.toHaveBeenCalled();
+
+        // Its entry is gone already: closing takes nothing else from the history
+        const back = vi.spyOn(window.history, 'back');
+        wrapper.unmount();
+        expect(back).not.toHaveBeenCalled();
+    });
+
+    it('going back with changes asks first, and staying puts its entry back', async () => {
+        const confirm = vi.fn<(message?: string) => boolean>(() => false);
+        vi.stubGlobal('confirm', confirm);
+        const wrapper = mountPanel();
+        const inertia = inertiaHearsPopstate();
+        await wrapper.get('[data-testid="bio-input"]').setValue('Hola');
+
+        window.history.back();
+        expect(confirm).toHaveBeenCalledWith(
+            'Tienes cambios sin guardar en tu perfil. ¿Salir y descartarlos?'
+        );
+        expect(wrapper.emitted('close')).toBeUndefined();
+        expect(inertia).not.toHaveBeenCalled();
+
+        // Still open, on its entry again: the next Back asks again, and leaving closes it
+        confirm.mockReturnValue(true);
+        window.history.back();
+        expect(confirm).toHaveBeenCalledTimes(2);
+        expect(wrapper.emitted('close')).toHaveLength(1);
+        expect(inertia).not.toHaveBeenCalled();
+
+        const unload = new Event('beforeunload', { cancelable: true });
+        window.dispatchEvent(unload);
+        expect(unload.defaultPrevented).toBe(false);
+        wrapper.unmount();
+    });
+
+    it('closing it otherwise takes its entry away, leaving the page as it is now', async () => {
+        const wrapper = mountPanel();
+        const inertia = inertiaHearsPopstate();
+        // Inertia keeps the page on the panel's entry (after a new banner, say): the page's own entry gets it
+        window.history.replaceState({ page: { url: 'latest' } }, '');
+        const back = vi.spyOn(window.history, 'back');
+
+        await wrapper.get('[data-testid="profile-editor"]').trigger('keydown', { key: 'Escape' });
+        expect(wrapper.emitted('close')).toHaveLength(1);
+        wrapper.unmount();
+
+        expect(back).toHaveBeenCalledTimes(1);
+        expect(inertia).not.toHaveBeenCalled();
+        expect(window.history.state).toEqual({ page: { url: 'latest' } });
+
+        // Only that one step back was the panel's: the next one is the page's again
+        window.history.pushState({ page: { url: 'next' } }, '');
+        window.history.back();
+        expect(inertia).toHaveBeenCalledTimes(1);
+    });
+
+    it('lets a visit elsewhere take its entry instead of adding one after it', () => {
+        const wrapper = mountPanel();
+
+        const own = visitTo('/miembros/ana-prueba/banner', 'post');
+        expect((own.detail as { visit: { replace?: boolean } }).visit.replace).toBeUndefined();
+
+        const elsewhere = visitTo('/eventos');
+        expect((elsewhere.detail as { visit: { replace?: boolean } }).visit.replace).toBe(true);
+
+        const back = vi.spyOn(window.history, 'back');
+        wrapper.unmount();
+        expect(back).not.toHaveBeenCalled();
+    });
+
+    it('going back to another page leaves with it, asking first with changes', async () => {
+        const confirm = vi.fn<(message?: string) => boolean>(() => false);
+        vi.stubGlobal('confirm', confirm);
+        window.history.pushState({ page: { url: '/eventos' } }, '', '/eventos');
+        window.history.pushState(
+            { page: { url: '/miembros/ana-prueba' } },
+            '',
+            '/miembros/ana-prueba'
+        );
+        const wrapper = mountPanel();
+        const inertia = inertiaHearsPopstate();
+        await wrapper.get('[data-testid="bio-input"]').setValue('Hola');
+
+        window.history.go(-2);
+        expect(confirm).toHaveBeenCalledTimes(1);
+        expect(inertia).not.toHaveBeenCalled();
+        expect(window.location.pathname).toBe('/miembros/ana-prueba');
+
+        confirm.mockReturnValue(true);
+        window.history.go(-2);
+        // Inertia takes the other page, and the panel goes with the page it was on
+        expect(inertia).toHaveBeenCalledTimes(1);
+        expect(wrapper.emitted('close')).toBeUndefined();
+
+        const back = vi.spyOn(window.history, 'back');
+        wrapper.unmount();
+        expect(back).not.toHaveBeenCalled();
+    });
+
+    it('saves from the page’s own entry, so the saved page leaves no extra step back', async () => {
+        const back = vi.spyOn(window.history, 'back');
+        const put = vi.spyOn(router, 'put').mockImplementation((_url, _data, options) => {
+            options?.onError?.({ handle: 'No disponible.' });
+            options?.onFinish?.({} as never);
+        });
+        const wrapper = mountPanel();
+        const inertia = inertiaHearsPopstate();
+
+        await wrapper.get('[data-testid="bio-input"]').setValue('Hola');
+        await wrapper.get('form').trigger('submit');
+        await flushPromises();
+
+        expect(put).toHaveBeenCalledTimes(1);
+        expect(back).toHaveBeenCalledTimes(1);
+        expect(back.mock.invocationCallOrder[0]).toBeLessThan(put.mock.invocationCallOrder[0] ?? 0);
+        expect(inertia).not.toHaveBeenCalled();
+
+        // Not saved: the panel stays, on an entry of its own again, so Back still closes it
+        vi.stubGlobal(
+            'confirm',
+            vi.fn(() => true)
+        );
+        window.history.back();
+        expect(wrapper.emitted('close')).toHaveLength(1);
+        expect(inertia).not.toHaveBeenCalled();
+        wrapper.unmount();
+    });
+
     it('names the membership error on its switch', async () => {
         const wrapper = mountPanel(editorFixture({ canShowMembership: true }));
         vi.spyOn(router, 'put').mockImplementation((_url, _data, options) => {
@@ -149,11 +305,14 @@ describe('ProfileEditorPanel', () => {
     });
 
     it('offers the four audiences and the badge only to an association member', () => {
-        expect(mountPanel().findAll('[data-testid="visibility-option"]')).toHaveLength(4);
-        expect(mountPanel().text()).not.toContain('Mostrar que soy socio');
-        expect(mountPanel(editorFixture({ canShowMembership: true })).text()).toContain(
-            'Mostrar que soy socio'
-        );
+        const plain = mountPanel();
+        expect(plain.findAll('[data-testid="visibility-option"]')).toHaveLength(4);
+        expect(plain.text()).not.toContain('Mostrar que soy socio');
+        plain.unmount();
+
+        const member = mountPanel(editorFixture({ canShowMembership: true }));
+        expect(member.text()).toContain('Mostrar que soy socio');
+        member.unmount();
     });
 
     it('counts the characters of «Sobre mí» and marks a text too long', async () => {
