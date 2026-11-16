@@ -58,11 +58,13 @@ final class ResetPublicProfileAction
                 $userId = (string) $recordResolver()->getKey();
                 $reset = app(UserProfileServiceInterface::class)->resetContent($userId);
 
-                // Ids only: what was taken away is the owner's and stays out of the log
-                Log::info('Public profile reset from the panel', [
-                    'actor_id' => (string) Auth::id(),
-                    'user_id' => $userId,
-                ]);
+                // Only when something was taken away, and with ids only: what was there is the owner's
+                if ($reset) {
+                    Log::info('Public profile reset from the panel', [
+                        'actor_id' => (string) Auth::id(),
+                        'user_id' => $userId,
+                    ]);
+                }
 
                 $notification = Notification::make();
                 $reset

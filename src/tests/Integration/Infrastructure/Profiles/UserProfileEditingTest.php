@@ -330,6 +330,8 @@ final class UserProfileEditingTest extends TestCase
         UserProfileModel::query()->findOrFail($owner->id)->update(['banner_public_id' => 'profiles/banners/2026/10/old.jpg']);
         $before = $this->profileOf($owner);
 
+        // Later on: a handle_changed_at written again by mistake would no longer match
+        Carbon::setTestNow('2026-11-20 18:00:00');
         $this->assertTrue($this->service()->resetContent($owner->id));
 
         $profile = $this->profileOf($owner);

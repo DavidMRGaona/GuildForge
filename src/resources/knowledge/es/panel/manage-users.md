@@ -85,7 +85,7 @@ Si el «Sobre mí» o el banner del perfil público de alguien no son adecuados,
 Se borran el «Sobre mí» y el banner. La dirección del perfil, quién puede verlo y el orden de sus secciones no cambian, y la persona puede volver a escribirlos. Queda registrado quién lo hizo.
 
 > [!IMPORTANT]
-> Necesitas el permiso «Restablecer perfiles públicos», que no tiene ningún rol de entrada: se concede en el editor de roles.
+> Necesitas el permiso «Restablecer perfiles públicos», que no tiene ningún rol de entrada: se concede en el editor de roles. Además tienes que poder editar esa cuenta, porque la acción está en su página: no sale en cuentas con permisos que tú no tienes, ni en las de administración si tú no eres de la administración.
 
 ## Historial de roles
 

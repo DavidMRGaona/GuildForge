@@ -14,6 +14,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
@@ -138,12 +139,33 @@ final class ResetPublicProfileActionTest extends TestCase
     {
         $this->actingAs($this->moderator());
         UserProfileModel::query()->findOrFail($this->owner->id)->update(['bio' => null, 'banner_public_id' => null]);
+        $log = Log::spy();
 
         $this->editPage()
             ->callAction(ResetPublicProfileAction::NAME, ['confirmation' => true])
             ->assertNotified(__('filament.users.actions.resetPublicProfile.nothing'));
 
         $this->releaser->shouldNotHaveReceived('release');
+        $log->shouldNotHaveReceived('info', ['Public profile reset from the panel', Mockery::any()]);
+    }
+
+    public function test_the_policy_lets_a_moderator_reset_an_account_they_could_edit(): void
+    {
+        $this->assertTrue(Gate::forUser($this->moderator())->allows('resetPublicProfile', $this->owner));
+    }
+
+    public function test_the_policy_never_lets_a_moderator_reset_an_administrator(): void
+    {
+        $admin = UserModel::factory()->admin()->create();
+
+        $this->assertFalse(Gate::forUser($this->moderator())->allows('resetPublicProfile', $admin));
+    }
+
+    public function test_the_policy_never_lets_a_moderator_reset_an_account_holding_more_than_they_do(): void
+    {
+        $stronger = $this->editorWithPermissions(['users.view_any', 'users.view', 'users.update', 'profiles.moderate', 'roles.delete']);
+
+        $this->assertFalse(Gate::forUser($this->moderator())->allows('resetPublicProfile', $stronger));
     }
 
     public function test_it_is_refused_while_impersonating_in_read_only_mode(): void

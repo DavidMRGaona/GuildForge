@@ -305,7 +305,7 @@ return [
                 'confirmation' => 'I understand the "About me" text and the banner are deleted and cannot be recovered',
                 'confirm' => 'Reset',
                 'done' => 'Public profile reset',
-                'nothing' => 'The public profile had no "About me" text nor banner',
+                'nothing' => 'The public profile had neither an "About me" text nor a banner',
             ],
         ],
     ],
