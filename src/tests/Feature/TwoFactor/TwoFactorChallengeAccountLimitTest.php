@@ -16,6 +16,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Notifications\TwoFactor\RepeatedTwoFactorCodeFailuresNotification;
 use Closure;
 use Filament\Facades\Filament;
+use Illuminate\Cache\RateLimiter;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -97,6 +98,50 @@ final class TwoFactorChallengeAccountLimitTest extends TestCase
         Carbon::setTestNow(Carbon::now()->addSeconds(61));
         $this->post(self::CHALLENGE, ['code' => $this->codeAt(1)])->assertRedirect(route('home'));
         $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_two_codes_at_once_past_the_fourth_never_both_reach_the_service(): void
+    {
+        $user = $this->adminWithTwoFactor();
+        $this->countVerifications();
+        $challenge = $this->app->make(TwoFactorChallengeInterface::class);
+        for ($attempt = 1; $attempt < TwoFactorChallengeRule::ATTEMPTS_PER_MINUTE; $attempt++) {
+            $challenge->check((string) $user->id, '000000', false);
+        }
+        $this->assertSame(TwoFactorChallengeRule::ATTEMPTS_PER_MINUTE - 1, $this->verified);
+
+        // Another request comes in while this one is counting itself: it counts first and goes on
+        $limiter = new class($this->app->make('cache.store')) extends RateLimiter
+        {
+            public ?Closure $meanwhile = null;
+
+            public function hit($key, $decaySeconds = 60)
+            {
+                if ($this->meanwhile instanceof Closure) {
+                    $meanwhile = $this->meanwhile;
+                    $this->meanwhile = null;
+                    $meanwhile();
+                }
+
+                return parent::hit($key, $decaySeconds);
+            }
+        };
+        $this->app->instance(RateLimiter::class, $limiter);
+        $challenge = $this->app->make(TwoFactorChallengeInterface::class);
+        $other = null;
+        $limiter->meanwhile = static function () use (&$other, $challenge, $user): void {
+            $other = $challenge->check((string) $user->id, '000000', false);
+        };
+
+        $thisOne = $challenge->check((string) $user->id, '000000', false);
+
+        // Of the fifth and the sixth code, only one was checked; the other was refused unchecked
+        $this->assertSame(TwoFactorChallengeRule::ATTEMPTS_PER_MINUTE, $this->verified);
+        $this->assertNotNull($other);
+        $this->assertSame(
+            [TwoFactorFailure::InvalidCode, TwoFactorFailure::TooManyAttempts],
+            [$other->failure, $thisOne->failure],
+        );
     }
 
     public function test_thirty_codes_an_hour_at_most(): void

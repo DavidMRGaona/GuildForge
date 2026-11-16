@@ -93,6 +93,14 @@ final class PanelLogin extends Login
      */
     private function recordFailure(string $pendingKey): bool
     {
+        // Some stores create a missing key again without an expiry when incremented: a pending
+        // sign-in already gone is an expired one, and its counter is never touched
+        if (! is_int(Cache::get($pendingKey))) {
+            $this->forgetPending($pendingKey);
+
+            return false;
+        }
+
         $failures = Cache::increment($pendingKey.self::FAILURES_SUFFIX);
 
         if (! is_int($failures) || TwoFactorChallengeRule::isExhausted($failures)) {

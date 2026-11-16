@@ -92,30 +92,26 @@ final readonly class TwoFactorChallenge implements TwoFactorChallengeInterface
     }
 
     /**
-     * The account's limit reached: refused without asking the service. Otherwise the code counts.
+     * Counts the code first and decides after: hit() is an atomic increment that returns the new
+     * count, so codes arriving at once each get their own number and never more than the limit
+     * reach the service (reading and then counting would let them all read a count under it).
+     * A refused code counts too. Past either limit: refused without asking the service.
      */
     private function limited(string $userId): ?TwoFactorChallengeCheckDTO
     {
         $minute = self::ATTEMPTS_KEY.$userId;
         $hour = $minute.':hour';
-        $wait = 0;
+        $overMinute = $this->limiter->hit($minute, self::MINUTE) > TwoFactorChallengeRule::ATTEMPTS_PER_MINUTE;
+        $overHour = $this->limiter->hit($hour, self::HOUR) > TwoFactorChallengeRule::ATTEMPTS_PER_HOUR;
 
-        if ($this->limiter->tooManyAttempts($minute, TwoFactorChallengeRule::ATTEMPTS_PER_MINUTE)) {
-            $wait = $this->limiter->availableIn($minute);
+        if (! $overMinute && ! $overHour) {
+            return null;
         }
 
-        if ($this->limiter->tooManyAttempts($hour, TwoFactorChallengeRule::ATTEMPTS_PER_HOUR)) {
-            $wait = max($wait, $this->limiter->availableIn($hour));
-        }
-
-        if ($wait > 0) {
-            return TwoFactorChallengeCheckDTO::tooManyAttempts($wait);
-        }
-
-        $this->limiter->hit($minute, self::MINUTE);
-        $this->limiter->hit($hour, self::HOUR);
-
-        return null;
+        return TwoFactorChallengeCheckDTO::tooManyAttempts(max(
+            $overMinute ? $this->limiter->availableIn($minute) : 0,
+            $overHour ? $this->limiter->availableIn($hour) : 0,
+        ));
     }
 
     private function checkCode(string $userId, #[\SensitiveParameter] string $code, bool $recoveryCode): TwoFactorChallengeCheckDTO
