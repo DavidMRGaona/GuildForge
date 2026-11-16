@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace Tests\Feature\Http\Controllers\Auth;
 
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
 use App\Notifications\VerifyPendingEmailNotification;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
+use RuntimeException;
 use Tests\Support\Images\ImageFixtures;
 use Tests\TestCase;
 
@@ -150,5 +153,49 @@ final class ProfileControllerTest extends TestCase
 
         $this->actingAs($user)->post(route('profile.update'), ['name' => 'Renamed'])
             ->assertSessionHasErrors(['email']);
+    }
+
+    public function test_the_account_page_gets_the_banner_of_the_own_public_profile(): void
+    {
+        $user = UserModel::factory()->create();
+        UserProfileModel::query()->whereKey($user->id)->update(['banner_public_id' => 'profiles/banners/2026/11/b.jpg']);
+
+        $this->actingAs($user)->get(route('profile.show'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Profile/Show')
+                ->where('bannerPublicId', 'profiles/banners/2026/11/b.jpg'));
+    }
+
+    public function test_the_account_page_gets_no_banner_when_the_profile_has_none(): void
+    {
+        $user = UserModel::factory()->create();
+        UserProfileModel::query()->whereKey($user->id)->update(['banner_public_id' => null]);
+
+        $this->actingAs($user)->get(route('profile.show'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('bannerPublicId', null));
+    }
+
+    public function test_the_account_page_gets_no_banner_without_a_public_profile(): void
+    {
+        $user = UserModel::factory()->create();
+        UserProfileModel::query()->whereKey($user->id)->delete();
+
+        $this->actingAs($user)->get(route('profile.show'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('bannerPublicId', null));
+    }
+
+    public function test_the_account_page_still_opens_when_the_banner_cannot_be_read(): void
+    {
+        $user = UserModel::factory()->create();
+        UserProfileModel::retrieved(static function (): never {
+            throw new RuntimeException('Profile row unreadable');
+        });
+
+        $this->actingAs($user)->get(route('profile.show'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('bannerPublicId', null));
     }
 }
