@@ -24,6 +24,11 @@ return [
                 'description' => 'Verificación del email, cambio de contraseña o de email, bienvenida y avisos sobre tus roles.',
                 'reason' => 'Siempre se envía: confirma algo que has hecho tú, te avisa de un cambio en tu cuenta o te pide una acción.',
             ],
+            'account_security' => [
+                'label' => 'Seguridad de la cuenta',
+                'description' => 'Doble factor activado o desactivado, códigos de recuperación usados o generados de nuevo.',
+                'reason' => 'Avisos de seguridad de tu cuenta: si no has sido tú, así te enteras a tiempo.',
+            ],
             'role_management' => [
                 'label' => 'Roles inactivos',
                 'description' => 'Aviso cuando una persona a la que puedes conceder roles se queda con alguno inactivo.',

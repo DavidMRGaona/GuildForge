@@ -27,6 +27,12 @@ final class CoreMailCategories
      */
     public const string ACCOUNT = 'core.account';
 
+    /**
+     * Changes to the person's two-factor authentication (core#768): turned on or off, a recovery
+     * code used, new recovery codes. Always sent, by mail only.
+     */
+    public const string ACCOUNT_SECURITY = 'core.account-security';
+
     /** Inactive roles of someone the person can grant roles to. */
     public const string ROLE_MANAGEMENT = 'core.role-management';
 
@@ -64,6 +70,14 @@ final class CoreMailCategories
                 reason: 'mail.preferences.categories.account.reason',
                 icon: 'circle-user-round',
                 site: true,
+            ),
+            MailCategoryDTO::mandatory(
+                key: self::ACCOUNT_SECURITY,
+                section: 'mail.preferences.sections.account',
+                label: 'mail.preferences.categories.account_security.label',
+                description: 'mail.preferences.categories.account_security.description',
+                reason: 'mail.preferences.categories.account_security.reason',
+                icon: 'shield-check',
             ),
             MailCategoryDTO::optional(
                 key: self::ROLE_MANAGEMENT,

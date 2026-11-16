@@ -30,8 +30,11 @@ use Throwable;
  * QR codes with endroid/qr-code (on bacon/bacon-qr-code). PNG goes through GD, the only image
  * extension present in production, development and CI alike; an SVG logo is rasterized for it
  * by rsvg-convert first. The SVG output embeds any logo as a data URI image.
+ *
+ * Both entry points check their content with QrCodeContentPolicy before drawing: render() the
+ * site's URLs (the public contract), renderTotpUri() authenticator URIs (two-factor setup only).
  */
-final readonly class EndroidQrCodeRenderer implements QrCodeRendererInterface
+final readonly class EndroidQrCodeRenderer implements QrCodeRendererInterface, TotpQrCodeRendererInterface
 {
     private const string SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 
@@ -49,8 +52,23 @@ final readonly class EndroidQrCodeRenderer implements QrCodeRendererInterface
     {
         $this->policy->assertAllowed($url);
 
+        return $this->draw($url, $options, $format);
+    }
+
+    public function renderTotpUri(#[\SensitiveParameter] string $uri, QrCodeOptionsDTO $options, QrCodeFormat $format): RenderedQrCodeDTO
+    {
+        $this->policy->assertTotpUriAllowed($uri);
+
+        return $this->draw($uri, $options, $format);
+    }
+
+    /**
+     * Only called once the content passed the policy.
+     */
+    private function draw(#[\SensitiveParameter] string $data, QrCodeOptionsDTO $options, QrCodeFormat $format): RenderedQrCodeDTO
+    {
         $qrCode = new QrCode(
-            data: $url,
+            data: $data,
             encoding: new Encoding('UTF-8'),
             errorCorrectionLevel: $this->errorCorrectionLevel($options->effectiveErrorCorrection()),
             // endroid adds the margin around this size; the DTO size is the whole image

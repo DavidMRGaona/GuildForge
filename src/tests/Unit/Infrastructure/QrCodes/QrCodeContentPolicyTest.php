@@ -100,4 +100,50 @@ final class QrCodeContentPolicyTest extends TestCase
 
         (new QrCodeContentPolicy('', allowsHttp: false))->assertAllowed('https://guild.example.org/');
     }
+
+    private const string TOTP_URI = 'otpauth://totp/Example%20site:ana%40example.org?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=Example%20site&algorithm=SHA1&digits=6&period=30';
+
+    public function test_the_public_policy_never_accepts_an_authenticator_uri(): void
+    {
+        $this->expectException(InvalidQrCodeContentException::class);
+
+        (new QrCodeContentPolicy('https://guild.example.org', allowsHttp: true))->assertAllowed(self::TOTP_URI);
+    }
+
+    public function test_the_two_factor_path_accepts_a_totp_uri(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        (new QrCodeContentPolicy('https://guild.example.org', allowsHttp: false))->assertTotpUriAllowed(self::TOTP_URI);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function rejectedTotpUris(): iterable
+    {
+        yield 'empty' => [''];
+        yield 'a site url' => ['https://guild.example.org/'];
+        yield 'counter based' => ['otpauth://hotp/Example:ana?secret=JBSWY3DPEHPK3PXP&counter=0'];
+        yield 'scheme in capitals' => ['OTPAUTH://totp/Example:ana?secret=JBSWY3DPEHPK3PXP'];
+        yield 'another scheme' => ['javascript://totp/x?secret=JBSWY3DPEHPK3PXP'];
+        yield 'no label' => ['otpauth://totp/?secret=JBSWY3DPEHPK3PXP'];
+        yield 'no secret' => ['otpauth://totp/Example:ana?issuer=Example'];
+        yield 'secret not base32' => ['otpauth://totp/Example:ana?secret=not-base32!'];
+        yield 'two secrets' => ['otpauth://totp/Example:ana?secret=JBSWY3DPEHPK3PXP&secret=ABCDEFGH'];
+        yield 'unknown parameter' => ['otpauth://totp/Example:ana?secret=JBSWY3DPEHPK3PXP&image=https://evil.example.com/a.png'];
+        yield 'fragment' => ['otpauth://totp/Example:ana?secret=JBSWY3DPEHPK3PXP#x'];
+        yield 'space' => ['otpauth://totp/Example ana?secret=JBSWY3DPEHPK3PXP'];
+        yield 'newline' => ["otpauth://totp/Example:ana?secret=JBSWY3DPEHPK3PXP\n"];
+        yield 'backslash' => ['otpauth://totp/Example\\ana?secret=JBSWY3DPEHPK3PXP'];
+        yield 'too long' => ['otpauth://totp/'.str_repeat('a', QrCodeContentPolicy::MAX_LENGTH).'?secret=JBSWY3DPEHPK3PXP'];
+    }
+
+    #[DataProvider('rejectedTotpUris')]
+    public function test_the_two_factor_path_rejects_anything_else(string $uri): void
+    {
+        $this->expectException(InvalidQrCodeContentException::class);
+
+        (new QrCodeContentPolicy('https://guild.example.org', allowsHttp: true))->assertTotpUriAllowed($uri);
+    }
 }

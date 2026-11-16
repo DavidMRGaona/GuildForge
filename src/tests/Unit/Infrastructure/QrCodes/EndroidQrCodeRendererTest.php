@@ -309,4 +309,28 @@ final class EndroidQrCodeRendererTest extends TestCase
 
         return null;
     }
+
+    public function test_the_two_factor_path_renders_an_authenticator_uri(): void
+    {
+        $uri = 'otpauth://totp/Example%20site:ana%40example.org?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=Example%20site';
+
+        $result = $this->renderer->renderTotpUri($uri, new QrCodeOptionsDTO(size: 400, margin: 20), QrCodeFormat::Png);
+
+        $this->assertSame($uri, QrCodeTestImages::decode($result->contents));
+        $this->assertStringStartsWith('<svg', $this->renderer->renderTotpUri($uri, new QrCodeOptionsDTO, QrCodeFormat::Svg)->contents);
+    }
+
+    public function test_the_two_factor_path_draws_nothing_but_authenticator_uris(): void
+    {
+        $this->expectException(InvalidQrCodeContentException::class);
+
+        $this->renderer->renderTotpUri(self::URL, new QrCodeOptionsDTO, QrCodeFormat::Png);
+    }
+
+    public function test_the_public_path_refuses_an_authenticator_uri(): void
+    {
+        $this->expectException(InvalidQrCodeContentException::class);
+
+        $this->renderer->render('otpauth://totp/Example:ana?secret=JBSWY3DPEHPK3PXP', new QrCodeOptionsDTO, QrCodeFormat::Png);
+    }
 }
