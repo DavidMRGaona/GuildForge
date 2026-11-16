@@ -163,6 +163,7 @@ const stopGuardingVisits = router.on('before', (event) => {
     const visit = event.detail.visit;
 
     if (ownPaths.value.has(visit.url.pathname)) {
+        historyEntry.keep(visit);
         return;
     }
 

@@ -9,6 +9,12 @@ export interface DialogHistoryEntry {
      */
     handOver(visit: { replace?: boolean }): void;
     /**
+     * A request of the dialog's own (an upload, say): if its answer is another page (a session that
+     * expired sends it to sign in), that page takes the dialog's entry instead of adding one after it.
+     * Answers on the same address replace the entry anyway. Pass the visit `before` gives.
+     */
+    keep(visit: { replace?: boolean }): void;
+    /**
      * Goes back to the page's own entry before a request that answers with the page again (saving): that
      * page takes the page's entry, so nothing is left to go back to. Resolved once the browser is there.
      */
@@ -50,8 +56,9 @@ export interface DialogHistoryEntry {
  *   back from a reloaded document reloads it again.
  * - Forward while saving puts the entry back and leaves a dead step: by its address alone the dialog's
  *   entry cannot be told from the page's.
- * - Closing or saving through `back()` leaves a forward entry behind with the page as it was before
- *   saving: an entry cannot be taken out of the history.
+ * - Closing or saving through `back()` leaves the dialog's entry behind as a forward step, holding the
+ *   page as it is when closing, and as it was before saving when saving: an entry cannot be taken
+ *   out of the history.
  */
 export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): DialogHistoryEntry {
     let pageHref = '';
@@ -67,6 +74,11 @@ export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): Di
     /** Inertia is loading a document again (`location`): no entry is put back */
     let reloading = false;
     let stopListening: () => void = () => undefined;
+
+    /** Whether an address is the page's: the fragment (`#main-content`, say) is not another page */
+    function isPage(href: string): boolean {
+        return withoutFragment(href) === withoutFragment(pageHref);
+    }
 
     function push(): void {
         window.history.pushState(pageState, '', pageHref);
@@ -91,7 +103,7 @@ export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): Di
         }
 
         current = false;
-        const toPage = window.location.href === pageHref;
+        const toPage = isPage(window.location.href);
 
         if (!onLeave(toPage)) {
             event.stopImmediatePropagation();
@@ -108,7 +120,7 @@ export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): Di
 
     /** Requests the dialog makes keep the page on its entry: remember the latest for the page's own */
     const stopTracking = router.on('finish', () => {
-        if (current && window.location.href === pageHref) {
+        if (current && isPage(window.location.href)) {
             pageState = window.history.state as unknown;
         }
     });
@@ -124,7 +136,7 @@ export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): Di
         current = false;
 
         // A request of its own ended on another page: that page's entry is Inertia's now
-        if (window.location.href !== pageHref) {
+        if (!isPage(window.location.href)) {
             return Promise.resolve();
         }
 
@@ -166,6 +178,11 @@ export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): Di
     });
 
     return {
+        keep(visit): void {
+            if (current) {
+                visit.replace = true;
+            }
+        },
         handOver(visit): void {
             if (current) {
                 visit.replace = true;
@@ -174,13 +191,7 @@ export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): Di
         },
         release,
         restore(): void {
-            if (
-                mounted &&
-                !current &&
-                !ownBack &&
-                !reloading &&
-                window.location.href === pageHref
-            ) {
+            if (mounted && !current && !ownBack && !reloading && isPage(window.location.href)) {
                 pageState = window.history.state as unknown;
                 // Over the page's own entry, wherever the dialog's was before
                 pageBelow = true;
@@ -188,4 +199,11 @@ export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): Di
             }
         },
     };
+}
+
+function withoutFragment(href: string): string {
+    const url = new URL(href, window.location.origin);
+    url.hash = '';
+
+    return url.href;
 }

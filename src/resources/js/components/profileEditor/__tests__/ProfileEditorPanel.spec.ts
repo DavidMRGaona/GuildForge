@@ -215,8 +215,9 @@ describe('ProfileEditorPanel', () => {
     it('lets a visit elsewhere take its entry instead of adding one after it', () => {
         const wrapper = mountPanel();
 
+        // Its own requests too: one that ends elsewhere (an expired session) replaces the entry
         const own = visitTo('/miembros/ana-prueba/banner', 'post');
-        expect((own.detail as { visit: { replace?: boolean } }).visit.replace).toBeUndefined();
+        expect((own.detail as { visit: { replace?: boolean } }).visit.replace).toBe(true);
 
         const elsewhere = visitTo('/eventos');
         expect((elsewhere.detail as { visit: { replace?: boolean } }).visit.replace).toBe(true);
@@ -371,6 +372,49 @@ describe('ProfileEditorPanel', () => {
         expect(window.location.pathname).toBe('/miembros/ana-prueba');
         expect(window.history.state).not.toEqual({ page: { url: '/login' } });
         expect(inertia).toHaveBeenCalledTimes(1);
+    });
+
+    it('takes a new fragment in the address for the same page, still keeping its latest state', () => {
+        window.history.pushState(
+            { page: { url: '/miembros/ana-prueba' } },
+            '',
+            '/miembros/ana-prueba#main-content'
+        );
+        const inertia = inertiaHearsPopstate();
+        const wrapper = mountPanel();
+        const back = vi.spyOn(window.history, 'back');
+
+        // A new banner: Inertia answers on the page's address without the fragment, on the panel's entry
+        window.history.replaceState({ page: { url: 'new-banner' } }, '', '/miembros/ana-prueba');
+        document.dispatchEvent(new CustomEvent('inertia:finish', { detail: { visit: {} } }));
+        window.history.replaceState({ page: { url: 'scrolled' } }, '', '/miembros/ana-prueba');
+        wrapper.unmount();
+
+        // Still the same page: back over the panel's entry, with the state of the last request
+        expect(back).toHaveBeenCalledTimes(1);
+        expect(window.location.pathname).toBe('/miembros/ana-prueba');
+        expect(window.history.state).toEqual({ page: { url: 'scrolled' } });
+        expect(inertia).not.toHaveBeenCalled();
+    });
+
+    it('keeps the latest state from its own requests for Back, also after a new fragment', () => {
+        window.history.pushState(
+            { page: { url: '/miembros/ana-prueba' } },
+            '',
+            '/miembros/ana-prueba#main-content'
+        );
+        const inertia = inertiaHearsPopstate();
+        const wrapper = mountPanel();
+
+        window.history.replaceState({ page: { url: 'new-banner' } }, '', '/miembros/ana-prueba');
+        document.dispatchEvent(new CustomEvent('inertia:finish', { detail: { visit: {} } }));
+
+        // Back closes it, and the page's own entry gets what the request left
+        window.history.back();
+        expect(wrapper.emitted('close')).toHaveLength(1);
+        expect(window.history.state).toEqual({ page: { url: 'new-banner' } });
+        expect(inertia).not.toHaveBeenCalled();
+        wrapper.unmount();
     });
 
     it('stops listening to Back once closed, whichever way it closes', async () => {
