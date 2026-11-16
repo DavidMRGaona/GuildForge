@@ -9,11 +9,14 @@ use App\Application\TwoFactor\Services\TwoFactorSessionSealInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\TwoFactor\TwoFactorSessionSeal;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Contracts\Cookie\QueueingFactory as CookieJar;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Session\ArraySessionHandler;
 use Illuminate\Session\Store;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use PragmaRX\Google2FA\Google2FA;
 use RuntimeException;
@@ -164,10 +167,86 @@ final class TwoFactorSessionSealTest extends TestCase
 
     public function test_it_fails_closed_when_the_seal_cannot_be_read(): void
     {
+        $log = Log::spy();
         $owner = $this->createStub(Authenticatable::class);
         $owner->method('getAuthIdentifier')->willThrowException(new RuntimeException('Unreadable'));
 
         $this->assertFalse($this->seal()->passes($this->newSession(), $owner));
+        $log->shouldHaveReceived('error')->once()->withArgs(
+            static fn (string $message, array $context): bool => $context['exception'] === RuntimeException::class,
+        );
+    }
+
+    public function test_two_factor_on_without_a_seal_keeps_no_session(): void
+    {
+        $user = UserModel::factory()->create();
+        $this->enable($user);
+        UserModel::query()->whereKey($user->id)->update(['session_seal' => null]);
+
+        $this->assertFalse($this->seal()->passes($this->newSession(), $this->fresh($user)));
+    }
+
+    public function test_the_seal_is_written_with_the_change_and_rolls_back_with_it(): void
+    {
+        $user = UserModel::factory()->create();
+        $setup = $this->service()->beginSetup((string) $user->id);
+
+        try {
+            DB::transaction(function () use ($user, $setup): void {
+                $this->service()->confirmSetup((string) $user->id, (new Google2FA)->oathTotp($setup->secret, intdiv(self::NOW, 30)));
+
+                // Inside the same transaction, before any commit
+                $this->assertNotNull($this->fresh($user)->session_seal);
+
+                throw new RuntimeException('Rolled back');
+            });
+        } catch (RuntimeException) {
+        }
+
+        $this->assertNull($this->fresh($user)->session_seal);
+        $this->assertFalse($this->service()->isEnabled((string) $user->id));
+    }
+
+    public function test_a_failing_clean_up_is_logged_and_keeps_the_change(): void
+    {
+        $log = Log::spy();
+        config(['session.driver' => 'database', 'session.table' => 'missing_sessions_table']);
+        $user = UserModel::factory()->create();
+        $session = $this->newSession();
+
+        $this->seal()->renew((string) $user->id, $session);
+
+        $seal = (string) $this->fresh($user)->session_seal;
+        $this->assertNotSame('', $seal);
+        $this->assertTrue($this->seal()->passes($session, $this->fresh($user)));
+        $log->shouldHaveReceived('error')->once()->withArgs(
+            static fn (string $message, array $context): bool => $context['user_id'] === (string) $user->id
+                && ! in_array($seal, $context, true),
+        );
+    }
+
+    public function test_the_challenge_cookie_is_bound_to_the_account_token_and_seal(): void
+    {
+        $user = UserModel::factory()->create(['remember_token' => Str::random(60)]);
+        $this->enable($user);
+        $cookies = $this->app->make(CookieJar::class);
+
+        $this->seal()->rememberAfterChallenge((string) $user->id);
+        $cookie = $cookies->queued(TwoFactorSessionSeal::REMEMBER_COOKIE);
+        $this->assertNotNull($cookie);
+        $this->assertTrue($cookie->isHttpOnly());
+        $this->assertGreaterThan(time() + 300 * 86400, $cookie->getExpiresTime());
+        $value = (string) $cookie->getValue();
+        $this->assertStringNotContainsString((string) $this->fresh($user)->session_seal, $value);
+        $this->assertStringNotContainsString((string) $this->fresh($user)->getRememberToken(), $value);
+
+        $request = Request::create('/', cookies: [TwoFactorSessionSeal::REMEMBER_COOKIE => $value]);
+        $this->assertTrue($this->seal()->rememberedAfterChallenge($request, (string) $user->id));
+        $this->assertFalse($this->seal()->rememberedAfterChallenge(Request::create('/'), (string) $user->id));
+
+        // A new remember token alone (signing out everywhere) is enough to invalidate it
+        UserModel::query()->whereKey($user->id)->update(['remember_token' => Str::random(60)]);
+        $this->assertFalse($this->seal()->rememberedAfterChallenge($request, (string) $user->id));
     }
 
     private function enable(UserModel $user, ?Store $session = null): void

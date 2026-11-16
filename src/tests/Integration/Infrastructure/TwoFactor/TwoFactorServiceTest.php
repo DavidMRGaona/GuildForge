@@ -14,6 +14,7 @@ use App\Domain\TwoFactor\Events\RecoveryCodeUsed;
 use App\Domain\TwoFactor\Events\TwoFactorDisabled;
 use App\Domain\TwoFactor\Events\TwoFactorEnabled;
 use App\Domain\TwoFactor\Exceptions\TwoFactorException;
+use App\Domain\TwoFactor\Exceptions\TwoFactorUnavailableException;
 use App\Domain\TwoFactor\TwoFactorFailure;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserTwoFactorModel;
@@ -27,6 +28,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use PragmaRX\Google2FA\Google2FA;
 use Tests\TestCase;
@@ -453,6 +455,59 @@ final class TwoFactorServiceTest extends TestCase
         $this->assertSame($before, $this->rows());
         Event::assertNothingDispatched();
         $this->assertTrue($this->service()->isEnabled((string) $user->id));
+    }
+
+    public function test_a_failing_seal_write_rolls_the_confirmation_back(): void
+    {
+        $user = UserModel::factory()->create();
+        $setup = $this->service()->beginSetup((string) $user->id);
+        $seal = $this->createStub(TwoFactorSessionSealInterface::class);
+        $seal->method('renew')->willThrowException(new \RuntimeException('Update failed'));
+        $this->app->instance(TwoFactorSessionSealInterface::class, $seal);
+
+        try {
+            $this->service()->confirmSetup((string) $user->id, $this->codeAt($setup->secret, 0));
+            $this->fail('Expected the confirmation to fail');
+        } catch (\RuntimeException $exception) {
+            $this->assertSame('Update failed', $exception->getMessage());
+        }
+
+        $this->assertFalse($this->service()->isEnabled((string) $user->id));
+        $this->assertTrue($this->service()->status((string) $user->id)->setupPending);
+    }
+
+    public function test_a_failing_mail_never_costs_the_recovery_codes(): void
+    {
+        $log = Log::spy();
+        $user = UserModel::factory()->create();
+        $setup = $this->service()->beginSetup((string) $user->id);
+        Event::listen(TwoFactorEnabled::class, static fn () => throw new \RuntimeException('Mail down'));
+
+        $codes = $this->service()->confirmSetup((string) $user->id, $this->codeAt($setup->secret, 0));
+
+        $this->assertCount(8, $codes);
+        $this->assertTrue($this->service()->isEnabled((string) $user->id));
+        $log->shouldHaveReceived('error')->withArgs(
+            static fn (string $message, array $context): bool => $context['event'] === TwoFactorEnabled::class
+                && $context['exception'] === \RuntimeException::class,
+        );
+    }
+
+    public function test_a_failing_code_computation_never_carries_the_secret(): void
+    {
+        $user = UserModel::factory()->create();
+        $setup = $this->service()->beginSetup((string) $user->id);
+        // An unreadable secret makes google2fa throw with it in the arguments of its trace
+        UserTwoFactorModel::query()->whereKey($user->id)->update(['secret' => Crypt::encryptString('not base32 at all!')]);
+
+        try {
+            $this->service()->confirmSetup((string) $user->id, '123456');
+            $this->fail('Expected the computation to fail');
+        } catch (TwoFactorUnavailableException $exception) {
+            $this->assertNull($exception->getPrevious());
+            $this->assertStringNotContainsString('not base32', $exception->getMessage());
+            $this->assertStringNotContainsString($setup->secret, $exception->getTraceAsString());
+        }
     }
 
     /**

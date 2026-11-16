@@ -17,6 +17,7 @@ use App\Domain\TwoFactor\Events\RecoveryCodeUsed;
 use App\Domain\TwoFactor\Events\TwoFactorDisabled;
 use App\Domain\TwoFactor\Events\TwoFactorEnabled;
 use App\Domain\TwoFactor\Exceptions\TwoFactorException;
+use App\Domain\TwoFactor\Exceptions\TwoFactorUnavailableException;
 use App\Domain\TwoFactor\TotpWindowRule;
 use App\Domain\TwoFactor\TwoFactorFailure;
 use App\Domain\TwoFactor\ValueObjects\RecoveryCode;
@@ -28,8 +29,10 @@ use DateTimeImmutable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use PragmaRX\Google2FA\Google2FA;
+use Throwable;
 
 /**
  * TOTP on pragmarx/google2fa, which only computes codes: the window, the replay rule, storage and
@@ -103,7 +106,7 @@ final readonly class TwoFactorService implements TwoFactorServiceInterface
         $this->refuseWhileImpersonating();
 
         $id = $this->normalise($userId) ?? throw TwoFactorException::because(TwoFactorFailure::UnknownAccount);
-        $secret = $this->google2fa->generateSecretKey(self::SECRET_LENGTH);
+        $secret = $this->totp(fn (): string => $this->google2fa->generateSecretKey(self::SECRET_LENGTH));
 
         $user = DB::transaction(static function () use ($id, $secret): UserModel {
             // The account's row is locked first: with no two-factor row yet there is nothing else to
@@ -135,7 +138,7 @@ final readonly class TwoFactorService implements TwoFactorServiceInterface
         return new TwoFactorSetupDTO(
             secret: $secret,
             otpauthUri: $uri,
-            qrCodeSvg: $this->qrCodes->renderTotpUri($uri, new QrCodeOptionsDTO, QrCodeFormat::Svg)->contents,
+            qrCodeSvg: $this->totp(fn (): string => $this->qrCodes->renderTotpUri($uri, new QrCodeOptionsDTO, QrCodeFormat::Svg)->contents),
         );
     }
 
@@ -172,7 +175,7 @@ final readonly class TwoFactorService implements TwoFactorServiceInterface
 
             // Every session opened before is signed out; the one that turned it on stays
             $this->seal->renew($id, $currentSession);
-            DB::afterCommit(static fn () => Event::dispatch(new TwoFactorEnabled($id)));
+            $this->announceAfterCommit(new TwoFactorEnabled($id));
 
             return array_map(static fn (RecoveryCode $recoveryCode): string => $recoveryCode->value, $codes);
         });
@@ -243,7 +246,7 @@ final readonly class TwoFactorService implements TwoFactorServiceInterface
             $row->save();
 
             $remaining = count($left);
-            DB::afterCommit(static fn () => Event::dispatch(new RecoveryCodeUsed($id, $remaining)));
+            $this->announceAfterCommit(new RecoveryCodeUsed($id, $remaining));
 
             return true;
         });
@@ -262,7 +265,7 @@ final readonly class TwoFactorService implements TwoFactorServiceInterface
             $row->recovery_codes = $this->hashesOf($codes);
             $row->save();
 
-            DB::afterCommit(static fn () => Event::dispatch(new RecoveryCodesRegenerated($id)));
+            $this->announceAfterCommit(new RecoveryCodesRegenerated($id));
 
             return array_map(static fn (RecoveryCode $recoveryCode): string => $recoveryCode->value, $codes);
         });
@@ -278,7 +281,7 @@ final readonly class TwoFactorService implements TwoFactorServiceInterface
             $this->enabledRowOrFail($id)->delete();
 
             $this->seal->renew($id, $currentSession);
-            DB::afterCommit(static fn () => Event::dispatch(new TwoFactorDisabled($id)));
+            $this->announceAfterCommit(new TwoFactorDisabled($id));
         });
     }
 
@@ -305,7 +308,9 @@ final readonly class TwoFactorService implements TwoFactorServiceInterface
         $match = null;
 
         foreach ($this->window->candidateSteps(now()->getTimestamp(), $row->last_used_timestep) as $step) {
-            if (hash_equals($this->google2fa->oathTotp($row->secret, $step), $code->value) && $match === null) {
+            $expected = $this->totp(fn (): string => $this->google2fa->oathTotp($row->secret, $step));
+
+            if (hash_equals($expected, $code->value) && $match === null) {
                 $match = $step;
             }
         }
@@ -362,6 +367,44 @@ final readonly class TwoFactorService implements TwoFactorServiceInterface
             'digits' => TotpCode::DIGITS,
             'period' => TotpWindowRule::PERIOD_SECONDS,
         ], '', '&', PHP_QUERY_RFC3986);
+    }
+
+    /**
+     * The events send the security mails. A failure there must not cost the person what the
+     * change returns (recovery codes are shown only once), so it is logged instead.
+     */
+    private function announceAfterCommit(object $event): void
+    {
+        DB::afterCommit(static function () use ($event): void {
+            try {
+                Event::dispatch($event);
+            } catch (Throwable $exception) {
+                Log::error('Two-factor change committed, but announcing it failed.', [
+                    'event' => $event::class,
+                    'exception' => $exception::class,
+                ]);
+            }
+        });
+    }
+
+    /**
+     * Runs a call that handles the secret or the URI. Whatever it throws is replaced by an
+     * exception with no message from the cause and no previous one, whose trace could carry them.
+     *
+     * @template T
+     *
+     * @param  callable(): T  $call
+     * @return T
+     *
+     * @throws TwoFactorUnavailableException
+     */
+    private function totp(callable $call): mixed
+    {
+        try {
+            return $call();
+        } catch (Throwable) {
+            throw new TwoFactorUnavailableException;
+        }
     }
 
     private function refuseWhileImpersonating(): void

@@ -42,11 +42,13 @@ $app = Application::configure(basePath: dirname(__DIR__))
         );
 
         $middleware->web(append: [
-            // First: everything after it (shared props, maintenance, verification, the
+            // Before the impersonation applies: the seal checked is the session owner's, and a session
+            // without it ends the impersonation outside the safety net, so its log entry is closed
+            // (core#768)
+            EnsureSessionPassedTwoFactor::class,
+            // Then: everything after it (shared props, maintenance, verification, the
             // controllers) sees the impersonated account. Livewire requests are web requests.
             ApplyImpersonation::class,
-            // A session of an account with two-factor authentication must have passed it (core#768)
-            EnsureSessionPassedTwoFactor::class,
             // «Solo mirar»: the site only reads (core#574); needs the context ApplyImpersonation fills
             BlockSiteWritesWhenImpersonatingReadOnly::class,
             HandleInertiaRequests::class,

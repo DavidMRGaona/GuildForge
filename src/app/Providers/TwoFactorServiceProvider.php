@@ -11,14 +11,15 @@ use App\Domain\TwoFactor\Events\RecoveryCodesRegenerated;
 use App\Domain\TwoFactor\Events\RecoveryCodeUsed;
 use App\Domain\TwoFactor\Events\TwoFactorDisabled;
 use App\Domain\TwoFactor\Events\TwoFactorEnabled;
-use App\Infrastructure\QrCodes\EndroidQrCodeRenderer;
 use App\Infrastructure\QrCodes\QrCodeContentPolicy;
+use App\Infrastructure\QrCodes\TotpQrCodeRenderer;
 use App\Infrastructure\QrCodes\TotpQrCodeRendererInterface;
 use App\Infrastructure\TwoFactor\Listeners\SendTwoFactorSecurityNotice;
 use App\Infrastructure\TwoFactor\Listeners\StampSessionSealOnLogin;
 use App\Infrastructure\TwoFactor\TwoFactorService;
 use App\Infrastructure\TwoFactor\TwoFactorSessionSeal;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Contracts\Cookie\QueueingFactory as CookieJar;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
@@ -32,9 +33,12 @@ final class TwoFactorServiceProvider extends ServiceProvider
     {
         $this->app->bind(TwoFactorServiceInterface::class, TwoFactorService::class);
         $this->app->bind(TwoFactorStatusReaderInterface::class, TwoFactorService::class);
-        $this->app->bind(TwoFactorSessionSealInterface::class, TwoFactorSessionSeal::class);
+        $this->app->bind(TwoFactorSessionSealInterface::class, static fn ($app): TwoFactorSessionSeal => new TwoFactorSessionSeal(
+            $app->make(CookieJar::class),
+            (string) config('app.key'),
+        ));
 
-        $this->app->bind(TotpQrCodeRendererInterface::class, static fn ($app): TotpQrCodeRendererInterface => new EndroidQrCodeRenderer(
+        $this->app->bind(TotpQrCodeRendererInterface::class, static fn ($app): TotpQrCodeRendererInterface => new TotpQrCodeRenderer(
             new QrCodeContentPolicy((string) config('app.url'), $app->environment('local', 'testing')),
         ));
     }

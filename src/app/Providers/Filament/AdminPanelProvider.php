@@ -118,6 +118,8 @@ class AdminPanelProvider extends PanelProvider
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
+                // Before the impersonation applies, as in the web group (core#768)
+                EnsureSessionPassedTwoFactor::class,
                 // Before the session check and Filament's Authenticate, so the panel opens
                 // (or not) for the impersonated account, never for the administrator
                 ApplyImpersonation::class,
@@ -125,8 +127,6 @@ class AdminPanelProvider extends PanelProvider
                 RedirectImpersonatedAccountWithoutPanelAccess::class,
                 // Resolves to AuthenticatePanelImpersonatorSession (ImpersonationServiceProvider)
                 AuthenticateSession::class,
-                // A session of an account with two-factor authentication must have passed it (core#768)
-                EnsureSessionPassedTwoFactor::class,
                 ShareErrorsFromSession::class,
                 PreventRequestForgery::class,
                 SubstituteBindings::class,
