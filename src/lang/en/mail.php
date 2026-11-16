@@ -24,6 +24,11 @@ return [
                 'description' => 'Email verification, password or email change, welcome and notices about your roles.',
                 'reason' => 'Always sent: it confirms something you did, tells you about a change to your account or asks you to act.',
             ],
+            'account_security' => [
+                'label' => 'Account security',
+                'description' => 'Two-factor authentication turned on or off, recovery codes used or generated again.',
+                'reason' => 'Security notices about your account: if it was not you, this is how you find out in time.',
+            ],
             'role_management' => [
                 'label' => 'Inactive roles',
                 'description' => 'Notice when someone you can grant roles to is left with an inactive one.',

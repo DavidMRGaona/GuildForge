@@ -23,6 +23,7 @@ use App\Filament\Support\PanelCreateMenu;
 use App\Filament\Support\PanelNavigationGroups;
 use App\Filament\Support\PanelSidebarMode;
 use App\Http\Middleware\ApplyImpersonation;
+use App\Http\Middleware\EnsureSessionPassedTwoFactor;
 use App\Http\Middleware\RedirectImpersonatedAccountWithoutPanelAccess;
 use App\Infrastructure\Impersonation\ImpersonatedName;
 use App\Infrastructure\Impersonation\ImpersonationContext;
@@ -117,6 +118,8 @@ class AdminPanelProvider extends PanelProvider
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
+                // Before the impersonation applies, as in the web group (core#768)
+                EnsureSessionPassedTwoFactor::class,
                 // Before the session check and Filament's Authenticate, so the panel opens
                 // (or not) for the impersonated account, never for the administrator
                 ApplyImpersonation::class,

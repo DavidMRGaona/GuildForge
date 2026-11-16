@@ -13,6 +13,7 @@ use App\Domain\QrCodes\Exceptions\QrCodeRenderingException;
 use App\Infrastructure\QrCodes\EndroidQrCodeRenderer;
 use App\Infrastructure\QrCodes\QrCodeContentPolicy;
 use App\Infrastructure\QrCodes\RsvgConvertRasterizer;
+use App\Infrastructure\QrCodes\TotpQrCodeRendererInterface;
 use DOMDocument;
 use DOMElement;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -308,5 +309,17 @@ final class EndroidQrCodeRendererTest extends TestCase
         }
 
         return null;
+    }
+
+    public function test_modules_cannot_reach_the_two_factor_path_through_the_public_renderer(): void
+    {
+        $this->assertNotContains(TotpQrCodeRendererInterface::class, (array) class_implements(EndroidQrCodeRenderer::class));
+    }
+
+    public function test_the_public_path_refuses_an_authenticator_uri(): void
+    {
+        $this->expectException(InvalidQrCodeContentException::class);
+
+        $this->renderer->render('otpauth://totp/Example:ana?secret=JBSWY3DPEHPK3PXP', new QrCodeOptionsDTO, QrCodeFormat::Png);
     }
 }

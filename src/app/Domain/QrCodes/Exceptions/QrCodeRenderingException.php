@@ -16,4 +16,13 @@ final class QrCodeRenderingException extends RuntimeException
     {
         return new self('The QR code could not be rendered: '.$previous->getMessage(), previous: $previous);
     }
+
+    /**
+     * For content that must not reach a log (an authenticator URI holds the secret): no message
+     * from the cause and no previous exception, whose trace could carry it.
+     */
+    public static function withoutDetails(): self
+    {
+        return new self('The QR code could not be rendered');
+    }
 }

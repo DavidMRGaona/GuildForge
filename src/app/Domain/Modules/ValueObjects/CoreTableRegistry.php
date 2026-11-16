@@ -12,6 +12,8 @@ final readonly class CoreTableRegistry
         'users',
         'password_reset_tokens',
         'sessions',
+        // Accounts
+        'user_two_factor',
         'cache',
         'cache_locks',
         'jobs',

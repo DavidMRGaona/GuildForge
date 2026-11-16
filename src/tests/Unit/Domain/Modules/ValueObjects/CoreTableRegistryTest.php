@@ -15,7 +15,12 @@ final class CoreTableRegistryTest extends TestCase
 
         $tables = $registry->all();
 
-        $this->assertCount(33, $tables);
+        $this->assertCount(34, $tables);
+    }
+
+    public function test_modules_cannot_touch_the_two_factor_secrets(): void
+    {
+        $this->assertTrue((new CoreTableRegistry)->isCore('user_two_factor'));
     }
 
     public function test_it_identifies_core_table(): void

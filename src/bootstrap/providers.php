@@ -18,6 +18,7 @@ use App\Providers\RealtimeServiceProvider;
 use App\Providers\SearchServiceProvider;
 use App\Providers\SiteBlocksServiceProvider;
 use App\Providers\SiteNotificationsServiceProvider;
+use App\Providers\TwoFactorServiceProvider;
 
 return [
     AppServiceProvider::class,
@@ -36,4 +37,5 @@ return [
     SearchServiceProvider::class,
     SiteBlocksServiceProvider::class,
     SiteNotificationsServiceProvider::class,
+    TwoFactorServiceProvider::class,
 ];

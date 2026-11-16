@@ -14,6 +14,10 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Notifications\InactiveRolesManagerNotification;
 use App\Notifications\InactiveRolesNotification;
 use App\Notifications\SiteNewsNotification;
+use App\Notifications\TwoFactor\RecoveryCodesRegeneratedNotification;
+use App\Notifications\TwoFactor\RecoveryCodeUsedNotification;
+use App\Notifications\TwoFactor\TwoFactorDisabledNotification;
+use App\Notifications\TwoFactor\TwoFactorEnabledNotification;
 use App\Notifications\VerifyPendingEmailNotification;
 use App\Notifications\WelcomeNotification;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -59,6 +63,10 @@ final class CoreMailCategoriesTest extends TestCase
         yield 'welcome' => [new WelcomeNotification('Example site'), CoreMailCategories::ACCOUNT];
         yield 'inactive roles' => [new InactiveRolesNotification('Example site', 'Role'), CoreMailCategories::ACCOUNT];
         yield 'inactive roles to managers' => [new InactiveRolesManagerNotification('Person', 'Role', 'id', ['role']), CoreMailCategories::ROLE_MANAGEMENT];
+        yield 'two-factor turned on' => [new TwoFactorEnabledNotification('Example site', '2027-01-15T10:00:00+00:00'), CoreMailCategories::ACCOUNT_SECURITY];
+        yield 'two-factor turned off' => [new TwoFactorDisabledNotification('Example site', '2027-01-15T10:00:00+00:00'), CoreMailCategories::ACCOUNT_SECURITY];
+        yield 'recovery code used' => [new RecoveryCodeUsedNotification('Example site', '2027-01-15T10:00:00+00:00', 7), CoreMailCategories::ACCOUNT_SECURITY];
+        yield 'recovery codes regenerated' => [new RecoveryCodesRegeneratedNotification('Example site', '2027-01-15T10:00:00+00:00'), CoreMailCategories::ACCOUNT_SECURITY];
         yield 'site news' => [new SiteNewsNotification(SiteNewsKind::Event, '00000000-0000-4000-8000-000000000000'), CoreMailCategories::SITE_NEWS];
     }
 
