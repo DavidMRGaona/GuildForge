@@ -50,11 +50,14 @@ Cuando te quedan pocos (dos o menos), la tarjeta te avisa para que generes códi
 1. Escribe tu correo y tu contraseña en **Iniciar sesión** y pulsa el botón.
 2. Llegas a **Verificación en dos pasos**. Escribe el **Código de la app** que muestra ahora tu app de autenticación y pulsa **Verificar**.
 
+El panel de administración pide el código igual que la web, en su propia pantalla de acceso.
+
 Si marcaste **Recordarme**, solo se aplica una vez que el código es correcto.
 
 Un código sirve una sola vez: si acabas de usarlo y te pide otro, espera a que la app muestre el siguiente. Para no quedarte atascado, la verificación tiene límites:
 
 - Tienes unos minutos desde que pones la contraseña. Si se pasa el tiempo, la web te pide volver a iniciar sesión.
+- Si escribes demasiados códigos seguidos, verás «Demasiados códigos seguidos» y tendrás que esperar unos segundos. El límite es de 5 por minuto y 30 por hora para tu cuenta, tanto en la web como en el panel.
 - Tras varios intentos seguidos con un código incorrecto, se descarta el inicio de sesión y hay que volver a escribir la contraseña. Además, te llega un aviso por correo.
 
 > [!WARNING]
@@ -78,13 +81,17 @@ Hazlo **antes** de perder el móvil antiguo, mientras aún funciona.
 3. Escanea el nuevo código QR con la app nueva, o escribe la clave a mano.
 4. Escribe el código que muestra la app nueva para confirmar.
 
-Hasta que confirmes con el código de la app nueva, la anterior sigue valiendo. Al terminar, la anterior deja de servir. Tus códigos de recuperación siguen siendo los mismos. Se cierran las demás sesiones abiertas y te llega un correo.
+Hasta que confirmes con el código de la app nueva, la anterior sigue valiendo. Al terminar, la anterior deja de servir. Tus códigos de recuperación siguen siendo los mismos, salvo el que hayas gastado al confirmar. Se cierran las demás sesiones abiertas y te llega un correo.
+
+Si confirmas con un código de recuperación, ese código se gasta, como cuando entras con él.
 
 ## Generar códigos nuevos
 
 1. En **Ajustes de la cuenta → Seguridad**, pulsa **Generar códigos nuevos**.
 2. Confirma con tu contraseña y un código de tu app o de recuperación.
 3. Guarda los códigos nuevos.
+
+Si confirmas con un código de recuperación, ese código se gasta.
 
 Los códigos anteriores dejan de servir, aunque no los hubieras usado. Te llega un correo de aviso.
 
@@ -93,7 +100,7 @@ Los códigos anteriores dejan de servir, aunque no los hubieras usado. Te llega 
 1. En **Ajustes de la cuenta → Seguridad**, pulsa **Desactivar**.
 2. Confirma con tu contraseña y un código de tu app o de recuperación.
 
-Volverá a bastar con tu contraseña para iniciar sesión. Te llega un correo de aviso.
+Volverá a bastar con tu contraseña para iniciar sesión. Si confirmas con un código de recuperación, ese código se gasta. Se cierran las demás sesiones abiertas de tu cuenta y te llega un correo de aviso.
 
 Si alguno de tus roles exige el doble factor, **Desactivar** no está disponible. Lo que sí puedes es **Cambiar de app**.
 

@@ -96,13 +96,13 @@ Se borran su app de autenticación y sus códigos de recuperación, se cierran t
 > [!IMPORTANT]
 > Antes de hacerlo, comprueba que quien lo pide es esa persona **por otro medio** que no sea el correo ni la contraseña: una llamada, o en persona. Este paso es la única salida cuando se pierde el doble factor, y quien tenga la contraseña de otra persona y un cómplice en el panel podría usarlo para saltárselo.
 
-Solo lo pueden hacer las cuentas del rol `admin`, porque el permiso «Restablecer el doble factor» está reservado a la administración. La acción solo sale en cuentas que tienen el doble factor activo, no en la tuya (para eso están los ajustes de la cuenta) ni en cuentas anonimizadas. En una impersonación de solo lectura, tampoco.
+Solo lo pueden hacer las cuentas del rol `admin`, porque el permiso «Restablecer el doble factor de otras cuentas» está reservado a la administración. La acción solo sale en cuentas que tienen el doble factor activo, no en la tuya (para eso están los ajustes de la cuenta) ni en cuentas anonimizadas. En una impersonación de solo lectura, tampoco.
 
 En la lista de usuarios, la columna **Doble factor** y el filtro **Con doble factor** / **Sin doble factor** te dicen quién lo tiene activo.
 
 ### Si la cuenta es la única de administración
 
-Si quien lo pierde es la única cuenta de administración, nadie puede usar el botón. Quien tenga acceso a la consola del servidor ejecuta:
+Si quien lo pierde es la única cuenta de administración, nadie puede usar el botón. Quien pueda ejecutar comandos de la aplicación ejecuta:
 
 ```
 php artisan users:reset-two-factor correo@ejemplo.org
