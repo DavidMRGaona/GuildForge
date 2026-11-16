@@ -15,6 +15,7 @@ use Illuminate\Support\Carbon;
  *
  * @property string $user_id
  * @property string $secret Base32
+ * @property string|null $pending_secret Base32, the secret of a new app waiting to be confirmed (core#769)
  * @property Carbon|null $confirmed_at
  * @property list<string>|null $recovery_codes SHA-256 hashes of the unused codes
  * @property int|null $last_used_timestep
@@ -36,6 +37,7 @@ final class UserTwoFactorModel extends Model
     protected $fillable = [
         'user_id',
         'secret',
+        'pending_secret',
         'confirmed_at',
         'recovery_codes',
         'last_used_timestep',
@@ -43,6 +45,7 @@ final class UserTwoFactorModel extends Model
 
     protected $hidden = [
         'secret',
+        'pending_secret',
         'recovery_codes',
     ];
 
@@ -53,6 +56,7 @@ final class UserTwoFactorModel extends Model
     {
         return [
             'secret' => 'encrypted',
+            'pending_secret' => 'encrypted',
             'confirmed_at' => 'datetime',
             'recovery_codes' => 'encrypted:array',
             'last_used_timestep' => 'integer',

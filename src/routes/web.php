@@ -14,6 +14,7 @@ use App\Http\Controllers\Auth\MailPauseController;
 use App\Http\Controllers\Auth\MailPreferencesController;
 use App\Http\Controllers\Auth\MutedMailSubjectsController;
 use App\Http\Controllers\Auth\ProfileController;
+use App\Http\Controllers\Auth\ProfileTwoFactorController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\StopImpersonationController;
@@ -231,6 +232,16 @@ Route::middleware('auth')->group(function (): void {
         ->middleware('throttle:6,1,profile')
         ->name('profile.update');
     Route::put('/perfil/contrasena', [ProfileController::class, 'changePassword'])->name('profile.password');
+    // Two-factor authentication from «Seguridad» (core#769): the secret and the recovery codes are only in
+    // the answer that creates them. Same per-account limit on all of them (codes are guessed here too)
+    Route::middleware('throttle:two-factor-manage')->prefix('/perfil/doble-factor')->group(function (): void {
+        Route::post('/', [ProfileTwoFactorController::class, 'begin'])->name('profile.two-factor.begin');
+        Route::post('/confirmar', [ProfileTwoFactorController::class, 'confirm'])->name('profile.two-factor.confirm');
+        Route::post('/codigos', [ProfileTwoFactorController::class, 'recoveryCodes'])->name('profile.two-factor.recovery-codes');
+        Route::post('/app', [ProfileTwoFactorController::class, 'beginAppChange'])->name('profile.two-factor.app.begin');
+        Route::post('/app/confirmar', [ProfileTwoFactorController::class, 'confirmAppChange'])->name('profile.two-factor.app.confirm');
+        Route::delete('/', [ProfileTwoFactorController::class, 'disable'])->name('profile.two-factor.disable');
+    });
     // Which optional mail the person receives. Open to accounts that must verify their email
     // (it is where they stop a mail); the service decides which categories are editable
     Route::put('/perfil/correos', [MailPreferencesController::class, 'update'])

@@ -33,6 +33,10 @@ return [
             'subject' => 'New recovery codes at :site',
             'body' => 'New recovery codes were generated for your :site account on :when. The previous ones no longer work.',
         ],
+        'app_changed' => [
+            'subject' => 'Two-factor authenticator app changed at :site',
+            'body' => 'The authenticator app of your :site account was changed on :when. From now on, codes come from the new app; the previous one no longer works. Your recovery codes still work: if you want others, generate them from your account settings. Your account\'s other open sessions have been closed.',
+        ],
         'not_you' => 'If it was not you, change your password as soon as possible and tell the site\'s administrators.',
         'action' => 'Go to your account settings',
     ],
@@ -53,5 +57,21 @@ return [
         'app_code' => 'App code',
         'recovery_code' => 'Recovery code',
         'use_recovery_code' => 'Use a recovery code',
+    ],
+
+    'profile' => [
+        // Asking for the factor in use: its app or a recovery code
+        'invalid_code' => 'The code is wrong or was already used. Try the next one your app shows, or a recovery code.',
+        // Confirming a new app (turning it on or changing it): only its first code counts
+        'invalid_new_code' => 'The code is wrong or was already used. Type the one your app shows now; if it just changed, wait for the next one.',
+        'cannot_disable' => 'Your account cannot turn two-factor authentication off.',
+        'refused' => [
+            'unknown_account' => 'We could not find your account. Sign in again.',
+            'already_enabled' => 'Two-factor authentication is already on for your account.',
+            'no_pending_setup' => 'There is no setup in progress. Start again.',
+            'not_enabled' => 'Two-factor authentication is not on for your account.',
+            'impersonating' => 'Two-factor authentication cannot be changed while you are viewing another person\'s account.',
+            'unavailable' => 'We could not complete the operation right now. Please try again later.',
+        ],
     ],
 ];

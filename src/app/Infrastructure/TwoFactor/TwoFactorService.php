@@ -10,10 +10,12 @@ use App\Application\QrCodes\Enums\QrCodeFormat;
 use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\TwoFactor\DTOs\TwoFactorSetupDTO;
 use App\Application\TwoFactor\DTOs\TwoFactorStatusDTO;
+use App\Application\TwoFactor\Services\TwoFactorAppChangeInterface;
 use App\Application\TwoFactor\Services\TwoFactorServiceInterface;
 use App\Application\TwoFactor\Services\TwoFactorSessionSealInterface;
 use App\Domain\TwoFactor\Events\RecoveryCodesRegenerated;
 use App\Domain\TwoFactor\Events\RecoveryCodeUsed;
+use App\Domain\TwoFactor\Events\TwoFactorAppChanged;
 use App\Domain\TwoFactor\Events\TwoFactorDisabled;
 use App\Domain\TwoFactor\Events\TwoFactorEnabled;
 use App\Domain\TwoFactor\Exceptions\TwoFactorException;
@@ -39,7 +41,7 @@ use Throwable;
  * recovery codes are decided here. Every read that leads to a write takes the row lock first, so
  * two requests racing with the same code (or recovery code) never both pass.
  */
-final readonly class TwoFactorService implements TwoFactorServiceInterface
+final readonly class TwoFactorService implements TwoFactorAppChangeInterface, TwoFactorServiceInterface
 {
     public const int RECOVERY_CODE_COUNT = 8;
 
@@ -125,6 +127,7 @@ final readonly class TwoFactorService implements TwoFactorServiceInterface
             $row ??= new UserTwoFactorModel(['user_id' => $id]);
             $row->fill([
                 'secret' => $secret,
+                'pending_secret' => null,
                 'confirmed_at' => null,
                 'recovery_codes' => null,
                 'last_used_timestep' => null,
@@ -287,6 +290,73 @@ final readonly class TwoFactorService implements TwoFactorServiceInterface
         });
     }
 
+    public function beginAppChange(string $userId): TwoFactorSetupDTO
+    {
+        $this->refuseWhileImpersonating();
+
+        $id = $this->normalise($userId) ?? throw TwoFactorException::because(TwoFactorFailure::NotEnabled);
+        $secret = $this->totp(fn (): string => $this->google2fa->generateSecretKey(self::SECRET_LENGTH));
+
+        $user = DB::transaction(function () use ($id, $secret): UserModel {
+            $user = UserModel::query()->lockForUpdate()->find($id);
+            if (! $user instanceof UserModel) {
+                throw TwoFactorException::because(TwoFactorFailure::NotEnabled);
+            }
+
+            // Only the secret waiting changes: the one in use keeps signing the person in
+            $row = $this->enabledRowOrFail($id);
+            $row->pending_secret = $secret;
+            $row->save();
+
+            return $user;
+        });
+
+        $uri = $this->otpauthUri((string) $user->email, $secret);
+
+        return new TwoFactorSetupDTO(
+            secret: $secret,
+            otpauthUri: $uri,
+            qrCodeSvg: $this->totp(fn (): string => $this->qrCodes->renderTotpUri($uri, new QrCodeOptionsDTO, QrCodeFormat::Svg)->contents),
+        );
+    }
+
+    public function confirmAppChange(string $userId, #[\SensitiveParameter] string $code, ?Session $currentSession = null): void
+    {
+        $this->refuseWhileImpersonating();
+
+        $id = $this->normalise($userId) ?? throw TwoFactorException::because(TwoFactorFailure::NotEnabled);
+        $totp = TotpCode::tryFrom($code);
+
+        DB::transaction(function () use ($id, $totp, $currentSession): void {
+            $this->lockAccount($id);
+            $row = $this->enabledRowOrFail($id);
+
+            $pending = $row->pending_secret;
+            if ($pending === null) {
+                throw TwoFactorException::because(TwoFactorFailure::NoPendingSetup);
+            }
+
+            // The code must belong to the new app: one of the app in use proves nothing about it
+            $step = $totp instanceof TotpCode ? $this->matchingStep($row, $totp, $pending, enforceLastUsed: false) : null;
+            if ($step === null) {
+                throw TwoFactorException::because(TwoFactorFailure::InvalidCode);
+            }
+
+            $row->fill([
+                'secret' => $pending,
+                'pending_secret' => null,
+                // The code just typed cannot be typed again to sign in. The new secret has no earlier
+                // use to protect, so the code of the app in use that was typed a moment ago (same
+                // step) does not make the new app's code wait for the next one
+                'last_used_timestep' => max($row->last_used_timestep ?? 0, $step),
+            ])->save();
+
+            // Whoever held the old app may hold a session: every other one is signed out
+            $this->seal->renew($id, $currentSession);
+            $this->announceAfterCommit(new TwoFactorAppChanged($id));
+        });
+    }
+
     /**
      * Changes that also write the account's row (the session seal) lock it first, before the
      * two-factor row, in the same order as beginSetup(): two requests taking them the other way
@@ -315,12 +385,14 @@ final readonly class TwoFactorService implements TwoFactorServiceInterface
      * The step the code belongs to, among those the window still accepts. Every candidate is
      * computed, so the time taken does not tell which one matched.
      */
-    private function matchingStep(UserTwoFactorModel $row, TotpCode $code): ?int
+    private function matchingStep(UserTwoFactorModel $row, TotpCode $code, ?string $secret = null, bool $enforceLastUsed = true): ?int
     {
+        $secret ??= $row->secret;
+        $lastUsed = $enforceLastUsed ? $row->last_used_timestep : null;
         $match = null;
 
-        foreach ($this->window->candidateSteps(now()->getTimestamp(), $row->last_used_timestep) as $step) {
-            $expected = $this->totp(fn (): string => $this->google2fa->oathTotp($row->secret, $step));
+        foreach ($this->window->candidateSteps(now()->getTimestamp(), $lastUsed) as $step) {
+            $expected = $this->totp(fn (): string => $this->google2fa->oathTotp($secret, $step));
 
             if (hash_equals($expected, $code->value) && $match === null) {
                 $match = $step;

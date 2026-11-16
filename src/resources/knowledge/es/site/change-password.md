@@ -9,10 +9,11 @@ keywords: [contraseña, clave, password, cambiar contraseña, nueva contraseña,
 related: [core.account.complete-profile, core.account.verify-email]
 ---
 1. Pulsa tu nombre en la cabecera y elige **Ajustes de la cuenta**.
-2. En la tarjeta **Seguridad**, escribe tu **Contraseña actual**.
-3. Escribe la **Nueva contraseña**. Necesita al menos 8 caracteres.
-4. Repítela en **Confirmar contraseña**.
-5. Pulsa **Actualizar contraseña**.
+2. Abre la pestaña **Seguridad**.
+3. En la tarjeta **Contraseña**, escribe tu **Contraseña actual**.
+4. Escribe la **Nueva contraseña**. Necesita al menos 8 caracteres.
+5. Repítela en **Confirmar contraseña**.
+6. Pulsa **Actualizar contraseña**.
 
 Verás el aviso «Contraseña actualizada correctamente». La próxima vez que inicies sesión, usa la nueva.
 
@@ -30,4 +31,4 @@ Verás el aviso «Contraseña actualizada correctamente». La próxima vez que i
 > [!IMPORTANT]
 > Si la web te pide verificar tu email, no podrás cambiar la contraseña desde los ajustes de la cuenta hasta hacerlo.
 
-[[action:profile.show|Ir a los ajustes de la cuenta]]
+[[action:profile.show?tab=seguridad|Ir a la pestaña Seguridad]]

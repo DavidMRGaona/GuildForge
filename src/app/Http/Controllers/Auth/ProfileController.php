@@ -19,6 +19,8 @@ use App\Application\Seo\DTOs\SeoPageDTO;
 use App\Application\Seo\Services\SeoMetadataFactoryInterface;
 use App\Application\Services\AuthServiceInterface;
 use App\Application\Services\TimezoneServiceInterface;
+use App\Application\TwoFactor\Services\TwoFactorDisableRule;
+use App\Application\TwoFactor\Services\TwoFactorServiceInterface;
 use App\Domain\Mail\ValueObjects\MailPause;
 use App\Domain\Mail\ValueObjects\MutedMailSubject;
 use App\Domain\Proposals\Enums\ProposalType;
@@ -53,6 +55,8 @@ final class ProfileController extends Controller
         private readonly ProposalQueryServiceInterface $proposalQueries,
         private readonly ProposalEligibilityServiceInterface $proposalAccess,
         private readonly OwnProfileBanner $ownBanner,
+        private readonly TwoFactorServiceInterface $twoFactor,
+        private readonly TwoFactorDisableRule $twoFactorDisable,
     ) {}
 
     public function show(Request $request): Response
@@ -74,6 +78,7 @@ final class ProfileController extends Controller
                 'issuedAt' => $this->timezone->iso($this->calendarFeedTokens->issuedAt((string) $user->id)),
             ],
             'proposals' => $this->proposalsFor($user),
+            'security' => $this->securityFor($user),
         ];
 
         // Only for the «Avisos» tab (`?tab=mail`): listing the categories evaluates each one's
@@ -103,6 +108,28 @@ final class ProfileController extends Controller
         }
 
         return Inertia::render('Profile/Show', $props);
+    }
+
+    /**
+     * «Seguridad» (core#769): where the account stands with two-factor authentication. Only
+     * numbers and dates: the secret and the recovery codes are never in page props.
+     *
+     * @return array{twoFactor: array{active: bool, since: string|null, remainingCodes: int, canDisable: bool}}
+     */
+    private function securityFor(UserModel $user): array
+    {
+        $userId = (string) $user->id;
+        $status = $this->twoFactor->status($userId);
+
+        return [
+            'twoFactor' => [
+                'active' => $status->enabled,
+                'since' => $this->timezone->iso($status->confirmedAt),
+                'remainingCodes' => $status->recoveryCodesRemaining,
+                // Decided on the server (the route asks the same rule): core#772 refuses it while a role requires it
+                'canDisable' => $this->twoFactorDisable->allowed($userId),
+            ],
+        ];
     }
 
     /**

@@ -33,6 +33,10 @@ return [
             'subject' => 'Códigos de recuperación nuevos en :site',
             'body' => 'Se han generado códigos de recuperación nuevos para tu cuenta de :site el :when. Los anteriores ya no sirven.',
         ],
+        'app_changed' => [
+            'subject' => 'Aplicación de doble factor cambiada en :site',
+            'body' => 'Se ha cambiado la app de autenticación de tu cuenta de :site el :when. A partir de ahora, los códigos los genera la app nueva; la anterior ya no sirve. Tus códigos de recuperación siguen valiendo: si quieres otros, genéralos desde los ajustes de tu cuenta. Hemos cerrado las demás sesiones abiertas de tu cuenta.',
+        ],
         'not_you' => 'Si no has sido tú, cambia tu contraseña cuanto antes y avisa a la administración del sitio.',
         'action' => 'Ir a los ajustes de la cuenta',
     ],
@@ -53,5 +57,21 @@ return [
         'app_code' => 'Código de la app',
         'recovery_code' => 'Código de recuperación',
         'use_recovery_code' => 'Usar un código de recuperación',
+    ],
+
+    'profile' => [
+        // Asking for the factor in use: its app or a recovery code
+        'invalid_code' => 'El código no es correcto o ya se ha usado. Prueba con el siguiente que muestre tu app, o con un código de recuperación.',
+        // Confirming a new app (turning it on or changing it): only its first code counts
+        'invalid_new_code' => 'El código no es correcto o ya se ha usado. Escribe el que muestra ahora tu app; si acaba de cambiar, espera al siguiente.',
+        'cannot_disable' => 'Tu cuenta no puede desactivar el doble factor.',
+        'refused' => [
+            'unknown_account' => 'No hemos encontrado tu cuenta. Vuelve a iniciar sesión.',
+            'already_enabled' => 'El doble factor ya está activado en tu cuenta.',
+            'no_pending_setup' => 'No hay ninguna configuración en curso. Empieza de nuevo.',
+            'not_enabled' => 'El doble factor no está activado en tu cuenta.',
+            'impersonating' => 'No se puede cambiar el doble factor mientras ves la cuenta de otra persona.',
+            'unavailable' => 'No hemos podido completar la operación ahora. Inténtalo de nuevo más tarde.',
+        ],
     ],
 ];
