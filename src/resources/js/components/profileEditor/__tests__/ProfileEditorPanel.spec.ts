@@ -6,7 +6,7 @@ import ProfileEditorPanel from '../ProfileEditorPanel.vue';
 import en from '@/locales/en';
 import es from '@/locales/es';
 import type { ProfileEditor, ProfileEditorForm } from '@/types/profileEditor';
-import { listenToHistoryFirst } from '@/utils/historyPops';
+import { historyPopListeners, listenToHistoryFirst } from '@/utils/historyPops';
 import { editorFixture } from './fixtures';
 
 // As the app does before Inertia starts
@@ -344,6 +344,59 @@ describe('ProfileEditorPanel', () => {
         expect(push).not.toHaveBeenCalled();
         expect(window.location.pathname).toBe('/eventos');
         wrapper.unmount();
+    });
+
+    it('leaves the history alone when a request of its own ends on another page', async () => {
+        window.history.pushState(
+            { page: { url: '/miembros/ana-prueba' } },
+            '',
+            '/miembros/ana-prueba'
+        );
+        const inertia = inertiaHearsPopstate();
+        const wrapper = mountPanel();
+        const back = vi.spyOn(window.history, 'back');
+
+        // The banner's upload, with a session that expired: Inertia goes on to the sign-in page
+        window.history.pushState({ page: { url: '/login' } }, '', '/login');
+        document.dispatchEvent(new CustomEvent('inertia:finish', { detail: { visit: {} } }));
+        wrapper.unmount();
+
+        expect(back).not.toHaveBeenCalled();
+        expect(window.location.pathname).toBe('/login');
+        expect(window.history.state).toEqual({ page: { url: '/login' } });
+
+        // The panel's entry under it keeps the profile, never the sign-in page
+        back.mockRestore();
+        window.history.back();
+        expect(window.location.pathname).toBe('/miembros/ana-prueba');
+        expect(window.history.state).not.toEqual({ page: { url: '/login' } });
+        expect(inertia).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops listening to Back once closed, whichever way it closes', async () => {
+        expect(historyPopListeners()).toBe(0);
+
+        const plain = mountPanel();
+        expect(historyPopListeners()).toBe(1);
+        plain.unmount();
+        expect(historyPopListeners()).toBe(0);
+
+        const backed = mountPanel();
+        window.history.back();
+        backed.unmount();
+        expect(historyPopListeners()).toBe(0);
+
+        // After staying from several steps back, closing turns its entry into the page's in place
+        behindAnotherPage();
+        const stayed = mountPanel();
+        await stayAfterGoingBackTwoSteps(stayed);
+        stayed.unmount();
+        expect(historyPopListeners()).toBe(0);
+
+        const elsewhere = mountPanel();
+        window.history.pushState({ page: { url: '/login' } }, '', '/login');
+        elsewhere.unmount();
+        expect(historyPopListeners()).toBe(0);
     });
 
     it('puts nothing back once Inertia is reloading the page (a new version)', async () => {

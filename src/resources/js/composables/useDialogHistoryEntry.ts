@@ -41,9 +41,17 @@ export interface DialogHistoryEntry {
  * while another is drawn. The entry is never put back once the address is no longer the page's (Back
  * while saving) or Inertia is reloading the document (a new version answers with a 409).
  *
- * Known limit: reloading with the dialog open loads its entry as the page, so one Back stays on the
- * same address. Telling it apart would need a mark in the history that Inertia's own writes would
- * erase, and going back from a reloaded document reloads it again, so it is left as it is.
+ * A request of the dialog's own that ends on another page (a session that expired sends the banner's
+ * upload to the sign-in page) leaves the history as Inertia wrote it: nothing is copied or gone back.
+ *
+ * Known limits, which the History API leaves no way around:
+ * - Reloading with the dialog open loads its entry as the page, so one Back stays on the same address.
+ *   Telling it apart would need a mark in the history that Inertia's own writes would erase, and going
+ *   back from a reloaded document reloads it again.
+ * - Forward while saving puts the entry back and leaves a dead step: by its address alone the dialog's
+ *   entry cannot be told from the page's.
+ * - Closing or saving through `back()` leaves a forward entry behind with the page as it was before
+ *   saving: an entry cannot be taken out of the history.
  */
 export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): DialogHistoryEntry {
     let pageHref = '';
@@ -100,7 +108,7 @@ export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): Di
 
     /** Requests the dialog makes keep the page on its entry: remember the latest for the page's own */
     const stopTracking = router.on('finish', () => {
-        if (current) {
+        if (current && window.location.href === pageHref) {
             pageState = window.history.state as unknown;
         }
     });
@@ -113,8 +121,14 @@ export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): Di
             return Promise.resolve();
         }
 
-        pageState = window.history.state as unknown;
         current = false;
+
+        // A request of its own ended on another page: that page's entry is Inertia's now
+        if (window.location.href !== pageHref) {
+            return Promise.resolve();
+        }
+
+        pageState = window.history.state as unknown;
 
         if (!pageBelow) {
             // Another page is under it: the dialog's entry becomes the page's own, where it is
@@ -143,9 +157,9 @@ export function useDialogHistoryEntry(onLeave: (toPage: boolean) => boolean): Di
 
         if (current) {
             void release();
-            return;
         }
 
+        // Unless a Back of its own is still on its way, which stops listening once it arrives
         if (!ownBack) {
             stopListening();
         }

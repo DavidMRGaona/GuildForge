@@ -27,6 +27,11 @@ export function listenToHistoryFirst(): void {
     window.addEventListener('popstate', dispatch, true);
 }
 
+/** How many are listening now: none once every dialog has closed */
+export function historyPopListeners(): number {
+    return handlers.size;
+}
+
 /** Hears every Back and Forward before the page does; returns how to stop */
 export function onHistoryPop(handler: HistoryPopHandler): () => void {
     listenToHistoryFirst();
