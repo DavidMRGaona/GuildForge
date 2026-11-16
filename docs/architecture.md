@@ -1198,6 +1198,8 @@ Content-Security-Policy:
     frame-ancestors 'none'
     base-uri 'self'
     form-action 'self'
+    -> only when the response has no non-blank Content-Security-Policy of its own (core#784):
+       a stricter one set by a controller (an uploaded file served back) is kept
 ```
 
 In the `local` environment the CSP also allows the Vite dev server (`http://localhost:5173`).
