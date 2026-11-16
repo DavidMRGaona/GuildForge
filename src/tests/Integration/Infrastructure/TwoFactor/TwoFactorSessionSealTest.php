@@ -221,7 +221,7 @@ final class TwoFactorSessionSealTest extends TestCase
         );
     }
 
-    public function test_an_id_that_names_no_account_gets_its_own_warning_without_echoing_it(): void
+    public function test_a_text_that_is_no_uuid_gets_its_own_warning_without_echoing_it(): void
     {
         $log = Log::spy();
 

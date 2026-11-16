@@ -30,9 +30,10 @@ use Throwable;
  * Signs out a session that does not hold its account's current seal (TwoFactorSessionSealInterface):
  * one opened before two-factor authentication was turned on, off or reset, or one of an account
  * with it on that skipped the challenge. An account that never had a seal is left alone. A seal
- * that cannot be read (the database failing) answers 503 with Retry-After (JSON callers also get
- * `error` = JSON_ERROR_CODE) and closes nothing. Signing out (ApplyImpersonation::LOGOUT_ROUTES,
- * site and panel) is never checked, so it works even then.
+ * that cannot be read (the database failing) answers 503 with Retry-After (callers asking for JSON
+ * also get `error` = JSON_ERROR_CODE; Livewire, which does not, gets the HTML page for its modal)
+ * and closes nothing, except that signing out (ApplyImpersonation::LOGOUT_ROUTES, site and panel)
+ * still goes through then.
  *
  * In the web group and the panel's middleware. Not inside the AuthenticateSession subclasses: the
  * web group does not run AuthenticateSession, and adding it there would also start signing out
@@ -68,14 +69,20 @@ final readonly class EnsureSessionPassedTwoFactor
     {
         $owner = $this->impersonation->impersonator() ?? $request->user();
 
-        // Signing out is never unsafe: it always goes through, even when the seal cannot be read
-        if (! $owner instanceof Authenticatable || ! $request->hasSession() || $request->routeIs(...ApplyImpersonation::LOGOUT_ROUTES)) {
+        if (! $owner instanceof Authenticatable || ! $request->hasSession()) {
             return $next($request);
         }
 
         try {
             $passes = $this->seal->passes($request->session(), $owner);
         } catch (TwoFactorUnavailableException) {
+            // Signing out is never unsafe, so it goes through while the seal cannot be read. Only
+            // then: a session known to lack the seal is signed out below, from this device alone,
+            // where the sign-out route would rotate the remember token of every device
+            if ($request->routeIs(...ApplyImpersonation::LOGOUT_ROUTES)) {
+                return $next($request);
+            }
+
             // Unknown, not a mismatch: refused for now, with the session and its cookies left alone
             return $this->unavailable($request);
         }
