@@ -80,6 +80,33 @@ final class SiteNotificationSeenTest extends TestCase
         $this->actingAs($user)->getJson('/avisos/contador')->assertExactJson(['unread' => 2, 'unseen' => 1]);
     }
 
+    public function test_a_notice_still_being_delivered_while_the_bell_opens_counts_as_new(): void
+    {
+        $user = UserModel::factory()->create();
+        $this->notify($user);
+        $first = SiteNotificationModel::query()->firstOrFail();
+        $this->actingAs($user)->postJson('/avisos/vistos')->assertOk();
+
+        // deliver() takes its sort_key inside its transaction: one that started before the look
+        // and committed after it has a key below the clock of the look, above the newest row then
+        $late = $first->replicate();
+        $late->forceFill(['title' => 'Tardío', 'sort_key' => $first->sort_key + 1])->save();
+        $this->assertLessThan((int) now()->format('Uu'), $late->sort_key);
+
+        $this->actingAs($user)->getJson('/avisos/contador')->assertExactJson(['unread' => 2, 'unseen' => 1]);
+    }
+
+    public function test_a_look_with_nothing_stored_leaves_no_mark_and_the_next_notice_counts(): void
+    {
+        $user = UserModel::factory()->create();
+        $this->actingAs($user)->postJson('/avisos/vistos')->assertOk()->assertExactJson(['unread' => 0, 'unseen' => 0]);
+        $this->assertSame(0, DB::table('user_site_notification_seen')->count());
+
+        $this->notify($user);
+
+        $this->actingAs($user)->getJson('/avisos/contador')->assertExactJson(['unread' => 1, 'unseen' => 1]);
+    }
+
     public function test_a_group_that_grows_after_the_bell_was_opened_counts_again(): void
     {
         $user = UserModel::factory()->create();
@@ -147,10 +174,14 @@ final class SiteNotificationSeenTest extends TestCase
     public function test_the_mark_never_goes_back(): void
     {
         $user = UserModel::factory()->create();
+        $this->notify($user);
+        $this->travel(1)->seconds();
+        $this->notify($user);
         $this->actingAs($user)->postJson('/avisos/vistos')->assertOk();
         $stored = DB::table('user_site_notification_seen')->where('user_id', $user->id)->value('seen_key');
 
-        $this->travel(-1)->hours();
+        // The newest notice goes: the next look finds only an older one
+        SiteNotificationModel::query()->orderByDesc('sort_key')->firstOrFail()->delete();
         $this->actingAs($user)->postJson('/avisos/vistos')->assertOk();
 
         $this->assertSame((int) $stored, (int) DB::table('user_site_notification_seen')->where('user_id', $user->id)->value('seen_key'));
@@ -159,7 +190,9 @@ final class SiteNotificationSeenTest extends TestCase
     public function test_deleting_the_account_takes_its_mark(): void
     {
         $user = UserModel::factory()->create();
+        $this->notify($user);
         $this->actingAs($user)->postJson('/avisos/vistos')->assertOk();
+        $this->assertSame(1, DB::table('user_site_notification_seen')->count());
 
         $user->forceDelete();
 

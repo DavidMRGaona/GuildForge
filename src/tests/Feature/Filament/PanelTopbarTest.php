@@ -207,6 +207,17 @@ final class PanelTopbarTest extends TestCase
             ->assertSee('data-count-url="'.route('site-notifications.count').'"', false);
     }
 
+    public function test_the_bell_says_a_rise_to_screen_readers_like_the_site_s(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        $content = (string) $this->get(Dashboard::getUrl())->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/<span class="sr-only" role="status" aria-live="polite" data-panel-notifications-live/', $content);
+        $this->assertStringContainsString('data-live-one="Tienes :count aviso nuevo"', $content);
+        $this->assertStringContainsString('data-live-many="Tienes :count avisos nuevos"', $content);
+    }
+
     public function test_the_bell_counts_what_arrived_since_the_site_s_bell_was_last_opened(): void
     {
         $user = UserModel::factory()->admin()->create();

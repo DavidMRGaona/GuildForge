@@ -171,17 +171,48 @@ describe('NotificationBell', () => {
         wrapper.unmount();
     });
 
-    it('takes the number from the list when the server could not store the look', async () => {
+    it('asks for the counters again when the server could not store the look', async () => {
         fetchMock
             .mockResolvedValueOnce(jsonResponse({ message: 'Error' }, 500))
+            .mockResolvedValueOnce(jsonResponse({ unread: 2, unseen: 2 }))
             .mockResolvedValueOnce(jsonResponse({ unread: 2, unseen: 2, items: [notice()] }));
         const wrapper = mountBell();
 
         await wrapper.get('[data-testid="notification-bell"]').trigger('click');
         await flushPromises();
 
+        expect(fetchMock).toHaveBeenNthCalledWith(2, '/avisos/contador', expect.anything());
         expect(wrapper.findAll('[data-testid="site-notification"]')).toHaveLength(1);
         expect(wrapper.get('[data-testid="notification-badge"]').text()).toBe('2');
+        wrapper.unmount();
+    });
+
+    it('drops a counter answer that was sent before the bell was opened', async () => {
+        vi.useFakeTimers();
+        let answerOldCount: (response: Response) => void = () => undefined;
+        fetchMock
+            .mockImplementationOnce(
+                () =>
+                    new Promise<Response>((resolve) => {
+                        answerOldCount = resolve;
+                    })
+            )
+            .mockResolvedValueOnce(jsonResponse({ unread: 3, unseen: 0 }))
+            .mockResolvedValueOnce(jsonResponse({ unread: 3, unseen: 0, items: [notice()] }));
+        const wrapper = mountBell();
+        // The minute's question is on its way
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+        expect(fetchMock).toHaveBeenCalledWith('/avisos/contador', expect.anything());
+
+        await wrapper.get('[data-testid="notification-bell"]').trigger('click');
+        await flushPromises();
+        expect(wrapper.find('[data-testid="notification-badge"]').exists()).toBe(false);
+
+        // It answers with the number from before the look: dropped
+        answerOldCount(jsonResponse({ unread: 3, unseen: 3 }));
+        await flushPromises();
+
+        expect(wrapper.find('[data-testid="notification-badge"]').exists()).toBe(false);
         wrapper.unmount();
     });
 

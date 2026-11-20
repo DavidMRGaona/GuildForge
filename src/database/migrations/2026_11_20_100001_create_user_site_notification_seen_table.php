@@ -8,9 +8,9 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * When each person last looked at their notices (core#800): the bell counts the unread ones that
- * arrived after it. The mark is on the same clock as `site_notifications.sort_key` (microseconds),
- * so a notice delivered within the same second still tells apart. No row means everything unread
- * is new.
+ * arrived after it. The mark is the `site_notifications.sort_key` (microseconds) of the newest
+ * notice stored when they looked, so a notice within the same second, or one still being
+ * delivered, still tells apart. No row means everything unread is new.
  */
 return new class extends Migration
 {

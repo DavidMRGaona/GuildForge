@@ -20,7 +20,7 @@ final readonly class EloquentSiteNotificationRepository implements SiteNotificat
     /** Distinct actors kept per group: enough to say «y 99 más», small enough to stay a short list. */
     public const int MAX_ACTORS = 100;
 
-    /** When each person last looked (core#800), on the clock of `sort_key`. */
+    /** When each person last looked (core#800): the `sort_key` of the newest notice they had then. */
     private const string SEEN_TABLE = 'user_site_notification_seen';
 
     public function __construct(
@@ -93,10 +93,21 @@ final readonly class EloquentSiteNotificationRepository implements SiteNotificat
 
     public function markSeen(UserId $userId): void
     {
-        $key = $this->sortKey();
+        // The newest notice already stored, never the clock: deliver() sets its sort_key inside a
+        // transaction, before the commit, so a notice being delivered while the person looks has
+        // a key below the clock and would never count as new. One not committed yet is not seen
+        // here, so it stays above the mark
+        $key = SiteNotificationModel::query()->where('user_id', $userId->value())->max('sort_key');
+
+        if (! is_numeric($key)) {
+            // Nothing stored: no mark, everything that arrives counts
+            return;
+        }
+
+        $key = (int) $key;
 
         DB::table(self::SEEN_TABLE)->insertOrIgnore(['user_id' => $userId->value(), 'seen_key' => $key]);
-        // Never back: a clock behind another server's would bring old notices back to the counter
+        // Never back: once seen, a notice never counts as new again
         DB::table(self::SEEN_TABLE)
             ->where('user_id', $userId->value())
             ->where('seen_key', '<', $key)

@@ -39,7 +39,8 @@ return [
         'help' => 'Help',
         'site' => 'View website',
         'notifications' => 'Notices',
-        'notifications_unread' => 'New notices: :count',
+        'notifications_new' => 'New notices: :count',
+        'notifications_live' => 'You have :count new notice|You have :count new notices',
     ],
     'pages' => [
         'legal' => [

@@ -55,21 +55,19 @@
             {{-- The site's bell (core#687): its number (the unread notices that arrived since the person
                  last looked, core#800), asked again like the site does without real time (every minute
                  while visible, every five while hidden, on return), and a link to the «Avisos» page,
-                 where the notices are read, hidden or marked; opening it counts as looking --}}
-            @php($bellLabel = $notifications['count'] > 0 ? str_replace(':count', (string) $notifications['count'], $notifications['labelUnread']) : $notifications['label'])
-            <a
-                href="{{ $notifications['url'] }}"
-                aria-label="{{ $bellLabel }}"
-                title="{{ $bellLabel }}"
-                x-bind:aria-label="label()"
-                x-bind:title="label()"
-                class="relative flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 outline-none transition duration-75 hover:text-gray-500 focus-visible:ring-2 focus-visible:ring-primary-600 dark:text-gray-500 dark:hover:text-gray-400 dark:focus-visible:ring-primary-500"
-                data-panel-notifications-bell
+                 where the notices are read, hidden or marked; opening it counts as looking. A rise of
+                 the number is said to screen readers, as the site's bell does --}}
+            @php($bellLabel = $notifications['count'] > 0 ? str_replace(':count', (string) $notifications['count'], $notifications['labelNew']) : $notifications['label'])
+            <div
+                class="relative flex"
                 data-count-url="{{ $notifications['countUrl'] }}"
                 data-label="{{ $notifications['label'] }}"
-                data-label-unread="{{ $notifications['labelUnread'] }}"
+                data-label-new="{{ $notifications['labelNew'] }}"
+                data-live-one="{{ $notifications['liveOne'] }}"
+                data-live-many="{{ $notifications['liveMany'] }}"
                 x-data="{
                     count: {{ $notifications['count'] }},
+                    announcement: '',
                     askedAt: Date.now(),
                     timer: null,
                     onVisible: null,
@@ -78,7 +76,7 @@
                     },
                     label() {
                         return this.count > 0
-                            ? this.$root.dataset.labelUnread.replace(':count', this.count)
+                            ? this.$root.dataset.labelNew.replace(':count', this.count)
                             : this.$root.dataset.label
                     },
                     async refresh() {
@@ -90,7 +88,13 @@
                             })
                             if (! response.ok) return
                             const unseen = (await response.json()).unseen
-                            if (Number.isInteger(unseen) && unseen >= 0) this.count = unseen
+                            if (! Number.isInteger(unseen) || unseen < 0) return
+                            // Only a rise is news
+                            if (unseen > this.count) {
+                                const text = unseen === 1 ? this.$root.dataset.liveOne : this.$root.dataset.liveMany
+                                this.announcement = text.replace(':count', unseen)
+                            }
+                            this.count = unseen
                         } catch (error) {
                             // Offline or signed out elsewhere: keep the last count
                         }
@@ -112,16 +116,27 @@
                     },
                 }"
             >
-                <x-filament::icon icon="heroicon-o-bell" class="h-6 w-6" />
-                <span
-                    data-panel-notifications-badge
-                    @if($notifications['count'] === 0) hidden @endif
-                    x-bind:hidden="count === 0"
-                    x-text="badge()"
-                    aria-hidden="true"
-                    class="absolute -end-0.5 -top-0.5 flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-primary-600 px-1 text-[0.6875rem] font-semibold leading-none text-white dark:bg-primary-500"
-                >{{ $notifications['badge'] }}</span>
-            </a>
+                <a
+                    href="{{ $notifications['url'] }}"
+                    aria-label="{{ $bellLabel }}"
+                    title="{{ $bellLabel }}"
+                    x-bind:aria-label="label()"
+                    x-bind:title="label()"
+                    class="relative flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 outline-none transition duration-75 hover:text-gray-500 focus-visible:ring-2 focus-visible:ring-primary-600 dark:text-gray-500 dark:hover:text-gray-400 dark:focus-visible:ring-primary-500"
+                    data-panel-notifications-bell
+                >
+                    <x-filament::icon icon="heroicon-o-bell" class="h-6 w-6" />
+                    <span
+                        data-panel-notifications-badge
+                        @if($notifications['count'] === 0) hidden @endif
+                        x-bind:hidden="count === 0"
+                        x-text="badge()"
+                        aria-hidden="true"
+                        class="absolute -end-0.5 -top-0.5 flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-primary-600 px-1 text-[0.6875rem] font-semibold leading-none text-white dark:bg-primary-500"
+                    >{{ $notifications['badge'] }}</span>
+                </a>
+                <span class="sr-only" role="status" aria-live="polite" data-panel-notifications-live x-text="announcement"></span>
+            </div>
         @endif
 
         <x-filament::icon-button

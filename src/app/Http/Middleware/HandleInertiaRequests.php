@@ -288,9 +288,10 @@ final class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Unread notices of the bell (core#491), for a signed-in account.
+     * The bell's counters (core#491) for a signed-in account: what is still unread and what is new
+     * since the person last looked (core#800, the bell's number), and the real-time channel.
      *
-     * @return array{unread: int}|null
+     * @return array{unread: int, unseen: int, channel: string|null}|null
      */
     private function getSiteNotifications(Request $request): ?array
     {

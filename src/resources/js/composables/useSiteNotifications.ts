@@ -42,7 +42,8 @@ export interface UseSiteNotificationsReturn {
     loadRecent: () => Promise<void>;
     /**
      * The person looks (the list opens, core#800): the number goes to 0 at once and the server
-     * stores it; the notices stay unread. True when the server did.
+     * stores it; the notices stay unread. Answers to requests sent before it are dropped. True
+     * when the server did; otherwise the counters are asked for again.
      */
     markSeen: () => Promise<boolean>;
     /** Mark every notice read; true when the server did. */
@@ -72,6 +73,9 @@ let realtimeScope: EffectScope | null = null;
 let live = false;
 // When the counter was last asked for, so a hidden tab asks only every few minutes
 let lastAskedAt = 0;
+// Bumped by every look (markSeen, core#800). An answer to a request sent before the latest look
+// carries the counters from before it, and would bring the old number back until the next poll
+let looks = 0;
 
 function readNumber(value: unknown): number | null {
     return typeof value === 'number' && Number.isFinite(value) && value >= 0
@@ -81,9 +85,17 @@ function readNumber(value: unknown): number | null {
 
 /**
  * Take the counters of an answer. One without `unseen` (a page cached before core#800) counts
- * everything unread as new; `unseen` never goes past `unread`.
+ * everything unread as new; `unseen` never goes past `unread`. With `sentAtLook` (the value of
+ * `looks` when its request was sent), an answer sent before the latest look is dropped.
  */
-function applyCounts(body: Record<string, unknown> | null | undefined): boolean {
+function applyCounts(
+    body: Record<string, unknown> | null | undefined,
+    sentAtLook?: number
+): boolean {
+    if (sentAtLook !== undefined && sentAtLook !== looks) {
+        return false;
+    }
+
     const unreadCount = readNumber(body?.unread);
     if (unreadCount === null) {
         return false;
@@ -132,9 +144,10 @@ async function refresh(
     }
 
     lastAskedAt = Date.now();
+    const look = looks;
 
     try {
-        applyCounts(await getJson(routes.notifications.count));
+        applyCounts(await getJson(routes.notifications.count), look);
     } catch {
         // Offline, signed out in another tab or rate limited: keep the last count
     }
@@ -183,10 +196,11 @@ export function useSiteNotifications(): UseSiteNotificationsReturn {
 
     async function loadRecent(): Promise<void> {
         loading.value = true;
+        const look = looks;
         try {
             const body = await getJson(routes.notifications.recent);
             items.value = Array.isArray(body.items) ? (body.items as SiteNotificationItem[]) : [];
-            applyCounts(body);
+            applyCounts(body, look);
             failed.value = false;
         } catch {
             failed.value = true;
@@ -197,6 +211,7 @@ export function useSiteNotifications(): UseSiteNotificationsReturn {
 
     /** POST to the notice routes and take the new counters; false when it failed. */
     async function post(url: string): Promise<boolean> {
+        const look = looks;
         try {
             const response = await fetch(url, {
                 method: 'POST',
@@ -212,7 +227,7 @@ export function useSiteNotifications(): UseSiteNotificationsReturn {
             }
 
             const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-            applyCounts(body);
+            applyCounts(body, look);
 
             return true;
         } catch {
@@ -221,10 +236,18 @@ export function useSiteNotifications(): UseSiteNotificationsReturn {
     }
 
     async function markSeen(): Promise<boolean> {
-        // At once: the person is looking. If the server fails, the next count brings it back
+        // At once: the person is looking. Answers already on their way are from before the look
+        looks++;
         unseen.value = 0;
 
-        return post(routes.notifications.seen);
+        if (await post(routes.notifications.seen)) {
+            return true;
+        }
+
+        // Not stored: the number the server still has, rather than a 0 that comes back later
+        await refresh(routes, { evenHidden: true });
+
+        return false;
     }
 
     async function markAllRead(): Promise<boolean> {
@@ -338,4 +361,5 @@ export function resetSiteNotificationsState(): void {
     realtimeScope = null;
     live = false;
     lastAskedAt = 0;
+    looks = 0;
 }
