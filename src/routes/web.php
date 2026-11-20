@@ -48,6 +48,8 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SearchSuggestionsController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SiteNotificationsController;
+use App\Http\Controllers\WebApp\ServiceWorkerController;
+use App\Http\Controllers\WebApp\WebAppManifestController;
 use App\Http\Middleware\KeepOutOfSearchEngines;
 use App\Http\Middleware\ThrottleWhereListed;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -89,6 +91,18 @@ Route::get('/correos/logo.png', MailLogoController::class)
         AddQueuedCookiesToResponse::class,
     ])
     ->name('mail.logo');
+
+// The installable site (core#802): manifest and service worker at fixed URLs, the same for everybody,
+// so no session or cookie. Both stay reachable during maintenance (EnsureSiteIsNotInMaintenance).
+Route::withoutMiddleware([
+    StartSession::class,
+    ShareErrorsFromSession::class,
+    PreventRequestForgery::class,
+    AddQueuedCookiesToResponse::class,
+])->group(function (): void {
+    Route::get('/manifest.webmanifest', WebAppManifestController::class)->name('web-app.manifest');
+    Route::get('/sw.js', ServiceWorkerController::class)->name('web-app.service-worker');
+});
 
 // Unsubscribe links of the mail footer and the List-Unsubscribe header: signed per account and
 // category, no expiry, no sign-in. Throttled before the signature, so guessing counts too.

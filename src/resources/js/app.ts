@@ -20,6 +20,7 @@ import { removeServerSeoTags, useServerSeo } from '@/composables/useSeo';
 import { useBellVisible } from '@/composables/useSiteNotifications';
 import { useUnreadTitle } from '@/composables/useUnreadTitle';
 import { listenToHistoryFirst } from '@/utils/historyPops';
+import { registerServiceWorkerAfterLoad } from '@/utils/serviceWorker';
 
 // Before Inertia adds its own listener: a dialog may then keep Back from swapping the page under it
 listenToHistoryFirst();
@@ -159,3 +160,6 @@ void createInertiaApp({
         color: '#4B5563',
     },
 });
+
+// The installable site and, later, browser push notifications (core#802)
+registerServiceWorkerAfterLoad();

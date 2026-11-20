@@ -297,6 +297,14 @@ final class SecurityHeadersMiddlewareTest extends TestCase
         $response->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }
 
+    public function test_csp_lets_the_site_register_its_own_service_worker_and_manifest_only(): void
+    {
+        $csp = (string) $this->get('/test-security-headers')->headers->get('Content-Security-Policy');
+
+        $this->assertStringContainsString("worker-src 'self';", $csp);
+        $this->assertStringContainsString("manifest-src 'self';", $csp);
+    }
+
     public function test_all_security_headers_are_present(): void
     {
         $response = $this->get('/test-security-headers');

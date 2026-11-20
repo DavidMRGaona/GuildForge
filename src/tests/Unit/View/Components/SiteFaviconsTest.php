@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\View\Components;
 
 use App\Application\Services\SiteBrandingServiceInterface;
+use App\Application\WebApp\Services\WebAppManifestInterface;
 use App\View\Components\SiteFavicons;
 use Mockery;
 use RuntimeException;
@@ -12,6 +13,17 @@ use Tests\TestCase;
 
 final class SiteFaviconsTest extends TestCase
 {
+    private const string APPLE_TOUCH_ICON = 'https://res.cloudinary.com/demo/apple-touch.jpg';
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $manifest = Mockery::mock(WebAppManifestInterface::class);
+        $manifest->shouldReceive('appleTouchIcon')->andReturn(self::APPLE_TOUCH_ICON);
+        $this->app->instance(WebAppManifestInterface::class, $manifest);
+    }
+
     private function render(): string
     {
         return app(SiteFavicons::class)->render()->render();
@@ -31,7 +43,6 @@ final class SiteFaviconsTest extends TestCase
         $html = $this->render();
 
         $this->assertStringContainsString('<link rel="icon" type="image/png" sizes="32x32" href="https://res.cloudinary.com/demo/fav.png">', $html);
-        $this->assertStringContainsString('<link rel="apple-touch-icon" sizes="180x180" href="https://res.cloudinary.com/demo/fav.png">', $html);
         $this->assertStringNotContainsString('/favicons/light/favicon', $html);
     }
 
@@ -61,5 +72,17 @@ final class SiteFaviconsTest extends TestCase
         $this->app->instance(SiteBrandingServiceInterface::class, $branding);
 
         $this->assertStringContainsString('href="/favicons/light/favicon.ico"', $this->render());
+    }
+
+    public function test_the_home_screen_icon_and_the_manifest_come_from_the_web_app(): void
+    {
+        $this->favicons('https://res.cloudinary.com/demo/fav.png');
+
+        $html = $this->render();
+
+        // A 32 px favicon is no home screen icon: iOS gets the padded 180 px one
+        $this->assertStringContainsString('<link rel="apple-touch-icon" sizes="180x180" href="'.self::APPLE_TOUCH_ICON.'">', $html);
+        $this->assertStringContainsString('<link rel="manifest" href="/manifest.webmanifest">', $html);
+        $this->assertStringNotContainsString('site.webmanifest', $html);
     }
 }

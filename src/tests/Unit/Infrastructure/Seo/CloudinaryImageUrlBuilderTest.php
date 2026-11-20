@@ -177,4 +177,32 @@ final class CloudinaryImageUrlBuilderTest extends TestCase
         );
         $this->assertNull((new CloudinaryImageUrlBuilder('', 'guildforge'))->emailLogo('branding/logo-email.webp', 128, 512));
     }
+
+    public function test_app_icon_is_a_square_png_of_the_given_size(): void
+    {
+        $builder = new CloudinaryImageUrlBuilder('demo', 'site');
+
+        $this->assertSame(
+            'https://res.cloudinary.com/demo/image/upload/w_192,h_192,c_pad,f_png/site/branding/favicon',
+            $builder->appIcon('branding/favicon.svg', 192),
+        );
+        // An ICO is an image like any other: its extension is not part of the public id
+        $this->assertSame(
+            'https://res.cloudinary.com/demo/image/upload/w_512,h_512,c_pad,f_png/site/branding/favicon',
+            $builder->appIcon('branding/favicon.ico', 512),
+        );
+        $this->assertNull((new CloudinaryImageUrlBuilder('', 'site'))->appIcon('branding/favicon.png', 192));
+    }
+
+    public function test_padded_app_icon_keeps_the_artwork_inside_the_safe_zone_on_an_opaque_background(): void
+    {
+        $builder = new CloudinaryImageUrlBuilder('demo', 'site');
+
+        $this->assertSame(
+            'https://res.cloudinary.com/demo/image/upload/w_288,h_288,c_pad,b_rgb:FAFAF9/w_512,h_512,c_lpad,b_rgb:FAFAF9,q_90,f_jpg/site/branding/favicon',
+            $builder->paddedAppIcon('branding/favicon.png', 512, 288, '#FAFAF9'),
+        );
+        $this->assertNull($builder->paddedAppIcon('branding/favicon.png', 512, 288, 'red;x'));
+        $this->assertNull((new CloudinaryImageUrlBuilder('', 'site'))->paddedAppIcon('branding/favicon.png', 512, 288, '#FAFAF9'));
+    }
 }

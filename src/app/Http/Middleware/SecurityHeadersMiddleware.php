@@ -58,6 +58,9 @@ final readonly class SecurityHeadersMiddleware
             "font-src 'self' data:",
             $this->connectSrc(),
             $this->frameSrc(),
+            // The site's own service worker at /sw.js and manifest (core#802), nothing else
+            "worker-src 'self'",
+            "manifest-src 'self'",
             "frame-ancestors 'none'",
             "base-uri 'self'",
             "form-action 'self'",
