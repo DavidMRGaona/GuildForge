@@ -47,6 +47,12 @@ describe('notificationTargetUrl', () => {
         expect(notificationTargetUrl({ url: 'javascript:alert(1)' }, ORIGIN, '/avisos')).toBe(
             'https://example.test/avisos'
         );
+        expect(notificationTargetUrl({ url: '/\\evil.test/x' }, ORIGIN, '/avisos')).toBe(
+            'https://example.test/avisos'
+        );
+        expect(notificationTargetUrl({ url: '/foro\\hilo' }, ORIGIN, '/avisos')).toBe(
+            'https://example.test/avisos'
+        );
         expect(notificationTargetUrl(null, ORIGIN, '/avisos')).toBe('https://example.test/avisos');
         expect(notificationTargetUrl({ url: 42 }, ORIGIN, '/avisos')).toBe(
             'https://example.test/avisos'

@@ -9,6 +9,7 @@ use App\Application\WebApp\DTOs\WebAppIconDTO;
 use App\Application\WebApp\Services\ServiceWorkerScriptInterface;
 use App\Application\WebApp\Services\WebAppManifestInterface;
 use Illuminate\Foundation\Vite;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -45,7 +46,17 @@ final readonly class ViteServiceWorkerScript implements ServiceWorkerScriptInter
             return null;
         }
 
-        return 'self.serviceWorkerSettings = '.json_encode($this->settings(), self::JSON_FLAGS).";\n".$source;
+        try {
+            $settings = json_encode($this->settings(), self::JSON_FLAGS);
+        } catch (Throwable $exception) {
+            // A worker without its settings would show empty notifications: the route's quiet 404
+            // instead, never a 500. The class only: a message may carry what was being read
+            Log::warning('Service worker settings could not be built', ['exception' => $exception::class]);
+
+            return null;
+        }
+
+        return 'self.serviceWorkerSettings = '.$settings.";\n".$source;
     }
 
     /**

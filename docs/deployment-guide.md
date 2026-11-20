@@ -690,7 +690,7 @@ Relevant configuration from `docker/prod/nginx.conf`:
 - Security headers: `X-Frame-Options`, `X-Content-Type-Options`, `X-XSS-Protection`, `Referrer-Policy`
 - Gzip compression enabled
 - Static assets with 1-year cache (`Cache-Control: public, immutable`)
-- Laravel routes whose URL ends like a static asset get an exact `location =` ahead of that rule: `/correos/logo.png` and the service worker `/sw.js`, which keeps its URL and must be revalidated on every check. A custom proxy in front of the site must not cache `/sw.js` either
+- Laravel routes whose URL ends like a static asset get an exact `location =` ahead of that rule: `/correos/logo.png`, the web app manifest `/manifest.webmanifest` and the service worker `/sw.js`, which keeps its URL and must be revalidated on every check. A custom proxy in front of the site must not cache `/sw.js` either
 - Module assets served from `/build/modules/`
 - Maximum upload size: 20MB
 - Hidden files denied (except `.well-known`)

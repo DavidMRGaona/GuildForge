@@ -5,11 +5,15 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\WebApp;
 
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\WebApp\Services\WebAppManifestInterface;
 use App\Infrastructure\WebApp\ViteServiceWorkerScript;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Foundation\Vite;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Mockery;
+use RuntimeException;
 use Tests\TestCase;
 
 final class ViteServiceWorkerScriptTest extends TestCase
@@ -57,6 +61,22 @@ final class ViteServiceWorkerScriptTest extends TestCase
 
         $this->assertStringNotContainsString('</script>', (string) $firstLine);
         $this->assertSame('</script><script>alert(1)</script>";x=1;//', $this->settings((string) $firstLine)['fallbackBody']);
+    }
+
+    public function test_it_is_null_and_warns_when_its_settings_cannot_be_built(): void
+    {
+        $this->build('void 0;');
+        $manifest = Mockery::mock(WebAppManifestInterface::class);
+        $manifest->shouldReceive('manifest')->andThrow(new RuntimeException('secret detail'));
+        $this->app->instance(WebAppManifestInterface::class, $manifest);
+        $log = Log::spy();
+
+        // The route answers its quiet 404 rather than a 500
+        $this->assertNull($this->worker()->script());
+        $log->shouldHaveReceived('warning')->once()->with(
+            'Service worker settings could not be built',
+            ['exception' => RuntimeException::class],
+        );
     }
 
     public function test_it_is_null_without_a_build(): void

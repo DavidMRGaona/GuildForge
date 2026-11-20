@@ -26,8 +26,8 @@ export function fallbackNotification(settings: ServiceWorkerSettings): Notificat
 }
 
 /**
- * The absolute address a clicked notification opens: the one it carries when it is on this site,
- * the fallback otherwise (another site, another scheme, nothing at all).
+ * The absolute address a clicked notification opens: the one it carries when it is a path of this
+ * site, the fallback otherwise (another site, another scheme, a backslash, nothing at all).
  */
 export function notificationTargetUrl(data: unknown, origin: string, fallbackPath: string): string {
     const fallback = new URL(fallbackPath, origin).href;
@@ -36,7 +36,13 @@ export function notificationTargetUrl(data: unknown, origin: string, fallbackPat
             ? (data as Record<string, unknown>).url
             : undefined;
 
-    if (typeof raw !== 'string' || !raw.startsWith('/') || raw.startsWith('//')) {
+    // URL parsers read `\` as `/` in http(s) addresses, so `/\host` is `//host`: never a path here
+    if (
+        typeof raw !== 'string' ||
+        !raw.startsWith('/') ||
+        raw.startsWith('//') ||
+        raw.includes('\\')
+    ) {
         return fallback;
     }
 

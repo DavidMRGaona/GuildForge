@@ -37,6 +37,7 @@ describe('readSettings', () => {
             'https://evil.test/avisos',
             '//evil.test/avisos',
             'javascript:alert(1)',
+            '/\\evil.test/avisos',
         ]) {
             expect(readSettings({ fallbackPath }, ORIGIN).fallbackPath).toBe('/');
         }

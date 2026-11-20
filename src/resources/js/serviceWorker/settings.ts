@@ -20,11 +20,12 @@ function text(value: unknown): string {
 }
 
 /**
- * A path on this site, never an address elsewhere (`//host`, another scheme): `/` otherwise.
+ * A path on this site, never an address elsewhere (`//host`, `/\host`, another scheme): `/` otherwise.
  */
 export function sameOriginPath(value: unknown, origin: string): string {
     const raw = text(value);
-    if (!raw.startsWith('/') || raw.startsWith('//')) {
+    // `\` reads as `/` in http(s) addresses, so `/\host` would be `//host`
+    if (!raw.startsWith('/') || raw.startsWith('//') || raw.includes('\\')) {
         return '/';
     }
 
