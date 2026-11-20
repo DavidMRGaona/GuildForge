@@ -344,6 +344,8 @@ To add a target, add its secret and a line to `WEBHOOKS` in `deploy.yml`; it is 
 | `SOURCE_COMMIT` | Deployed commit, injected by the deployment platform; do not set by hand (see `config/updates.php`) | - |
 | `CORE_GITHUB_BRANCH` | Branch the application deploys from, compared on the core updates page | `main` |
 
+> **Push notifications (optional):** `WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY` and `WEB_PUSH_SUBJECT` (from `php artisan web-push:keys`, one pair per installation) turn on browser push notifications; they need the queue worker, the scheduler and outgoing HTTPS to the browsers' push services. See [Push notifications](./web-push.md).
+
 > **Real time (optional):** `BROADCAST_CONNECTION=reverb` and the `REVERB_*` variables turn on WebSockets. The production image then starts the Reverb process and already sends `/app/` to it; set `REVERB_HOST=127.0.0.1` (and keep `REVERB_PORT` at `8080`). Without them the site polls. See [Real time](./realtime.md).
 
 > **Note on Redis vs database:** the default configuration uses `database` for cache, queues, and sessions, which simplifies deployment and does not require Redis to be available. For better performance in production, you can switch to `redis` for all three variables (`CACHE_STORE`, `QUEUE_CONNECTION`, `SESSION_DRIVER`), since Redis is part of the production stack.

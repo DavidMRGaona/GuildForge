@@ -630,6 +630,14 @@ class AppServiceProvider extends ServiceProvider
         );
         // Two-factor authentication from the account settings (core#769): six attempts a minute per
         // account, since a code is typed on these routes too
+        // Browser push (core#803): a browser subscribes once per session, and again after a reset
+        RateLimiter::for(
+            'web-push-subscription',
+            static fn (Request $request): array => [
+                Limit::perMinute(10)->by('user:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
+                Limit::perHour(60)->by('user-hour:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
+            ]
+        );
         RateLimiter::for(
             'two-factor-manage',
             static fn (Request $request): array => [

@@ -14,6 +14,7 @@ use Carbon\CarbonInterface;
 use DateTimeImmutable;
 use DateTimeInterface;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 final readonly class EloquentSiteNotificationRepository implements SiteNotificationRepositoryInterface
 {
@@ -27,9 +28,9 @@ final readonly class EloquentSiteNotificationRepository implements SiteNotificat
         private TimezoneServiceInterface $timezone,
     ) {}
 
-    public function deliver(UserId $userId, SiteNotice $notice): void
+    public function deliver(UserId $userId, SiteNotice $notice): string
     {
-        DB::transaction(function () use ($userId, $notice): void {
+        return DB::transaction(function () use ($userId, $notice): string {
             $group = $notice->groupKey === null ? null : SiteNotificationModel::query()
                 ->where('user_id', $userId->value())
                 ->where('group_key', $notice->groupKey)
@@ -40,7 +41,7 @@ final readonly class EloquentSiteNotificationRepository implements SiteNotificat
                 ->first();
 
             if (! $group instanceof SiteNotificationModel) {
-                SiteNotificationModel::query()->create([
+                return SiteNotificationModel::query()->create([
                     ...$this->texts($notice, $notice->title),
                     'user_id' => $userId->value(),
                     'group_key' => $notice->groupKey,
@@ -48,9 +49,7 @@ final readonly class EloquentSiteNotificationRepository implements SiteNotificat
                     'actor_ids' => $notice->actorId === null ? null : [$notice->actorId],
                     'notified_at' => now(),
                     'sort_key' => $this->sortKey(),
-                ]);
-
-                return;
+                ])->id;
             }
 
             $actors = $this->withActor($group->actor_ids ?? [], $notice->actorId);
@@ -65,7 +64,24 @@ final readonly class EloquentSiteNotificationRepository implements SiteNotificat
                 'notified_at' => now(),
                 'sort_key' => $this->sortKey(),
             ])->save();
+
+            return $group->id;
         });
+    }
+
+    public function findVisible(UserId $userId, string $id): ?StoredSiteNotice
+    {
+        if (! Str::isUuid($id)) {
+            return null;
+        }
+
+        $row = SiteNotificationModel::query()
+            ->where('user_id', $userId->value())
+            ->whereKey($id)
+            ->whereNull('hidden_at')
+            ->first();
+
+        return $row instanceof SiteNotificationModel ? $this->toStored($row) : null;
     }
 
     public function unreadCount(UserId $userId): int

@@ -14,6 +14,7 @@ use App\Application\SiteNotifications\DTOs\SiteNotificationDTO;
 use App\Application\SiteNotifications\DTOs\SiteNotificationGroupDTO;
 use App\Application\SiteNotifications\Services\SiteNotificationPreferenceServiceInterface;
 use App\Application\SiteNotifications\SiteNotificationIcons;
+use App\Application\WebPush\Services\WebPushNotifierInterface;
 use App\Domain\SiteNotifications\Repositories\SiteNotificationRepositoryInterface;
 use App\Domain\SiteNotifications\ValueObjects\SiteNotice;
 use App\Domain\ValueObjects\UserId;
@@ -49,6 +50,7 @@ final class SiteNotificationChannel
         private readonly SiteNotificationPreferenceServiceInterface $preferences,
         private readonly SiteNotificationRepositoryInterface $notices,
         private readonly RealtimePublisherInterface $realtime,
+        private readonly WebPushNotifierInterface $push,
     ) {}
 
     public function send(object $notifiable, Notification $notification): void
@@ -96,10 +98,13 @@ final class SiteNotificationChannel
 
         $this->warnOnUnknownIcon($notification, $notice);
 
-        $this->notices->deliver(UserId::fromString($notifiable->id), $this->toNotice($category, $notice, $subject));
+        $noticeId = $this->notices->deliver(UserId::fromString($notifiable->id), $this->toNotice($category, $notice, $subject));
 
         // With real time on, the bell hears of it at once and asks for its counter (core#493)
         $this->realtime->publish(SiteNotificationsRealtimeChannel::for((string) $notifiable->id), SiteNotificationsRealtimeChannel::DELIVERED);
+
+        // And the person's browsers too, when they want this category pushed (core#803)
+        $this->push->notify((string) $notifiable->id, $noticeId, $category, $subject);
     }
 
     private function toNotice(MailCategoryDTO $category, SiteNotificationDTO $notice, ?MailSubjectDTO $subject): SiteNotice

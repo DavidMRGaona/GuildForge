@@ -17,6 +17,7 @@
 - [Development guide](./development-guide.md) — Installation, commands, testing
 - [Deployment guide](./deployment-guide.md) — Docker, CI/CD, environment variables, monitoring
 - [Real time](./realtime.md) — Optional WebSockets: variables, the Reverb process and the proxy rule
+- [Push notifications](./web-push.md) — Optional browser push: VAPID keys, push services, privacy
 - [Module development guide](./modules/README.md) — Structure, SDK, scaffolding, testing
 - [Writing knowledge guides](./modules/knowledge-guides.md) — In-app help guides for modules
 - [Module CI/CD](./module-ci-cd.md) — Release pipeline with GitHub Actions

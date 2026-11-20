@@ -50,6 +50,9 @@ use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SiteNotificationsController;
 use App\Http\Controllers\WebApp\ServiceWorkerController;
 use App\Http\Controllers\WebApp\WebAppManifestController;
+use App\Http\Controllers\WebPush\WebPushNoticeController;
+use App\Http\Controllers\WebPush\WebPushSubscriptionController;
+use App\Http\Middleware\EnsureWebPushIsEnabled;
 use App\Http\Middleware\KeepOutOfSearchEngines;
 use App\Http\Middleware\ThrottleWhereListed;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -334,6 +337,20 @@ Route::middleware('auth')->group(function (): void {
             ->name('site-notifications.unread');
         Route::post('/avisos/{notification}/ocultar', [SiteNotificationsController::class, 'hide'])
             ->name('site-notifications.hide');
+    });
+    // Browser push notifications (core#803), only while they are configured (404 otherwise). The
+    // service worker reads a notice with the session: the push message carried its id only
+    Route::middleware(EnsureWebPushIsEnabled::class)->group(function (): void {
+        Route::middleware(ThrottleWhereListed::class.':web-push-subscription')->group(function (): void {
+            Route::post('/avisos/push/suscripcion', [WebPushSubscriptionController::class, 'store'])
+                ->name('web-push.subscribe');
+            Route::delete('/avisos/push/suscripcion', [WebPushSubscriptionController::class, 'destroy'])
+                ->name('web-push.unsubscribe');
+        });
+        Route::get('/avisos/{notification}/push', WebPushNoticeController::class)
+            ->whereUuid('notification')
+            ->middleware('throttle:120,1,web-push-notice')
+            ->name('site-notifications.push');
     });
     // Opening a notice marks it read, then goes where it leads
     Route::get('/avisos/{notification}', [SiteNotificationsController::class, 'open'])

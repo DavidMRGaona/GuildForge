@@ -20,6 +20,7 @@ use App\Providers\SiteBlocksServiceProvider;
 use App\Providers\SiteNotificationsServiceProvider;
 use App\Providers\TwoFactorServiceProvider;
 use App\Providers\WebAppServiceProvider;
+use App\Providers\WebPushServiceProvider;
 
 return [
     AppServiceProvider::class,
@@ -40,4 +41,5 @@ return [
     SiteNotificationsServiceProvider::class,
     TwoFactorServiceProvider::class,
     WebAppServiceProvider::class,
+    WebPushServiceProvider::class,
 ];
