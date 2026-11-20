@@ -32,7 +32,8 @@ RUN find . -mindepth 1 -maxdepth 1 \
         -exec rm -rf {} + \
     && find app -mindepth 1 -maxdepth 1 ! -name Filament -exec rm -rf {} + \
     && find scripts -mindepth 1 -maxdepth 1 ! -name verify-build.mjs ! -name public-api.mjs \
-        ! -name build-module.sh ! -name module-build-mode.sh -exec rm -rf {} +
+        ! -name build-file-names.mjs ! -name build-module.sh ! -name module-build-mode.sh \
+        -exec rm -rf {} +
 
 # Stage 1: Build frontend assets
 FROM node:24-alpine AS assets
