@@ -5,20 +5,22 @@ summary: Qué es la campana de la cabecera, cómo se leen los avisos y cómo ele
 category: account
 audience: site
 order: 41
-keywords: [avisos, notificaciones, campana, sin leer, marcar como leído, respuestas, menciones, me gusta, avisos en la web, contador, no me llegan avisos, demasiados avisos, novedades, eventos nuevos, artículos nuevos, galerías nuevas]
+keywords: [avisos, notificaciones, campana, sin leer, avisos nuevos, número de la campana, el número no se va, marcar como leído, respuestas, menciones, me gusta, avisos en la web, contador, no me llegan avisos, demasiados avisos, novedades, eventos nuevos, artículos nuevos, galerías nuevas]
 related: [core.account.mail-preferences]
 ---
 Además de los correos, {{site_name}} te avisa dentro de la web de lo que pasa mientras navegas: una respuesta en un tema que sigues, una mención, una plaza libre… Los avisos se ven en la campana de la cabecera, junto a tu nombre.
 
 ## La campana
 
-- El número de la campana dice cuántos avisos tienes sin leer. A partir de diez verás **9+**.
-- Pulsa la campana para ver los últimos avisos. Los que no has leído aparecen resaltados y con un punto.
+- El número de la campana dice cuántos avisos nuevos te han llegado desde la última vez que la abriste. A partir de diez verás **9+**.
+- Pulsa la campana para ver los últimos avisos. El número se va en cuanto la abres, pero los avisos que no has leído siguen resaltados y con un punto hasta que los abras.
 - Pulsa un aviso para ir a lo que cuenta. Al abrirlo, queda marcado como leído.
-- **Marcar todo como leído** deja todos tus avisos leídos de una vez.
-- **Ver todos los avisos** abre la página **Avisos**, con todos ellos ordenados del más reciente al más antiguo.
+- **Marcar todo como leído**, el botón con la doble marca, deja todos tus avisos leídos de una vez. En el móvil sale solo el icono. Aparece mientras te quede algún aviso sin leer.
+- **Ver todos los avisos** abre la página **Avisos**, con todos ellos ordenados del más reciente al más antiguo. Abrir esta página también cuenta como haber mirado tus avisos.
 
-El número se actualiza solo cada minuto mientras tienes la web abierta, y también al volver a la pestaña. No hace falta recargar la página.
+El número se actualiza solo cada minuto mientras tienes la web abierta, y también al volver a la pestaña. No hace falta recargar la página. Si llega un aviso después de abrir la campana, el número vuelve a subir.
+
+El mismo número aparece delante del título de la pestaña del navegador, como «(3) Eventos», y en la campana del panel de administración si tienes acceso a él.
 
 > [!TIP]
 > Con el teclado, pulsa Intro sobre la campana para abrirla, usa las flechas para ir de un aviso a otro y pulsa Escape para cerrarla.

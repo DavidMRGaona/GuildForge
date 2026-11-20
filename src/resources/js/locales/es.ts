@@ -461,8 +461,8 @@ export default {
     notifications: {
         title: 'Avisos',
         bell: 'Avisos',
-        bellWithUnread: 'Avisos, {count} sin leer | Avisos, {count} sin leer',
-        liveUnread: 'Tienes {count} aviso sin leer | Tienes {count} avisos sin leer',
+        bellWithUnread: 'Avisos, {count} nuevo | Avisos, {count} nuevos',
+        liveUnread: 'Tienes {count} aviso nuevo | Tienes {count} avisos nuevos',
         latest: 'Últimos avisos',
         unreadLabel: 'Sin leer:',
         moreInGroup: 'y {count} aviso más | y {count} avisos más',

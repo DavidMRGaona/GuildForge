@@ -18,6 +18,18 @@ interface SiteNotificationServiceInterface
     /** Unread rows (a group counts once). */
     public function unreadCount(object $user): int;
 
+    /**
+     * The bell's number (core#800): unread rows that arrived after the person last looked
+     * (markSeen()); every unread row before they ever looked. Never more than unreadCount().
+     */
+    public function unseenCount(object $user): int;
+
+    /**
+     * The person looks at their notices (the bell opened, the «Avisos» page): unseenCount() goes
+     * to 0 and the rows stay unread.
+     */
+    public function markSeen(object $user): void;
+
     /** Every visible row of the person; only the unread ones with $onlyUnread (core#671). */
     public function total(object $user, bool $onlyUnread = false): int;
 

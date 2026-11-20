@@ -317,7 +317,8 @@ class AdminPanelProvider extends PanelProvider
                 return null;
             }
 
-            $count = app(SiteNotificationServiceInterface::class)->unreadCount($user);
+            // The site's bell number (core#800): what arrived since the person last looked
+            $count = app(SiteNotificationServiceInterface::class)->unseenCount($user);
         } catch (Throwable $exception) {
             Log::warning('The panel bell could not read the unread notices; it is left out.', ['exception' => $exception]);
 

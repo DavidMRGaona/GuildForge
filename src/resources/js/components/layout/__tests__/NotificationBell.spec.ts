@@ -90,8 +90,24 @@ describe('NotificationBell', () => {
 
         expect(wrapper.get('[data-testid="notification-badge"]').text()).toBe('3');
         expect(wrapper.get('[data-testid="notification-bell"]').attributes('aria-label')).toBe(
-            'Avisos, 3 sin leer'
+            'Avisos, 3 nuevos'
         );
+        wrapper.unmount();
+    });
+
+    it('counts only what is new since the bell was last opened, never more than unread', async () => {
+        page.props = { siteNotifications: { unread: 5, unseen: 2 } };
+        const wrapper = mountBell();
+
+        expect(wrapper.get('[data-testid="notification-badge"]').text()).toBe('2');
+        expect(wrapper.get('[data-testid="notification-bell"]').attributes('aria-label')).toBe(
+            'Avisos, 2 nuevos'
+        );
+
+        page.props = { siteNotifications: { unread: 1, unseen: 4 } };
+        await flushPromises();
+
+        expect(wrapper.get('[data-testid="notification-badge"]').text()).toBe('1');
         wrapper.unmount();
     });
 
@@ -112,18 +128,30 @@ describe('NotificationBell', () => {
     });
 
     it('opens the latest notices and links each one through the core', async () => {
-        fetchMock.mockResolvedValue(
-            jsonResponse({
-                unread: 2,
-                items: [notice(), notice({ id: 'b', href: '/avisos/b', unread: false, count: 4 })],
-            })
-        );
+        fetchMock
+            .mockResolvedValueOnce(jsonResponse({ unread: 2, unseen: 0 }))
+            .mockResolvedValueOnce(
+                jsonResponse({
+                    unread: 2,
+                    unseen: 0,
+                    items: [
+                        notice(),
+                        notice({ id: 'b', href: '/avisos/b', unread: false, count: 4 }),
+                    ],
+                })
+            );
         const wrapper = mountBell();
 
         await wrapper.get('[data-testid="notification-bell"]').trigger('click');
         await flushPromises();
 
-        expect(fetchMock).toHaveBeenCalledWith('/avisos/recientes', expect.anything());
+        // Seen first, then the list (core#800)
+        expect(fetchMock).toHaveBeenNthCalledWith(
+            1,
+            '/avisos/vistos',
+            expect.objectContaining({ method: 'POST' })
+        );
+        expect(fetchMock).toHaveBeenNthCalledWith(2, '/avisos/recientes', expect.anything());
         const entries = wrapper.findAll('[data-testid="site-notification"]');
         expect(entries).toHaveLength(2);
         expect(entries[0]?.attributes('href')).toBe('/avisos/0193b2c4-7f1e-7a00-9c3d-5e6f7a8b9c0d');
@@ -131,15 +159,53 @@ describe('NotificationBell', () => {
         expect(entries[1]?.get('[data-testid="site-notification-count"]').text()).toBe(
             'y 3 avisos más'
         );
-        expect(wrapper.get('[data-testid="notification-badge"]').text()).toBe('2');
+        // Looked at: no number, the notices still unread and «Marcar todo como leído» there
+        expect(wrapper.find('[data-testid="notification-badge"]').exists()).toBe(false);
+        expect(wrapper.get('[data-testid="notification-bell"]').attributes('aria-label')).toBe(
+            'Avisos'
+        );
+        expect(wrapper.find('[data-testid="notification-mark-all-read"]').exists()).toBe(true);
         expect(wrapper.get('[data-testid="notification-bell"]').attributes('aria-expanded')).toBe(
             'true'
         );
         wrapper.unmount();
     });
 
+    it('takes the number from the list when the server could not store the look', async () => {
+        fetchMock
+            .mockResolvedValueOnce(jsonResponse({ message: 'Error' }, 500))
+            .mockResolvedValueOnce(jsonResponse({ unread: 2, unseen: 2, items: [notice()] }));
+        const wrapper = mountBell();
+
+        await wrapper.get('[data-testid="notification-bell"]').trigger('click');
+        await flushPromises();
+
+        expect(wrapper.findAll('[data-testid="site-notification"]')).toHaveLength(1);
+        expect(wrapper.get('[data-testid="notification-badge"]').text()).toBe('2');
+        wrapper.unmount();
+    });
+
+    it('counts a notice that arrives after the bell was opened', async () => {
+        vi.useFakeTimers();
+        fetchMock
+            .mockResolvedValueOnce(jsonResponse({ unread: 3, unseen: 0 }))
+            .mockResolvedValueOnce(jsonResponse({ unread: 3, unseen: 0, items: [notice()] }))
+            .mockResolvedValueOnce(jsonResponse({ unread: 4, unseen: 1 }));
+        const wrapper = mountBell();
+        await wrapper.get('[data-testid="notification-bell"]').trigger('click');
+        await flushPromises();
+        expect(wrapper.find('[data-testid="notification-badge"]').exists()).toBe(false);
+
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+        await flushPromises();
+
+        expect(wrapper.get('[data-testid="notification-badge"]').text()).toBe('1');
+        expect(wrapper.get('[role="status"]').text()).toBe('Tienes 1 aviso nuevo');
+        wrapper.unmount();
+    });
+
     it('keeps two lines of each excerpt and gives the full date on the time', async () => {
-        fetchMock.mockResolvedValue(
+        fetchMock.mockImplementation(async () =>
             jsonResponse({
                 unread: 1,
                 items: [notice({ notifiedAt: '2026-12-19T18:00:00+01:00' })],
@@ -162,7 +228,7 @@ describe('NotificationBell', () => {
     it('moves the times on while the list is open', async () => {
         vi.useFakeTimers();
         vi.setSystemTime(new Date('2026-11-14T10:00:00Z'));
-        fetchMock.mockResolvedValue(
+        fetchMock.mockImplementation(async () =>
             jsonResponse({ unread: 1, items: [notice({ notifiedAt: '2026-11-14T09:59:30Z' })] })
         );
         const wrapper = mountBell();
@@ -179,7 +245,7 @@ describe('NotificationBell', () => {
     });
 
     it('links to the notice settings from its header', async () => {
-        fetchMock.mockResolvedValue(jsonResponse({ unread: 0, items: [] }));
+        fetchMock.mockImplementation(async () => jsonResponse({ unread: 0, items: [] }));
         const wrapper = mountBell();
 
         await wrapper.get('[data-testid="notification-bell"]').trigger('click');
@@ -193,8 +259,11 @@ describe('NotificationBell', () => {
 
     it('marks one notice unread again from its menu', async () => {
         fetchMock
-            .mockResolvedValueOnce(jsonResponse({ unread: 0, items: [notice({ unread: false })] }))
-            .mockResolvedValueOnce(jsonResponse({ unread: 1 }));
+            .mockResolvedValueOnce(jsonResponse({ unread: 0, unseen: 0 }))
+            .mockResolvedValueOnce(
+                jsonResponse({ unread: 0, unseen: 0, items: [notice({ unread: false })] })
+            )
+            .mockResolvedValueOnce(jsonResponse({ unread: 1, unseen: 0 }));
         const wrapper = mountBell();
         await wrapper.get('[data-testid="notification-bell"]').trigger('click');
         await flushPromises();
@@ -213,7 +282,9 @@ describe('NotificationBell', () => {
         expect(wrapper.get('[data-testid="site-notification"]').attributes('data-unread')).toBe(
             'true'
         );
-        expect(wrapper.get('[data-testid="notification-badge"]').text()).toBe('1');
+        // Unread again but already seen: no number, «Marcar todo como leído» back
+        expect(wrapper.find('[data-testid="notification-badge"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="notification-mark-all-read"]').exists()).toBe(true);
         expect(wrapper.get('[role="status"]').text()).toBe('Aviso marcado como no leído.');
         // The keyboard stays in the bell: back on the «⋯» it came from
         expect(document.activeElement).toBe(
@@ -224,13 +295,15 @@ describe('NotificationBell', () => {
 
     it('hides a notice and moves the focus to the one in its place', async () => {
         fetchMock
+            .mockResolvedValueOnce(jsonResponse({ unread: 2, unseen: 0 }))
             .mockResolvedValueOnce(
                 jsonResponse({
                     unread: 2,
+                    unseen: 0,
                     items: [notice(), notice({ id: 'b', href: '/avisos/b', title: 'Segundo' })],
                 })
             )
-            .mockResolvedValueOnce(jsonResponse({ unread: 1 }));
+            .mockResolvedValueOnce(jsonResponse({ unread: 1, unseen: 0 }));
         const wrapper = mountBell();
         await wrapper.get('[data-testid="notification-bell"]').trigger('click');
         await flushPromises();
@@ -246,13 +319,13 @@ describe('NotificationBell', () => {
         const entries = wrapper.findAll('[data-testid="site-notification"]');
         expect(entries).toHaveLength(1);
         expect(document.activeElement).toBe(entries[0]?.element);
-        expect(wrapper.get('[data-testid="notification-badge"]').text()).toBe('1');
+        expect(wrapper.find('[data-testid="notification-badge"]').exists()).toBe(false);
         expect(wrapper.get('[role="status"]').text()).toBe('Aviso oculto.');
         wrapper.unmount();
     });
 
     it('places the «⋯» over the row through a wrapper, never on the menu root itself', async () => {
-        fetchMock.mockResolvedValue(jsonResponse({ unread: 1, items: [notice()] }));
+        fetchMock.mockImplementation(async () => jsonResponse({ unread: 1, items: [notice()] }));
         const wrapper = mountBell();
         await wrapper.get('[data-testid="notification-bell"]').trigger('click');
         await flushPromises();
@@ -267,7 +340,7 @@ describe('NotificationBell', () => {
     });
 
     it('closes the menu with Escape and leaves the bell open', async () => {
-        fetchMock.mockResolvedValue(jsonResponse({ unread: 1, items: [notice()] }));
+        fetchMock.mockImplementation(async () => jsonResponse({ unread: 1, items: [notice()] }));
         const wrapper = mountBell();
         await wrapper.get('[data-testid="notification-bell"]').trigger('click');
         await flushPromises();
@@ -290,7 +363,8 @@ describe('NotificationBell', () => {
 
     it('keeps the notice and says so when the server refuses', async () => {
         fetchMock
-            .mockResolvedValueOnce(jsonResponse({ unread: 1, items: [notice()] }))
+            .mockResolvedValueOnce(jsonResponse({ unread: 1, unseen: 0 }))
+            .mockResolvedValueOnce(jsonResponse({ unread: 1, unseen: 0, items: [notice()] }))
             .mockResolvedValueOnce(jsonResponse({ message: 'Error' }, 500));
         const wrapper = mountBell();
         await wrapper.get('[data-testid="notification-bell"]').trigger('click');
@@ -311,7 +385,7 @@ describe('NotificationBell', () => {
     });
 
     it('says when there is nothing yet', async () => {
-        fetchMock.mockResolvedValue(jsonResponse({ unread: 0, items: [] }));
+        fetchMock.mockImplementation(async () => jsonResponse({ unread: 0, items: [] }));
         const wrapper = mountBell();
 
         await wrapper.get('[data-testid="notification-bell"]').trigger('click');
@@ -322,7 +396,7 @@ describe('NotificationBell', () => {
     });
 
     it('closes with Escape and gives the focus back to the bell', async () => {
-        fetchMock.mockResolvedValue(jsonResponse({ unread: 1, items: [notice()] }));
+        fetchMock.mockImplementation(async () => jsonResponse({ unread: 1, items: [notice()] }));
         const wrapper = mountBell();
         const bell = wrapper.get('[data-testid="notification-bell"]');
 
@@ -339,7 +413,7 @@ describe('NotificationBell', () => {
     });
 
     it('moves between the notices with the arrows', async () => {
-        fetchMock.mockResolvedValue(
+        fetchMock.mockImplementation(async () =>
             jsonResponse({ unread: 2, items: [notice(), notice({ id: 'b', href: '/avisos/b' })] })
         );
         const wrapper = mountBell();
@@ -362,16 +436,20 @@ describe('NotificationBell', () => {
 
     it('marks everything read', async () => {
         fetchMock
-            .mockResolvedValueOnce(jsonResponse({ unread: 1, items: [notice()] }))
-            .mockResolvedValueOnce(jsonResponse({ unread: 0 }));
+            .mockResolvedValueOnce(jsonResponse({ unread: 1, unseen: 0 }))
+            .mockResolvedValueOnce(jsonResponse({ unread: 1, unseen: 0, items: [notice()] }))
+            .mockResolvedValueOnce(jsonResponse({ unread: 0, unseen: 0 }));
         const wrapper = mountBell();
         await wrapper.get('[data-testid="notification-bell"]').trigger('click');
         await flushPromises();
 
-        const markAll = wrapper
-            .findAll('button')
-            .find((button) => button.text() === 'Marcar todo como leído');
-        await markAll?.trigger('click');
+        const markAll = wrapper.get('[data-testid="notification-mark-all-read"]');
+        // A button with its icon; on narrow screens the icon alone, its name kept for screen readers
+        expect(markAll.text()).toBe('Marcar todo como leído');
+        expect(markAll.attributes('title')).toBe('Marcar todo como leído');
+        expect(markAll.find('svg').attributes('aria-hidden')).toBe('true');
+        expect(markAll.get('span').classes()).toEqual(['sr-only', 'sm:not-sr-only']);
+        await markAll.trigger('click');
         await flushPromises();
 
         expect(fetchMock).toHaveBeenLastCalledWith(
@@ -382,13 +460,14 @@ describe('NotificationBell', () => {
         expect(wrapper.get('[data-testid="site-notification"]').attributes('data-unread')).toBe(
             'false'
         );
+        expect(wrapper.find('[data-testid="notification-mark-all-read"]').exists()).toBe(false);
         expect(wrapper.get('[role="status"]').text()).toBe('Todos los avisos están leídos.');
         wrapper.unmount();
     });
 
     it('asks for the counter every minute and announces a rise', async () => {
         vi.useFakeTimers();
-        fetchMock.mockResolvedValue(jsonResponse({ unread: 5 }));
+        fetchMock.mockImplementation(async () => jsonResponse({ unread: 7, unseen: 5 }));
         const wrapper = mountBell();
 
         await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
@@ -396,13 +475,13 @@ describe('NotificationBell', () => {
 
         expect(fetchMock).toHaveBeenCalledWith('/avisos/contador', expect.anything());
         expect(wrapper.get('[data-testid="notification-badge"]').text()).toBe('5');
-        expect(wrapper.get('[role="status"]').text()).toBe('Tienes 5 avisos sin leer');
+        expect(wrapper.get('[role="status"]').text()).toBe('Tienes 5 avisos nuevos');
         wrapper.unmount();
     });
 
     it('keeps asking every few minutes while the tab is hidden, for the tab title', async () => {
         vi.useFakeTimers();
-        fetchMock.mockResolvedValue(jsonResponse({ unread: 6 }));
+        fetchMock.mockImplementation(async () => jsonResponse({ unread: 6 }));
         const wrapper = mountBell();
         hideTab();
 
@@ -420,7 +499,7 @@ describe('NotificationBell', () => {
 
     it('stops asking once unmounted', async () => {
         vi.useFakeTimers();
-        fetchMock.mockResolvedValue(jsonResponse({ unread: 5 }));
+        fetchMock.mockImplementation(async () => jsonResponse({ unread: 5 }));
         const wrapper = mountBell();
         wrapper.unmount();
 
@@ -493,7 +572,7 @@ describe('NotificationBell', () => {
         });
 
         it('asks for the counter as soon as a notice is delivered', async () => {
-            fetchMock.mockResolvedValue(jsonResponse({ unread: 4 }));
+            fetchMock.mockImplementation(async () => jsonResponse({ unread: 4, unseen: 4 }));
             const wrapper = mountBell();
             await goLive();
 
@@ -507,7 +586,7 @@ describe('NotificationBell', () => {
         });
 
         it('hears a delivered notice in a hidden tab too', async () => {
-            fetchMock.mockResolvedValue(jsonResponse({ unread: 4 }));
+            fetchMock.mockImplementation(async () => jsonResponse({ unread: 4 }));
             const wrapper = mountBell();
             await goLive();
             hideTab();
@@ -522,7 +601,7 @@ describe('NotificationBell', () => {
 
         it('skips the minute question while live and asks again once it is not', async () => {
             vi.useFakeTimers();
-            fetchMock.mockResolvedValue(jsonResponse({ unread: 3 }));
+            fetchMock.mockImplementation(async () => jsonResponse({ unread: 3 }));
             const wrapper = mountBell();
             await goLive();
 

@@ -305,6 +305,10 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/avisos/recientes', [SiteNotificationsController::class, 'recent'])
         ->middleware('throttle:120,1,site-notifications')
         ->name('site-notifications.recent');
+    // The bell opened (core#800): seen, not read. Exempt from «solo mirar», the safety net undoes it
+    Route::post('/avisos/vistos', [SiteNotificationsController::class, 'seen'])
+        ->middleware('throttle:60,1,site-notifications-seen')
+        ->name('site-notifications.seen');
     Route::post('/avisos/leidos', [SiteNotificationsController::class, 'markAllRead'])
         ->middleware('throttle:30,1,site-notifications-read')
         ->name('site-notifications.read-all');

@@ -84,6 +84,18 @@ describe('useUnreadTitle', () => {
         wrapper.unmount();
     });
 
+    it('shows the same number as the bell: what is new since the bell was last opened', async () => {
+        page.props = { siteNotifications: { unread: 5, unseen: 2 } };
+        const { wrapper, head } = mountWithTitle();
+
+        expect(await titleAfterRender(head)).toBe('(2) Eventos · Sitio de ejemplo');
+
+        // Opened: unread notices stay, the title says nothing
+        page.props = { siteNotifications: { unread: 5, unseen: 0 } };
+        expect(await titleAfterRender(head)).toBe('Eventos · Sitio de ejemplo');
+        wrapper.unmount();
+    });
+
     it('adds nothing where the bell is not shown', async () => {
         enabled.value = false;
         const { wrapper, head } = mountWithTitle();

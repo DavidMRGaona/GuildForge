@@ -39,7 +39,7 @@ return [
         'help' => 'Help',
         'site' => 'View website',
         'notifications' => 'Notices',
-        'notifications_unread' => 'Notices, :count unread',
+        'notifications_unread' => 'New notices: :count',
     ],
     'pages' => [
         'legal' => [

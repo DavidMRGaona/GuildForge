@@ -52,9 +52,10 @@
         />
 
         @if($notifications !== null)
-            {{-- The site's bell (core#687): the unread count, asked again like the site does without
-                 real time (every minute while visible, every five while hidden, on return), and a link
-                 to the «Avisos» page, where the notices are read, hidden or marked --}}
+            {{-- The site's bell (core#687): its number (the unread notices that arrived since the person
+                 last looked, core#800), asked again like the site does without real time (every minute
+                 while visible, every five while hidden, on return), and a link to the «Avisos» page,
+                 where the notices are read, hidden or marked; opening it counts as looking --}}
             @php($bellLabel = $notifications['count'] > 0 ? str_replace(':count', (string) $notifications['count'], $notifications['labelUnread']) : $notifications['label'])
             <a
                 href="{{ $notifications['url'] }}"
@@ -88,8 +89,8 @@
                                 credentials: 'same-origin',
                             })
                             if (! response.ok) return
-                            const unread = (await response.json()).unread
-                            if (Number.isInteger(unread) && unread >= 0) this.count = unread
+                            const unseen = (await response.json()).unseen
+                            if (Number.isInteger(unseen) && unseen >= 0) this.count = unseen
                         } catch (error) {
                             // Offline or signed out elsewhere: keep the last count
                         }

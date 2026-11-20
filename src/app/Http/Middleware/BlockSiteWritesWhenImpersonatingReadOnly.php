@@ -23,6 +23,8 @@ use Symfony\Component\HttpFoundation\Response;
  * Left alone on purpose:
  * - `impersonation.stop` and the logout routes (ApplyImpersonation::LOGOUT_ROUTES): the way out;
  * - `realtime.auth` (`POST /broadcasting/auth`): subscribing to a channel only reads;
+ * - `site-notifications.seen` (`POST /avisos/vistos`, core#800): opening the bell, which the
+ *   safety net undoes like any write, must not fail while only looking;
  * - Livewire update requests (by route name, never by a header the client can send) and the panel, which #576 covers with their own check.
  * What a request slips past this (a GET that writes) is the safety net's business (#572).
  */
@@ -39,6 +41,7 @@ final readonly class BlockSiteWritesWhenImpersonatingReadOnly
         'impersonation.stop',
         ...ApplyImpersonation::LOGOUT_ROUTES,
         'realtime.auth',
+        'site-notifications.seen',
         '*livewire.update',
         'filament.*',
     ];

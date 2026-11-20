@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
-import { Bell, Settings2 } from '@lucide/vue';
+import { Bell, CheckCheck, Settings2 } from '@lucide/vue';
 import SiteNotificationEntry from '@/components/notifications/SiteNotificationEntry.vue';
 import { useOnNavigate } from '@/composables/useOnNavigate';
 import { MAIL_TAB } from '@/composables/useProfileTabs';
@@ -10,11 +10,12 @@ import { useRoutes } from '@/composables/useRoutes';
 import { useSiteNotifications } from '@/composables/useSiteNotifications';
 
 /**
- * The bell of the header (core#491): the unread counter (up to «9+») and, on click, the latest
- * notices with «Marcar todo como leído», a shortcut to the notice settings (core#669) and a link to
- * the «Avisos» page. A disclosure: Tab moves
- * through the list, the arrows go from notice to notice, Escape closes it and gives the focus back
- * to the bell. A rise of the counter is announced to screen readers.
+ * The bell of the header (core#491): the number of unread notices new since the person last
+ * looked (core#800, up to «9+») and, on click, the latest notices with «Marcar todo como leído»,
+ * a shortcut to the notice settings (core#669) and a link to the «Avisos» page. Opening it is
+ * looking: the number goes to 0 while the notices stay unread until opened or marked. A
+ * disclosure: Tab moves through the list, the arrows go from notice to notice, Escape closes it
+ * and gives the focus back to the bell. A rise of the number is announced to screen readers.
  */
 interface Props {
     /** Unique per bell on the page (the desktop bar and the narrow header each have one). */
@@ -34,7 +35,7 @@ const props = withDefaults(defineProps<Props>(), {
 const { t } = useI18n();
 const routes = useRoutes();
 const notifications = useSiteNotifications();
-const { unread, items, loading, failed } = notifications;
+const { unread, unseen, items, loading, failed } = notifications;
 
 const isOpen = ref(false);
 const marking = ref(false);
@@ -47,15 +48,15 @@ const list = useTemplateRef<HTMLElement>('list');
 
 const settingsUrl = `${routes.profile}?tab=${MAIL_TAB}`;
 const headingId = computed(() => `${props.panelId}-heading`);
-const badge = computed(() => (unread.value > 9 ? '9+' : String(unread.value)));
+const badge = computed(() => (unseen.value > 9 ? '9+' : String(unseen.value)));
 const buttonLabel = computed(() =>
-    unread.value > 0
-        ? t('notifications.bellWithUnread', { count: unread.value }, unread.value)
+    unseen.value > 0
+        ? t('notifications.bellWithUnread', { count: unseen.value }, unseen.value)
         : t('notifications.bell')
 );
 
 // Only a rise is news: opening the list or marking everything read is the person's own doing
-watch(unread, (count, previous) => {
+watch(unseen, (count, previous) => {
     if (count > previous) {
         liveMessage.value = t('notifications.liveUnread', { count }, count);
     }
@@ -87,6 +88,8 @@ function onClickOutside(event: MouseEvent): void {
 async function toggle(): Promise<void> {
     isOpen.value = !isOpen.value;
     if (isOpen.value) {
+        // Seen first, then the list: whatever arrives meanwhile is in the list and still counts
+        await notifications.markSeen();
         await notifications.loadRecent();
     }
 }
@@ -197,7 +200,7 @@ async function markAllRead(): Promise<void> {
         >
             <Bell class="h-5 w-5" aria-hidden="true" />
             <span
-                v-if="unread > 0"
+                v-if="unseen > 0"
                 class="absolute -right-0.5 -top-0.5 flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-primary-600 px-1 text-[0.6875rem] font-semibold leading-none text-white dark:bg-primary-500"
                 aria-hidden="true"
                 data-testid="notification-badge"
@@ -205,7 +208,7 @@ async function markAllRead(): Promise<void> {
             >
         </button>
 
-        <!-- Rises of the counter (polling) and the result of «Marcar todo como leído» -->
+        <!-- Rises of the number (polling, real time) and the result of «Marcar todo como leído» -->
         <span class="sr-only" role="status" aria-live="polite">{{ liveMessage }}</span>
 
         <div
@@ -221,14 +224,20 @@ async function markAllRead(): Promise<void> {
                     {{ t('notifications.title') }}
                 </h2>
                 <div class="flex items-center gap-2">
+                    <!-- Icon and text; on narrow screens the icon alone, the text kept for screen readers -->
                     <button
                         v-if="unread > 0"
                         type="button"
-                        class="rounded text-sm font-medium text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
+                        :title="t('notifications.markAllRead')"
+                        class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-primary hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-50"
                         :disabled="marking"
+                        data-testid="notification-mark-all-read"
                         @click="markAllRead"
                     >
-                        {{ t('notifications.markAllRead') }}
+                        <CheckCheck class="h-4 w-4 shrink-0" aria-hidden="true" />
+                        <span class="sr-only sm:not-sr-only">{{
+                            t('notifications.markAllRead')
+                        }}</span>
                     </button>
                     <Link
                         :href="settingsUrl"

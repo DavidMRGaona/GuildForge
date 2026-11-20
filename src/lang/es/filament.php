@@ -39,7 +39,7 @@ return [
         'help' => 'Ayuda',
         'site' => 'Ver sitio web',
         'notifications' => 'Avisos',
-        'notifications_unread' => 'Avisos, :count sin leer',
+        'notifications_unread' => 'Avisos nuevos: :count',
     ],
     'pages' => [
         'about' => [

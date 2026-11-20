@@ -17,9 +17,9 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * The notification centre of the signed-in account (core#491): the bell's counter and latest
- * notices (JSON, light enough to ask every minute), the «Avisos» page, opening a notice and
- * marking everything read. Like every signed-in route, closed to accounts that must still verify
+ * The notification centre of the signed-in account (core#491): the bell's counters and latest
+ * notices (JSON, light enough to ask every minute), the «Avisos» page, opening a notice,
+ * marking everything read and, apart from reading, marking the notices seen (core#800). Like every signed-in route, closed to accounts that must still verify
  * their email.
  */
 final class SiteNotificationsController extends Controller
@@ -42,6 +42,8 @@ final class SiteNotificationsController extends Controller
     public function index(Request $request): Response
     {
         $user = $this->user($request);
+        // Looking at the page is looking at the notices (core#800): the bell it shows says 0
+        $this->notices->markSeen($user);
         $page = $this->getCurrentPage();
         // «Sin leer» (core#671); anything else lists everything
         $onlyUnread = $request->query('filtro') === self::UNREAD_FILTER;
@@ -65,7 +67,19 @@ final class SiteNotificationsController extends Controller
 
     public function count(Request $request): JsonResponse
     {
-        return response()->json(['unread' => $this->notices->unreadCount($this->user($request))]);
+        return response()->json($this->counts($this->user($request)));
+    }
+
+    /**
+     * The bell opened (core#800): its number goes to 0, the notices stay unread. Asked before the
+     * list is loaded, so whatever arrives meanwhile is in the list and still counts.
+     */
+    public function seen(Request $request): JsonResponse
+    {
+        $user = $this->user($request);
+        $this->notices->markSeen($user);
+
+        return response()->json($this->counts($user));
     }
 
     public function recent(Request $request): JsonResponse
@@ -73,7 +87,7 @@ final class SiteNotificationsController extends Controller
         $user = $this->user($request);
 
         return response()->json([
-            'unread' => $this->notices->unreadCount($user),
+            ...$this->counts($user),
             'items' => SiteNotificationResource::rows($this->notices->latest($user, self::RECENT)),
         ]);
     }
@@ -126,15 +140,29 @@ final class SiteNotificationsController extends Controller
     }
 
     /**
-     * The bell gets the new counter as JSON; the «Avisos» page goes back where it was.
+     * The bell gets the new counters as JSON; the «Avisos» page goes back where it was.
      */
     private function answer(Request $request, UserModel $user): JsonResponse|RedirectResponse
     {
         if ($request->expectsJson()) {
-            return response()->json(['unread' => $this->notices->unreadCount($user)]);
+            return response()->json($this->counts($user));
         }
 
         return back();
+    }
+
+    /**
+     * `unread` is what is still unread (the «Marcar todo como leído» button, the page);
+     * `unseen` is the bell's number and the tab title's (core#800).
+     *
+     * @return array{unread: int, unseen: int}
+     */
+    private function counts(UserModel $user): array
+    {
+        return [
+            'unread' => $this->notices->unreadCount($user),
+            'unseen' => $this->notices->unseenCount($user),
+        ];
     }
 
     private function user(Request $request): UserModel

@@ -20,6 +20,9 @@ final readonly class EloquentSiteNotificationRepository implements SiteNotificat
     /** Distinct actors kept per group: enough to say «y 99 más», small enough to stay a short list. */
     public const int MAX_ACTORS = 100;
 
+    /** When each person last looked (core#800), on the clock of `sort_key`. */
+    private const string SEEN_TABLE = 'user_site_notification_seen';
+
     public function __construct(
         private TimezoneServiceInterface $timezone,
     ) {}
@@ -72,6 +75,32 @@ final readonly class EloquentSiteNotificationRepository implements SiteNotificat
             ->whereNull('read_at')
             ->whereNull('hidden_at')
             ->count();
+    }
+
+    public function unseenCount(UserId $userId): int
+    {
+        return SiteNotificationModel::query()
+            ->where('user_id', $userId->value())
+            ->whereNull('read_at')
+            ->whereNull('hidden_at')
+            // One query: no mark yet means everything unread is new
+            ->where('sort_key', '>', static fn ($query) => $query
+                ->selectRaw('coalesce(max(seen_key), 0)')
+                ->from(self::SEEN_TABLE)
+                ->where('user_id', $userId->value()))
+            ->count();
+    }
+
+    public function markSeen(UserId $userId): void
+    {
+        $key = $this->sortKey();
+
+        DB::table(self::SEEN_TABLE)->insertOrIgnore(['user_id' => $userId->value(), 'seen_key' => $key]);
+        // Never back: a clock behind another server's would bring old notices back to the counter
+        DB::table(self::SEEN_TABLE)
+            ->where('user_id', $userId->value())
+            ->where('seen_key', '<', $key)
+            ->update(['seen_key' => $key]);
     }
 
     public function count(UserId $userId, bool $onlyUnread = false): int

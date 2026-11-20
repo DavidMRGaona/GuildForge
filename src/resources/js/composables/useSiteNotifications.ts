@@ -24,8 +24,13 @@ export const HIDDEN_POLL_INTERVAL_MS = 5 * 60_000;
 export const DELIVERED_EVENT = 'site-notification.delivered';
 
 export interface UseSiteNotificationsReturn {
-    /** Unread rows (a group counts once). */
+    /** Unread rows (a group counts once): «Marcar todo como leído» shows while there are some. */
     unread: Readonly<Ref<number>>;
+    /**
+     * The bell's number and the tab title's (core#800): unread rows that arrived after the person
+     * last opened the bell or the «Avisos» page. Never more than `unread`.
+     */
+    unseen: Readonly<Ref<number>>;
     /** The latest notices, loaded when the list opens. */
     items: Readonly<Ref<DeepReadonly<SiteNotificationItem[]>>>;
     loading: Readonly<Ref<boolean>>;
@@ -33,8 +38,13 @@ export interface UseSiteNotificationsReturn {
     failed: Readonly<Ref<boolean>>;
     /** Ask for the counter again (polling, back to the tab). */
     refreshCount: () => Promise<void>;
-    /** Load the latest notices and the counter (when the list opens). */
+    /** Load the latest notices and the counters (when the list opens). */
     loadRecent: () => Promise<void>;
+    /**
+     * The person looks (the list opens, core#800): the number goes to 0 at once and the server
+     * stores it; the notices stay unread. True when the server did.
+     */
+    markSeen: () => Promise<boolean>;
     /** Mark every notice read; true when the server did. */
     markAllRead: () => Promise<boolean>;
     /** Mark one notice read or unread again without opening it (core#670); true when the server did. */
@@ -51,6 +61,7 @@ export interface UseSiteNotificationsReturn {
 // One state for the whole page: the bell of the desktop bar and the one of the narrow header
 // share it, and only one timer asks the server
 const unread = ref(0);
+const unseen = ref(0);
 const items = ref<SiteNotificationItem[]>([]);
 const loading = ref(false);
 const failed = ref(false);
@@ -66,6 +77,22 @@ function readNumber(value: unknown): number | null {
     return typeof value === 'number' && Number.isFinite(value) && value >= 0
         ? Math.floor(value)
         : null;
+}
+
+/**
+ * Take the counters of an answer. One without `unseen` (a page cached before core#800) counts
+ * everything unread as new; `unseen` never goes past `unread`.
+ */
+function applyCounts(body: Record<string, unknown> | null | undefined): boolean {
+    const unreadCount = readNumber(body?.unread);
+    if (unreadCount === null) {
+        return false;
+    }
+
+    unread.value = unreadCount;
+    unseen.value = Math.min(readNumber(body?.unseen) ?? unreadCount, unreadCount);
+
+    return true;
 }
 
 async function getJson(url: string): Promise<Record<string, unknown>> {
@@ -107,10 +134,7 @@ async function refresh(
     lastAskedAt = Date.now();
 
     try {
-        const count = readNumber((await getJson(routes.notifications.count)).unread);
-        if (count !== null) {
-            unread.value = count;
-        }
+        applyCounts(await getJson(routes.notifications.count));
     } catch {
         // Offline, signed out in another tab or rate limited: keep the last count
     }
@@ -133,24 +157,26 @@ export function useBellVisible(): ComputedRef<boolean> {
 }
 
 /**
- * The notification centre of the header (core#491): the unread counter, which every page brings
- * in its shared props and the bell refreshes every minute and on return to the tab (a light JSON
- * request, never a page visit), and the latest notices, loaded when the list opens. With real
+ * The notification centre of the header (core#491): the counters, which every page brings in its
+ * shared props and the bell refreshes every minute and on return to the tab (a light JSON request,
+ * never a page visit), and the latest notices, loaded when the list opens. The bell shows what is
+ * new since the person last looked (core#800), apart from what is still unread. With real
  * time (core#493) the account's channel says when a notice arrives and the counter is asked then.
  */
 export function useSiteNotifications(): UseSiteNotificationsReturn {
     const routes = useRoutes();
     const page = usePage();
 
-    // Each visit brings a fresh count with it (every bell watches: they write the same value)
+    // Each visit brings fresh counts with it (every bell watches: they write the same values)
     watch(
         // The app root runs before Inertia sets the first page, so props may not exist yet
-        () => (page.props as SharedProps | undefined)?.siteNotifications?.unread,
-        (count) => {
-            const value = readNumber(count);
-            if (value !== null) {
-                unread.value = value;
-            }
+        () => {
+            const shared = (page.props as SharedProps | undefined)?.siteNotifications;
+
+            return [shared?.unread, shared?.unseen] as const;
+        },
+        ([unreadCount, unseenCount]) => {
+            applyCounts({ unread: unreadCount, unseen: unseenCount });
         },
         { immediate: true }
     );
@@ -160,10 +186,7 @@ export function useSiteNotifications(): UseSiteNotificationsReturn {
         try {
             const body = await getJson(routes.notifications.recent);
             items.value = Array.isArray(body.items) ? (body.items as SiteNotificationItem[]) : [];
-            const count = readNumber(body.unread);
-            if (count !== null) {
-                unread.value = count;
-            }
+            applyCounts(body);
             failed.value = false;
         } catch {
             failed.value = true;
@@ -172,8 +195,8 @@ export function useSiteNotifications(): UseSiteNotificationsReturn {
         }
     }
 
-    /** POST to the notice routes; the new counter, or null when it failed. */
-    async function post(url: string): Promise<number | null> {
+    /** POST to the notice routes and take the new counters; false when it failed. */
+    async function post(url: string): Promise<boolean> {
         try {
             const response = await fetch(url, {
                 method: 'POST',
@@ -185,36 +208,38 @@ export function useSiteNotifications(): UseSiteNotificationsReturn {
                 credentials: 'same-origin',
             });
             if (!response.ok) {
-                return null;
+                return false;
             }
 
             const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+            applyCounts(body);
 
-            return readNumber(body.unread) ?? unread.value;
+            return true;
         } catch {
-            return null;
+            return false;
         }
     }
 
+    async function markSeen(): Promise<boolean> {
+        // At once: the person is looking. If the server fails, the next count brings it back
+        unseen.value = 0;
+
+        return post(routes.notifications.seen);
+    }
+
     async function markAllRead(): Promise<boolean> {
-        const count = await post(routes.notifications.readAll);
-        if (count === null) {
+        if (!(await post(routes.notifications.readAll))) {
             return false;
         }
-        unread.value = count;
         items.value = items.value.map((item) => ({ ...item, unread: false }));
 
         return true;
     }
 
     async function setRead(id: string, read: boolean): Promise<boolean> {
-        const count = await post(
-            read ? routes.notifications.read(id) : routes.notifications.unread(id)
-        );
-        if (count === null) {
+        if (!(await post(read ? routes.notifications.read(id) : routes.notifications.unread(id)))) {
             return false;
         }
-        unread.value = count;
         items.value = items.value.map((item) =>
             item.id === id ? { ...item, unread: !read } : item
         );
@@ -223,11 +248,9 @@ export function useSiteNotifications(): UseSiteNotificationsReturn {
     }
 
     async function hide(id: string): Promise<boolean> {
-        const count = await post(routes.notifications.hide(id));
-        if (count === null) {
+        if (!(await post(routes.notifications.hide(id)))) {
             return false;
         }
-        unread.value = count;
         items.value = items.value.filter((item) => item.id !== id);
 
         return true;
@@ -285,11 +308,13 @@ export function useSiteNotifications(): UseSiteNotificationsReturn {
 
     return {
         unread: readonly(unread),
+        unseen: readonly(unseen),
         items: readonly(items) as Readonly<Ref<DeepReadonly<SiteNotificationItem[]>>>,
         loading: readonly(loading),
         failed: readonly(failed),
         refreshCount: () => refresh(routes),
         loadRecent,
+        markSeen,
         markAllRead,
         setRead,
         hide,
@@ -300,6 +325,7 @@ export function useSiteNotifications(): UseSiteNotificationsReturn {
 /** Only for tests: forget the shared state between them. */
 export function resetSiteNotificationsState(): void {
     unread.value = 0;
+    unseen.value = 0;
     items.value = [];
     loading.value = false;
     failed.value = false;

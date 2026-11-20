@@ -55,7 +55,7 @@ final class SiteNotificationsControllerTest extends TestCase
         $user = UserModel::factory()->create();
         $this->notify($user, '/foro/1');
 
-        $this->actingAs($user)->getJson('/avisos/contador')->assertOk()->assertExactJson(['unread' => 1]);
+        $this->actingAs($user)->getJson('/avisos/contador')->assertOk()->assertExactJson(['unread' => 1, 'unseen' => 1]);
     }
 
     public function test_the_recent_notices_come_newest_first_with_their_link_through_the_core(): void
@@ -136,7 +136,7 @@ final class SiteNotificationsControllerTest extends TestCase
         $user = UserModel::factory()->create();
         $this->notify($user, '/foro/1');
 
-        $this->actingAs($user)->postJson('/avisos/leidos')->assertOk()->assertExactJson(['unread' => 0]);
+        $this->actingAs($user)->postJson('/avisos/leidos')->assertOk()->assertExactJson(['unread' => 0, 'unseen' => 0]);
     }
 
     public function test_the_page_lists_every_notice_paginated(): void
@@ -168,10 +168,10 @@ final class SiteNotificationsControllerTest extends TestCase
         $notice = SiteNotificationModel::query()->firstOrFail();
         $this->actingAs($user)->get('/avisos/'.$notice->id);
 
-        $this->actingAs($user)->postJson('/avisos/'.$notice->id.'/no-leido')->assertOk()->assertExactJson(['unread' => 1]);
+        $this->actingAs($user)->postJson('/avisos/'.$notice->id.'/no-leido')->assertOk()->assertExactJson(['unread' => 1, 'unseen' => 1]);
         $this->assertNull($notice->fresh()?->read_at);
 
-        $this->actingAs($user)->postJson('/avisos/'.$notice->id.'/leido')->assertOk()->assertExactJson(['unread' => 0]);
+        $this->actingAs($user)->postJson('/avisos/'.$notice->id.'/leido')->assertOk()->assertExactJson(['unread' => 0, 'unseen' => 0]);
         $this->assertNotNull($notice->fresh()?->read_at);
     }
 
@@ -182,7 +182,7 @@ final class SiteNotificationsControllerTest extends TestCase
         $this->notify($user, '/foro/2', 'Visible');
         $hidden = SiteNotificationModel::query()->where('title', 'Oculto')->firstOrFail();
 
-        $this->actingAs($user)->postJson('/avisos/'.$hidden->id.'/ocultar')->assertOk()->assertExactJson(['unread' => 1]);
+        $this->actingAs($user)->postJson('/avisos/'.$hidden->id.'/ocultar')->assertOk()->assertExactJson(['unread' => 1, 'unseen' => 1]);
 
         $this->actingAs($user)->getJson('/avisos/recientes')
             ->assertJsonCount(1, 'items')
