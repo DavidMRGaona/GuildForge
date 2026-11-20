@@ -21,6 +21,7 @@
         "vitest.config.ts",
         "vite.module.config.ts",
         "vitest.module.config.ts",
-        "scripts/public-api.mjs"
+        "scripts/public-api.mjs",
+        "scripts/build-file-names.mjs"
     ]
 }

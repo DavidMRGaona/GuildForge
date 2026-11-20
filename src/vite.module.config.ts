@@ -10,6 +10,7 @@ import {
     readPublicApi,
     type PublicApi,
 } from './scripts/public-api.mjs';
+import { jsFileName } from './scripts/build-file-names.mjs';
 
 /**
  * Build configuration of a GuildForge module, with the core's toolchain:
@@ -176,8 +177,9 @@ export function defineModuleConfig({ name, root }: ModuleConfigOptions): UserCon
                 },
                 output: {
                     format: 'es',
-                    entryFileNames: 'assets/[name]-[hash].js',
-                    chunkFileNames: 'assets/[name]-[hash].js',
+                    // No cookie or consent words in script URLs: content blockers would drop them
+                    entryFileNames: jsFileName,
+                    chunkFileNames: jsFileName,
                     assetFileNames: 'assets/[name]-[hash].[ext]',
                 },
                 preserveEntrySignatures: 'exports-only',

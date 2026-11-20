@@ -12,13 +12,16 @@
 // - the app, the shared packages and the public entries reach one chunk per
 //   vendor group (a second Vue, Inertia or FullCalendar would split their state);
 // - the core build contains no module sources: in production module pages, slot
-//   components, translations and stylesheets only come from each module's own build.
+//   components, translations and stylesheets only come from each module's own build;
+// - no script is published under a name content blockers drop (cookie, consent…):
+//   a blocked public entry takes down every module component that imports it.
 //
 // Run after `vite build`.
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readPublicApi } from './public-api.mjs';
+import { BLOCKED_NAME_PATTERN } from './build-file-names.mjs';
 
 const srcDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -200,9 +203,13 @@ function builtScripts(dir) {
     });
 }
 for (const file of builtScripts(buildDir)) {
+    const name = file.slice(buildDir.length + 1);
     const match = readFileSync(file, 'utf8').match(MODULE_SOURCE);
     if (match) {
-        failures.push(`${file.slice(buildDir.length + 1)} contains module sources (${match[0]}…)`);
+        failures.push(`${name} contains module sources (${match[0]}…)`);
+    }
+    if (BLOCKED_NAME_PATTERN.test(name)) {
+        failures.push(`${name}: content blockers drop scripts named like this`);
     }
 }
 
