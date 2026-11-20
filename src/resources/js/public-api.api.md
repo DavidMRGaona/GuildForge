@@ -828,6 +828,7 @@ export interface RouteDefinitions {
         index: string;
         count: string;
         recent: string;
+        seen: string;
         readAll: string;
         read: (id: string) => string;
         unread: (id: string) => string;

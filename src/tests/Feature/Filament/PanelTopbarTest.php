@@ -201,10 +201,35 @@ final class PanelTopbarTest extends TestCase
             ->assertOk()
             ->assertSee('data-panel-notifications-bell', false)
             ->assertSee('href="'.route('site-notifications.index').'"', false)
-            ->assertSee('aria-label="Avisos, 3 sin leer"', false)
+            ->assertSee('aria-label="Avisos nuevos: 3"', false)
             ->assertSee('data-panel-notifications-badge', false)
             ->assertSee('>3</span>', false)
             ->assertSee('data-count-url="'.route('site-notifications.count').'"', false);
+    }
+
+    public function test_the_bell_says_a_rise_to_screen_readers_like_the_site_s(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        $content = (string) $this->get(Dashboard::getUrl())->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/<span class="sr-only" role="status" aria-live="polite" data-panel-notifications-live/', $content);
+        $this->assertStringContainsString('data-live-one="Tienes :count aviso nuevo"', $content);
+        $this->assertStringContainsString('data-live-many="Tienes :count avisos nuevos"', $content);
+    }
+
+    public function test_the_bell_counts_what_arrived_since_the_site_s_bell_was_last_opened(): void
+    {
+        $user = UserModel::factory()->admin()->create();
+        $this->notify($user, 3);
+        $this->actingAs($user)->postJson(route('site-notifications.seen'))->assertOk();
+        $this->travel(1)->seconds();
+        $this->notify($user, 1);
+
+        $this->get(Dashboard::getUrl())
+            ->assertOk()
+            ->assertSee('aria-label="Avisos nuevos: 1"', false)
+            ->assertSee('>1</span>', false);
     }
 
     public function test_the_bell_caps_its_count_like_the_site_and_says_nothing_with_none_unread(): void
@@ -212,7 +237,7 @@ final class PanelTopbarTest extends TestCase
         $busy = UserModel::factory()->admin()->create();
         $this->notify($busy, 12);
         $this->actingAs($busy);
-        $this->get(Dashboard::getUrl())->assertSee('>9+</span>', false)->assertSee('aria-label="Avisos, 12 sin leer"', false);
+        $this->get(Dashboard::getUrl())->assertSee('>9+</span>', false)->assertSee('aria-label="Avisos nuevos: 12"', false);
 
         $calm = UserModel::factory()->admin()->create();
         $this->actingAs($calm);
@@ -242,7 +267,7 @@ final class PanelTopbarTest extends TestCase
     public function test_a_count_that_cannot_be_read_leaves_the_bell_out_and_the_panel_working(): void
     {
         $notices = Mockery::mock(SiteNotificationServiceInterface::class);
-        $notices->shouldReceive('unreadCount')->andThrow(new RuntimeException('Database down'));
+        $notices->shouldReceive('unseenCount')->andThrow(new RuntimeException('Database down'));
         $this->app->instance(SiteNotificationServiceInterface::class, $notices);
         $log = Log::spy();
         $this->actingAs(UserModel::factory()->admin()->create());

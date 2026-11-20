@@ -288,9 +288,10 @@ final class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Unread notices of the bell (core#491), for a signed-in account.
+     * The bell's counters (core#491) for a signed-in account: what is still unread and what is new
+     * since the person last looked (core#800, the bell's number), and the real-time channel.
      *
-     * @return array{unread: int}|null
+     * @return array{unread: int, unseen: int, channel: string|null}|null
      */
     private function getSiteNotifications(Request $request): ?array
     {
@@ -301,8 +302,12 @@ final class HandleInertiaRequests extends Middleware
         }
 
         try {
+            $notices = app(SiteNotificationServiceInterface::class);
+
             return [
-                'unread' => app(SiteNotificationServiceInterface::class)->unreadCount($user),
+                'unread' => $notices->unreadCount($user),
+                // The bell's number and the tab title's (core#800)
+                'unseen' => $notices->unseenCount($user),
                 // The bell listens here when real time is on; it polls otherwise
                 'channel' => app(RealtimeConfigurationInterface::class)->enabled()
                     ? SiteNotificationsRealtimeChannel::for((string) $user->id)

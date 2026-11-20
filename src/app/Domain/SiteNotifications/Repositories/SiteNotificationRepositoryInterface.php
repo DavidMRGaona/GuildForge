@@ -22,6 +22,18 @@ interface SiteNotificationRepositoryInterface
 
     public function unreadCount(UserId $userId): int;
 
+    /**
+     * Unread visible rows whose latest notice came after the person last looked (core#800); all
+     * the unread ones before they ever looked. A group that takes a new notice counts again.
+     */
+    public function unseenCount(UserId $userId): int;
+
+    /**
+     * The person looks at their notices now (core#800): the mark becomes the newest row already
+     * stored (a notice still being delivered stays new), and never goes back.
+     */
+    public function markSeen(UserId $userId): void;
+
     /** Visible rows of the person; only the unread ones with $onlyUnread (core#671). */
     public function count(UserId $userId, bool $onlyUnread = false): int;
 

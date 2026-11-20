@@ -460,8 +460,8 @@ export default {
     notifications: {
         title: 'Notifications',
         bell: 'Notifications',
-        bellWithUnread: 'Notifications, {count} unread | Notifications, {count} unread',
-        liveUnread: 'You have {count} unread notification | You have {count} unread notifications',
+        bellWithUnread: 'Notifications, {count} new | Notifications, {count} new',
+        liveUnread: 'You have {count} new notification | You have {count} new notifications',
         latest: 'Latest notifications',
         unreadLabel: 'Unread:',
         moreInGroup: 'and {count} more | and {count} more',

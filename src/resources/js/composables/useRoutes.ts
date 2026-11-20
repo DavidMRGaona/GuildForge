@@ -63,6 +63,8 @@ export interface RouteDefinitions {
         index: string;
         count: string;
         recent: string;
+        /** The bell opened (core#800): seen, not read */
+        seen: string;
         readAll: string;
         /** One notice from its menu (core#670) */
         read: (id: string) => string;
@@ -159,6 +161,7 @@ const routes: RouteDefinitions = {
         index: '/avisos',
         count: '/avisos/contador',
         recent: '/avisos/recientes',
+        seen: '/avisos/vistos',
         readAll: '/avisos/leidos',
         read: (id: string) => `/avisos/${id}/leido`,
         unread: (id: string) => `/avisos/${id}/no-leido`,

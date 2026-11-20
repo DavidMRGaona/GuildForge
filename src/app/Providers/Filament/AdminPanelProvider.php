@@ -298,11 +298,12 @@ class AdminPanelProvider extends PanelProvider
     }
 
     /**
-     * The panel's bell (core#687): the unread count of the site's notification centre and a link
-     * to its «Avisos» page. Only where the site would show its own bell (not while the account
-     * must verify its email, whose /avisos routes are closed); left out if the count fails.
+     * The panel's bell (core#687): the site's bell number (the unread notices new since the
+     * person last looked, core#800) and a link to its «Avisos» page, with the texts that say a rise
+     * to screen readers. Only where the site would show its own bell (not while the account must
+     * verify its email, whose /avisos routes are closed); left out if the number fails.
      *
-     * @return array{count: int, badge: string, label: string, labelUnread: string, url: string, countUrl: string}|null
+     * @return array{count: int, badge: string, label: string, labelNew: string, liveOne: string, liveMany: string, url: string, countUrl: string}|null
      */
     private function notificationsBell(): ?array
     {
@@ -317,9 +318,10 @@ class AdminPanelProvider extends PanelProvider
                 return null;
             }
 
-            $count = app(SiteNotificationServiceInterface::class)->unreadCount($user);
+            // The site's bell number (core#800): what arrived since the person last looked
+            $count = app(SiteNotificationServiceInterface::class)->unseenCount($user);
         } catch (Throwable $exception) {
-            Log::warning('The panel bell could not read the unread notices; it is left out.', ['exception' => $exception]);
+            Log::warning('The panel bell could not read the new notices; it is left out.', ['exception' => $exception]);
 
             return null;
         }
@@ -328,7 +330,10 @@ class AdminPanelProvider extends PanelProvider
             'count' => $count,
             'badge' => $count > 9 ? '9+' : (string) $count,
             'label' => __('filament.topbar.notifications'),
-            'labelUnread' => __('filament.topbar.notifications_unread'),
+            'labelNew' => __('filament.topbar.notifications_new'),
+            // `:count` kept for the browser, which fills it in when the number rises
+            'liveOne' => trans_choice('filament.topbar.notifications_live', 1, ['count' => ':count']),
+            'liveMany' => trans_choice('filament.topbar.notifications_live', 2, ['count' => ':count']),
             'url' => route('site-notifications.index'),
             'countUrl' => route('site-notifications.count'),
         ];

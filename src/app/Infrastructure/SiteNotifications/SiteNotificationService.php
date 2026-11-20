@@ -32,6 +32,22 @@ final readonly class SiteNotificationService implements SiteNotificationServiceI
         return $userId instanceof UserId ? $this->notices->unreadCount($userId) : 0;
     }
 
+    public function unseenCount(object $user): int
+    {
+        $userId = $this->userId($user);
+
+        return $userId instanceof UserId ? $this->notices->unseenCount($userId) : 0;
+    }
+
+    public function markSeen(object $user): void
+    {
+        $userId = $this->userId($user);
+
+        if ($userId instanceof UserId) {
+            $this->notices->markSeen($userId);
+        }
+    }
+
     public function total(object $user, bool $onlyUnread = false): int
     {
         $userId = $this->userId($user);
