@@ -1,36 +1,45 @@
 import { describe, expect, it } from 'vitest';
-import { BLOCKED_NAME_PATTERN, blockerSafeName, jsFileName } from '../build-file-names.mjs';
+import { HASH_CHARACTERS, jsFileName, PUBLISHED_SCRIPT } from '../build-file-names.mjs';
 
-describe('blockerSafeName', () => {
+describe('jsFileName', () => {
     it.each([
         'cookieConsent',
-        'CookieBanner',
-        'resources/js/components/CookieBanner.vue',
-        'useConsent',
-        'cookie-consent',
-        'cookie_settings',
-        'gdprNotice',
-    ])('gives %s a neutral name', (name) => {
-        const safe = blockerSafeName(name);
+        'ShareButton',
+        'useReadTracker',
+        'resources/js/pages/Newsletter/Subscribe.vue',
+        'resources/js/components/RegistrationButton.vue',
+        'app',
+    ])('publishes %s under its hash alone', (name) => {
+        expect(jsFileName({ name })).toBe('assets/[hash].js');
+    });
 
-        expect(safe).toBe('choices');
-        expect(BLOCKED_NAME_PATTERN.test(safe)).toBe(false);
+    it.each(['vendor-vue', 'vendor-inertia', 'vendor-head', 'vendor-calendar'])(
+        'keeps the name of the shared group %s',
+        (name) => {
+            expect(jsFileName({ name })).toBe(`assets/${name}-[hash].js`);
+        }
+    );
+});
+
+describe('PUBLISHED_SCRIPT', () => {
+    it.each(['assets/k3j9x0ab.js', 'assets/vendor-vue-k3j9x0ab.js'])('accepts %s', (file) => {
+        expect(PUBLISHED_SCRIPT.test(file)).toBe(true);
     });
 
     it.each([
-        'app',
-        'vendor-vue',
-        'useFlashMessages',
-        'resources/js/components/RegistrationButton.vue',
-        'Unsubscribe',
-    ])('keeps %s as it is', (name) => {
-        expect(blockerSafeName(name)).toBe(name);
+        'assets/cookieConsent-BqD-Wubj.js',
+        'assets/ShareButton-k3j9x0ab.js',
+        'assets/resources/js/pages/Newsletter/Subscribe.vue-k3j9x0ab.js',
+        'assets/choices-k3j9x0ab.js',
+        'assets/k3j-x0ab.js',
+        'assets/K3J9X0AB.js',
+    ])('refuses %s', (file) => {
+        expect(PUBLISHED_SCRIPT.test(file)).toBe(false);
     });
 });
 
-describe('jsFileName', () => {
-    it('names a chunk after its blocker-safe name and its hash', () => {
-        expect(jsFileName({ name: 'cookieConsent' })).toBe('assets/choices-[hash].js');
-        expect(jsFileName({ name: 'vendor-vue' })).toBe('assets/vendor-vue-[hash].js');
+describe('HASH_CHARACTERS', () => {
+    it('leaves out the separators block lists match words between', () => {
+        expect(HASH_CHARACTERS).toBe('base36');
     });
 });

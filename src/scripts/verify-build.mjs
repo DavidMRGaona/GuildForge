@@ -13,15 +13,16 @@
 //   vendor group (a second Vue, Inertia or FullCalendar would split their state);
 // - the core build contains no module sources: in production module pages, slot
 //   components, translations and stylesheets only come from each module's own build;
-// - no script is published under a name content blockers drop (cookie, consent…):
-//   a blocked public entry takes down every module component that imports it.
+// - every script is published under its hash alone (the vendor groups keep their name):
+//   content blockers drop scripts by words in their URL, and a blocked chunk takes down
+//   everything that imports it.
 //
 // Run after `vite build`.
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readPublicApi } from './public-api.mjs';
-import { BLOCKED_NAME_PATTERN } from './build-file-names.mjs';
+import { PUBLISHED_SCRIPT } from './build-file-names.mjs';
 
 const srcDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -208,8 +209,8 @@ for (const file of builtScripts(buildDir)) {
     if (match) {
         failures.push(`${name} contains module sources (${match[0]}…)`);
     }
-    if (BLOCKED_NAME_PATTERN.test(name)) {
-        failures.push(`${name}: content blockers drop scripts named like this`);
+    if (!PUBLISHED_SCRIPT.test(name)) {
+        failures.push(`${name}: scripts are published under their hash alone (assets/<hash>.js)`);
     }
 }
 
