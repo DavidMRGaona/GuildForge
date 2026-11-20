@@ -40,6 +40,10 @@ final readonly class EnsureSiteIsNotInMaintenance
         'admin',
         'admin/*',
         'up',
+        // The installable site (core#802): a browser that met the maintenance page instead would
+        // keep a broken service worker or forget the installed app's name and icons
+        'sw.js',
+        'manifest.webmanifest',
         'iniciar-sesion',
         // Its second step, for accounts with two-factor authentication on (core#770)
         'iniciar-sesion/verificacion',

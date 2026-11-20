@@ -18,7 +18,7 @@ final readonly class CloudinaryImageUrlBuilder
 
     private const string ANIMATED_AVATAR_SUFFIX = '-animated';
 
-    private const array STRIPPED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg', 'bmp'];
+    private const array STRIPPED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg', 'bmp', 'ico'];
 
     public function __construct(
         private string $cloudName,
@@ -76,6 +76,34 @@ final readonly class CloudinaryImageUrlBuilder
     public function banner(string $publicId, int $width, int $height): ?string
     {
         return $this->build($publicId, "w_{$width},h_{$height},c_fill,g_auto,q_auto,f_auto");
+    }
+
+    /**
+     * A square PNG of the given size for the web app manifest (core#802), scaled up or down to fit.
+     * Vector favicons are rasterized too: the manifest and iOS want bitmaps.
+     */
+    public function appIcon(string $publicId, int $size): ?string
+    {
+        return $this->build($publicId, "w_{$size},h_{$size},c_pad,f_png");
+    }
+
+    /**
+     * The artwork fitted into `$artworkSize` and centred on a `$size` square of an opaque colour
+     * (`#RRGGBB`), as a JPEG, which leaves no transparent pixel: maskable icons and the iOS home
+     * screen one. Null for anything but a plain colour, so nothing else reaches the URL.
+     */
+    public function paddedAppIcon(string $publicId, int $size, int $artworkSize, string $background): ?string
+    {
+        if (preg_match('/^#([0-9A-Fa-f]{6})\z/', $background, $matches) !== 1) {
+            return null;
+        }
+
+        $colour = 'b_rgb:'.strtoupper($matches[1]);
+
+        return $this->build(
+            $publicId,
+            "w_{$artworkSize},h_{$artworkSize},c_pad,{$colour}/w_{$size},h_{$size},c_lpad,{$colour},q_90,f_jpg",
+        );
     }
 
     /**

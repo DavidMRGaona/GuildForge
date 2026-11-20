@@ -17,9 +17,7 @@ function renderHead(theme: 'light' | 'dark'): void {
     document.head.innerHTML = `
         <link rel="icon" sizes="32x32" href="${base}/favicon-32x32.png">
         <link rel="icon" sizes="16x16" href="${base}/favicon-16x16.png">
-        <link rel="apple-touch-icon" href="${base}/apple-touch-icon.png">
         <link rel="shortcut icon" href="${base}/favicon.ico">
-        <link rel="manifest" href="${base}/site.webmanifest">
     `;
 }
 
@@ -38,6 +36,23 @@ describe('useFavicons', () => {
         useFavicons();
 
         expect(shortcutIconHref()).toBe('/favicons/dark/favicon.ico');
+    });
+
+    it('leaves the home screen icon and the manifest to the installable site', () => {
+        document.head.innerHTML = `
+            <link rel="icon" sizes="32x32" href="/favicons/light/favicon-32x32.png">
+            <link rel="apple-touch-icon" href="https://res.cloudinary.com/demo/apple-touch.jpg">
+            <link rel="manifest" href="/manifest.webmanifest">
+        `;
+
+        useFavicons();
+
+        expect(document.querySelector('link[rel="apple-touch-icon"]')?.getAttribute('href')).toBe(
+            'https://res.cloudinary.com/demo/apple-touch.jpg'
+        );
+        expect(document.querySelector('link[rel="manifest"]')?.getAttribute('href')).toBe(
+            '/manifest.webmanifest'
+        );
     });
 
     it('leaves the links alone when they already match the theme', () => {

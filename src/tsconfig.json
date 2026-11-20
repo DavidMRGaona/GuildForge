@@ -44,5 +44,5 @@
         "modules/*/resources/js/**/*.ts",
         "modules/*/resources/js/**/*.vue"
     ],
-    "exclude": ["node_modules", "public"]
+    "exclude": ["node_modules", "public", "resources/js/serviceWorker/sw.ts"]
 }

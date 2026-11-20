@@ -81,7 +81,7 @@ function normalizePublicId(publicId: string, prefix: string): string {
     const lastDotIndex = publicId.lastIndexOf('.');
     if (lastDotIndex > 0) {
         const extension = publicId.substring(lastDotIndex + 1).toLowerCase();
-        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(extension)) {
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico'].includes(extension)) {
             publicId = publicId.substring(0, lastDotIndex);
         }
     }

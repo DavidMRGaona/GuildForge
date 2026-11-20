@@ -6,6 +6,7 @@ namespace Tests\Feature\Http\Middleware;
 
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\TwoFactor\Services\TwoFactorServiceInterface;
+use App\Application\WebApp\Services\ServiceWorkerScriptInterface;
 use App\Infrastructure\Authorization\Services\TwoFactorPanelAccess;
 use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
@@ -164,6 +165,22 @@ final class EnsureSiteIsNotInMaintenanceTest extends TestCase
         $this->enableMaintenance();
 
         $this->get('/up')->assertOk();
+    }
+
+    public function test_web_app_manifest_and_service_worker_stay_reachable_during_maintenance(): void
+    {
+        $this->enableMaintenance();
+        $this->app->instance(ServiceWorkerScriptInterface::class, new class implements ServiceWorkerScriptInterface
+        {
+            public function script(): string
+            {
+                return 'self.addEventListener("push", () => {});';
+            }
+        });
+
+        // A browser that met a 503 instead would keep a broken service worker
+        $this->get('/manifest.webmanifest')->assertOk();
+        $this->get('/sw.js')->assertOk();
     }
 
     public function test_whoever_waits_for_two_factor_to_enter_the_panel_reaches_the_security_tab(): void

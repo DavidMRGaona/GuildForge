@@ -20,6 +20,8 @@ export default defineConfig({
                 // Filament admin panel theme (registered with ->viteTheme())
                 'resources/css/filament/admin/theme.css',
                 'resources/js/app.ts',
+                // The service worker, served at /sw.js by the site (ViteServiceWorkerScript, core#802)
+                'resources/js/serviceWorker/sw.ts',
                 // The public frontend API, one entry each for the module import map
                 ...Object.values(publicApi.packages),
                 ...Object.values(publicApi.entries),

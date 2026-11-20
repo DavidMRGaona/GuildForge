@@ -24,8 +24,11 @@ function updateLinkHref(selector: string, href: string): void {
  * responding to OS prefers-color-scheme.
  *
  * If custom favicons are configured in settings, those are used for every
- * icon, the iOS home screen one included (as <x-site-favicons> renders them).
- * Otherwise, falls back to the static favicons in /favicons/{theme}/.
+ * icon (as <x-site-favicons> renders them). Otherwise, falls back to the static
+ * favicons in /favicons/{theme}/.
+ *
+ * The iOS home screen icon and the manifest belong to the installable site
+ * (core#802): the server draws them once and they do not follow the theme.
  */
 export function useFavicons(): void {
     const appStore = useAppStore();
@@ -48,11 +51,6 @@ export function useFavicons(): void {
             customFavicon ?? `${basePath}/favicon-16x16.png`
         );
         updateLinkHref('link[rel="shortcut icon"]', customFavicon ?? `${basePath}/favicon.ico`);
-        updateLinkHref(
-            'link[rel="apple-touch-icon"]',
-            customFavicon ?? `${basePath}/apple-touch-icon.png`
-        );
-        updateLinkHref('link[rel="manifest"]', `${basePath}/site.webmanifest`);
     }
 
     // Watch for theme changes and update favicons accordingly

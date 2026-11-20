@@ -565,7 +565,7 @@ curl http://localhost:8000/health
 
 `docker/prod/php.ini` sets `opcache.validate_timestamps=1` and `opcache.revalidate_freq=2`: PHP-FPM checks file timestamps at most every two seconds, so a module installed from a ZIP or updated from the admin panel takes effect without restarting the container or reloading PHP-FPM. A deployment always starts a new container, so its OPcache starts empty.
 
-Installing a module from a ZIP and applying module updates require maintenance mode. It is a site setting (*Configuración del sitio → Mantenimiento*, keys `maintenance_enabled` and `maintenance_message`), not `php artisan down`: the queue worker runs without `--force`, so `artisan down` would pause it and queued updates would never run. The setting only closes the public site: `/admin`, Livewire requests, `/up`, `/iniciar-sesion` and users who can access the panel keep working, and the queue worker and scheduler keep writing to the database.
+Installing a module from a ZIP and applying module updates require maintenance mode. It is a site setting (*Configuración del sitio → Mantenimiento*, keys `maintenance_enabled` and `maintenance_message`), not `php artisan down`: the queue worker runs without `--force`, so `artisan down` would pause it and queued updates would never run. The setting only closes the public site: `/admin`, Livewire requests, `/up`, `/iniciar-sesion`, the web app manifest and service worker (`/manifest.webmanifest`, `/sw.js`) and users who can access the panel keep working, and the queue worker and scheduler keep writing to the database.
 
 A module update runs as a queued job (`UpdateModuleJob`, one per module at a time):
 
@@ -690,6 +690,7 @@ Relevant configuration from `docker/prod/nginx.conf`:
 - Security headers: `X-Frame-Options`, `X-Content-Type-Options`, `X-XSS-Protection`, `Referrer-Policy`
 - Gzip compression enabled
 - Static assets with 1-year cache (`Cache-Control: public, immutable`)
+- Laravel routes whose URL ends like a static asset get an exact `location =` ahead of that rule: `/correos/logo.png` and the service worker `/sw.js`, which keeps its URL and must be revalidated on every check. A custom proxy in front of the site must not cache `/sw.js` either
 - Module assets served from `/build/modules/`
 - Maximum upload size: 20MB
 - Hidden files denied (except `.well-known`)

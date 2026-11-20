@@ -10,7 +10,7 @@
         "dev": "vite",
         "build": "vue-tsc --noEmit && vite build",
         "preview": "vite preview",
-        "type-check": "vue-tsc --noEmit && vue-tsc --noEmit -p tsconfig.node.json",
+        "type-check": "vue-tsc --noEmit && vue-tsc --noEmit -p tsconfig.node.json && vue-tsc --noEmit -p tsconfig.sw.json",
         "test:unit": "vitest run",
         "lint": "eslint resources/js scripts *.config.ts --ext .ts,.vue,.mjs --max-warnings=0",
         "lint:fix": "eslint resources/js scripts *.config.ts --ext .ts,.vue,.mjs --fix",
