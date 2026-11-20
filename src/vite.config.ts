@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { DEV_DEDUPED_PACKAGES } from './scripts/public-api.mjs';
-import { jsFileName } from './scripts/build-file-names.mjs';
+import { HASH_CHARACTERS, jsFileName } from './scripts/build-file-names.mjs';
 
 // Shared packages and public entries modules get through the import map (see ModuleImportMap)
 const publicApi = JSON.parse(
@@ -62,9 +62,10 @@ export default defineConfig({
     build: {
         rolldownOptions: {
             output: {
-                // No cookie or consent words in script URLs: content blockers would drop them
+                // Scripts under their hash alone: content blockers drop them by words in the URL
                 entryFileNames: jsFileName,
                 chunkFileNames: jsFileName,
+                hashCharacters: HASH_CHARACTERS,
                 // Shared vendor chunks: the import map entries and app.ts must load one Vue
                 codeSplitting: {
                     groups: [

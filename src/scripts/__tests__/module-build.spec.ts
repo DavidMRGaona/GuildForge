@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { build, resolveConfig } from 'vite';
 import type { RolldownOutput } from 'rolldown';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { PUBLISHED_SCRIPT } from '../build-file-names.mjs';
 
 const fixtures = resolve(import.meta.dirname, 'fixtures');
 
@@ -68,6 +69,17 @@ describe('defineModuleConfig', () => {
         await expect(buildFixture('subpath-module')).rejects.toThrow(
             `"@fullcalendar/vue3/locales/es" is not shared by the core`
         );
+    });
+
+    it('publishes every script under its hash alone', async () => {
+        const output = await buildFixture('demo-module');
+        const scripts = output.output
+            .filter((item) => item.type === 'chunk')
+            .map((item) => item.fileName);
+
+        expect(PUBLISHED_SCRIPT).toBeInstanceOf(RegExp);
+        expect(scripts.length).toBeGreaterThan(0);
+        expect(scripts.filter((file) => !PUBLISHED_SCRIPT.test(file))).toEqual([]);
     });
 
     it('writes the manifest at the root of the output', async () => {
