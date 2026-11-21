@@ -16,10 +16,7 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 final class StoreWebPushSubscriptionRequest extends FormRequest
 {
-    /** Uncompressed P-256 point (65 bytes) and auth secret (16 bytes), base64url without padding. */
-    private const string P256DH_PATTERN = '/^[A-Za-z0-9_-]{87}\z/';
-
-    private const string AUTH_PATTERN = '/^[A-Za-z0-9_-]{22}\z/';
+    private const string BASE64URL = '/^[A-Za-z0-9_-]+=*\z/';
 
     public function authorize(): bool
     {
@@ -34,8 +31,9 @@ final class StoreWebPushSubscriptionRequest extends FormRequest
         return [
             'endpoint' => ['required', 'string', 'max:'.WebPushEndpointRule::MAX_LENGTH, $this->pushService(...)],
             'keys' => ['required', 'array:p256dh,auth'],
-            'keys.p256dh' => ['required', 'string', 'regex:'.self::P256DH_PATTERN],
-            'keys.auth' => ['required', 'string', 'regex:'.self::AUTH_PATTERN],
+            // An uncompressed P-256 point (65 bytes starting with 0x04) and a 16-byte secret
+            'keys.p256dh' => ['required', 'string', 'max:100', $this->p256dh(...)],
+            'keys.auth' => ['required', 'string', 'max:40', $this->authSecret(...)],
         ];
     }
 
@@ -47,6 +45,41 @@ final class StoreWebPushSubscriptionRequest extends FormRequest
             auth: $this->string('keys.auth')->toString(),
             userAgent: mb_substr((string) $this->userAgent(), 0, 512),
         );
+    }
+
+    /**
+     * @param  Closure(string): void  $fail
+     */
+    private function p256dh(string $attribute, mixed $value, Closure $fail): void
+    {
+        $bytes = $this->decoded($value);
+
+        if ($bytes === null || strlen($bytes) !== 65 || $bytes[0] !== "\x04") {
+            $fail(__('web_push.validation.keys'));
+        }
+    }
+
+    /**
+     * @param  Closure(string): void  $fail
+     */
+    private function authSecret(string $attribute, mixed $value, Closure $fail): void
+    {
+        $bytes = $this->decoded($value);
+
+        if ($bytes === null || strlen($bytes) !== 16) {
+            $fail(__('web_push.validation.keys'));
+        }
+    }
+
+    private function decoded(mixed $value): ?string
+    {
+        if (! is_string($value) || preg_match(self::BASE64URL, $value) !== 1) {
+            return null;
+        }
+
+        $bytes = base64_decode(strtr(rtrim($value, '='), '-_', '+/'), true);
+
+        return $bytes === false ? null : $bytes;
     }
 
     /**

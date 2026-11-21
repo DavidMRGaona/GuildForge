@@ -68,11 +68,14 @@ async function pushManager(env: WebPushEnvironment): Promise<PushManager | null>
     }
 }
 
+/**
+ * Sends a request about this browser's subscription; the status, or null when it never arrived.
+ */
 async function send(
     env: WebPushEnvironment,
-    method: 'POST' | 'DELETE',
+    method: 'POST' | 'PUT' | 'DELETE',
     body: unknown
-): Promise<boolean> {
+): Promise<number | null> {
     try {
         const response = await env.fetch(WEB_PUSH_SUBSCRIPTION_URL, {
             method,
@@ -85,10 +88,14 @@ async function send(
             body: JSON.stringify(body),
         });
 
-        return response.ok;
+        return response.status;
     } catch {
-        return false;
+        return null;
     }
+}
+
+function isSuccess(status: number | null): boolean {
+    return status !== null && status >= 200 && status < 300;
 }
 
 function remember(env: WebPushEnvironment): void {
@@ -107,9 +114,49 @@ function forgetRemembered(env: WebPushEnvironment): void {
     }
 }
 
+async function currentSubscription(manager: PushManager | null): Promise<PushSubscription | null> {
+    try {
+        return (await manager?.getSubscription()) ?? null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Whether the browser's subscription was made with this VAPID key. Unknown (the browser does not
+ * say) counts as the same: only a key that is known to differ is replaced.
+ */
+export function subscribedWithKey(subscription: PushSubscription, publicKey: string): boolean {
+    const key = subscription.options?.applicationServerKey ?? null;
+    if (key === null) {
+        return true;
+    }
+
+    const current = applicationServerKey(publicKey);
+    const stored = new Uint8Array(key);
+
+    return (
+        stored.length === current.length && stored.every((byte, index) => byte === current[index])
+    );
+}
+
+/**
+ * Drops a subscription from the site (when it is this account's) and from the browser.
+ */
+async function drop(env: WebPushEnvironment, subscription: PushSubscription): Promise<void> {
+    forgetRemembered(env);
+
+    const endpoint = subscription.toJSON().endpoint;
+    if (endpoint !== undefined) {
+        await send(env, 'DELETE', { endpoint });
+    }
+    await subscription.unsubscribe().catch(() => false);
+}
+
 /**
  * Subscribes this browser and tells the site. Asks the browser's permission, so only call it from
- * a click. False when the browser cannot, the person refused or the site did not take it.
+ * a click: it is the only way a browser starts receiving an account's notifications, or moves to
+ * another account. False when the browser cannot, the person refused or the site did not take it.
  */
 export async function subscribeThisDevice(
     publicKey: string,
@@ -118,6 +165,12 @@ export async function subscribeThisDevice(
     const manager = await pushManager(env);
     if (manager === null) {
         return false;
+    }
+
+    // Made with keys the site no longer has: the browser would refuse the new one
+    const existing = await currentSubscription(manager);
+    if (existing !== null && !subscribedWithKey(existing, publicKey)) {
+        await drop(env, existing);
     }
 
     let subscription: PushSubscription;
@@ -130,7 +183,7 @@ export async function subscribeThisDevice(
         return false;
     }
 
-    if (await send(env, 'POST', subscription.toJSON())) {
+    if (isSuccess(await send(env, 'POST', subscription.toJSON()))) {
         remember(env);
         return true;
     }
@@ -142,23 +195,35 @@ export async function subscribeThisDevice(
 
 /**
  * Tells the site, once per session, about the subscription this browser already has: it counts as
- * a use (unused ones go after 90 days) and lets signing out forget it on the server too.
+ * a use (unused ones go after 90 days) and lets signing out forget it on the server too. It only
+ * refreshes the account's own: when the site does not know it for this account (another account
+ * subscribed this browser, or it was forgotten), it is dropped from the browser. Never asks for
+ * permission and never subscribes.
  */
 export async function syncThisDevice(
+    publicKey: string,
     env: WebPushEnvironment = browserEnvironment()
 ): Promise<void> {
     if (env.permission() !== 'granted' || env.session?.getItem(SYNCED_KEY) === '1') {
         return;
     }
 
-    const manager = await pushManager(env);
-    const subscription = await manager?.getSubscription().catch(() => null);
-    if (subscription === null || subscription === undefined) {
+    const subscription = await currentSubscription(await pushManager(env));
+    if (subscription === null) {
         return;
     }
 
-    if (await send(env, 'POST', subscription.toJSON())) {
+    if (!subscribedWithKey(subscription, publicKey)) {
+        await drop(env, subscription);
+        return;
+    }
+
+    const status = await send(env, 'PUT', { endpoint: subscription.toJSON().endpoint });
+    if (isSuccess(status)) {
         remember(env);
+    } else if (status === 404) {
+        forgetRemembered(env);
+        await subscription.unsubscribe().catch(() => false);
     }
 }
 
@@ -171,15 +236,8 @@ export async function forgetThisDevice(
 ): Promise<void> {
     forgetRemembered(env);
 
-    const manager = await pushManager(env);
-    const subscription = await manager?.getSubscription().catch(() => null);
-    if (subscription === null || subscription === undefined) {
-        return;
+    const subscription = await currentSubscription(await pushManager(env));
+    if (subscription !== null) {
+        await drop(env, subscription);
     }
-
-    const endpoint = subscription.toJSON().endpoint;
-    if (endpoint !== undefined) {
-        await send(env, 'DELETE', { endpoint });
-    }
-    await subscription.unsubscribe().catch(() => false);
 }

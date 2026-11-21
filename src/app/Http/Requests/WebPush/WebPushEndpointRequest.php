@@ -8,9 +8,9 @@ use App\Domain\WebPush\WebPushEndpointRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * This browser stops receiving push messages: its endpoint names it (core#803).
+ * A browser named by its push endpoint: to refresh or forget its subscription (core#803).
  */
-final class DestroyWebPushSubscriptionRequest extends FormRequest
+final class WebPushEndpointRequest extends FormRequest
 {
     public function authorize(): bool
     {

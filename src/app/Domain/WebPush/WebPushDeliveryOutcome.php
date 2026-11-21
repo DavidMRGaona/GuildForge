@@ -20,4 +20,7 @@ enum WebPushDeliveryOutcome: string
 
     /** Refused for good (a malformed message, a key the service rejects): logged, not retried. */
     case Failed = 'failed';
+
+    /** The browser's keys cannot encrypt a message: nothing was sent and the subscription is deleted. */
+    case Unusable = 'unusable';
 }

@@ -313,6 +313,7 @@ final readonly class EloquentSiteNotificationRepository implements SiteNotificat
             count: $row->count,
             readAt: $row->read_at instanceof CarbonInterface ? DateTimeImmutable::createFromInterface($row->read_at) : null,
             notifiedAt: DateTimeImmutable::createFromInterface($row->notified_at),
+            groupKey: $row->group_key,
         );
     }
 

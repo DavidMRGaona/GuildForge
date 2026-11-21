@@ -19,6 +19,7 @@ final readonly class WebPushSubscriptionDTO
     public function __construct(
         public string $id,
         public string $userId,
+        #[\SensitiveParameter]
         public string $endpoint,
         #[\SensitiveParameter]
         public string $p256dh,

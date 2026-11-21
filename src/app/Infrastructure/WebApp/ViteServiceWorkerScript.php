@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Infrastructure\WebApp;
 
 use App\Application\Services\SiteBrandingServiceInterface;
-use App\Application\WebApp\DTOs\WebAppIconDTO;
 use App\Application\WebApp\Services\ServiceWorkerScriptInterface;
 use App\Application\WebApp\Services\WebAppManifestInterface;
 use Illuminate\Foundation\Vite;
@@ -68,7 +67,7 @@ final readonly class ViteServiceWorkerScript implements ServiceWorkerScriptInter
             'fallbackTitle' => __('web_app.service_worker.fallback_title'),
             'fallbackBody' => $this->siteName(),
             'fallbackPath' => route('site-notifications.index', absolute: false),
-            'icon' => $this->icon(),
+            'icon' => $this->manifest->notificationIcon(),
         ];
     }
 
@@ -79,19 +78,5 @@ final readonly class ViteServiceWorkerScript implements ServiceWorkerScriptInter
         } catch (Throwable) {
             return (string) config('app.name');
         }
-    }
-
-    /**
-     * The smallest `any` icon of the manifest: notifications are drawn small.
-     */
-    private function icon(): string
-    {
-        foreach ($this->manifest->manifest()->icons as $icon) {
-            if ($icon->purpose === WebAppIconDTO::PURPOSE_ANY) {
-                return $icon->src;
-            }
-        }
-
-        return '/favicons/light/android-chrome-192x192.png';
     }
 }

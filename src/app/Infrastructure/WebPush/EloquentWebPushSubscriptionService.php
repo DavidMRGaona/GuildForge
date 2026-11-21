@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\WebPush;
 
+use App\Application\Services\TimezoneServiceInterface;
 use App\Application\WebPush\DTOs\WebPushSubscriptionDTO;
 use App\Application\WebPush\DTOs\WebPushSubscriptionInputDTO;
 use App\Application\WebPush\Services\WebPushSubscriptionServiceInterface;
@@ -15,6 +16,13 @@ use Illuminate\Support\Facades\DB;
 
 final readonly class EloquentWebPushSubscriptionService implements WebPushSubscriptionServiceInterface
 {
+    /** Browsers kept per account: subscribing one more forgets the one used longest ago. */
+    public const int MAX_PER_USER = 20;
+
+    public function __construct(
+        private TimezoneServiceInterface $timezone,
+    ) {}
+
     public function subscribe(string $userId, WebPushSubscriptionInputDTO $input): string
     {
         $device = UserAgentDevice::parse($input->userAgent);
@@ -30,14 +38,34 @@ final readonly class EloquentWebPushSubscriptionService implements WebPushSubscr
         $hash = hash('sha256', $input->endpoint);
 
         try {
-            return $this->upsert($hash, $values);
+            $id = $this->upsert($hash, $values);
         } catch (UniqueConstraintViolationException) {
             // Two requests of the same browser at once: the other one created it, update it now
-            return $this->upsert($hash, $values);
+            $id = $this->upsert($hash, $values);
         }
+
+        $this->keepNewest($userId);
+
+        return $id;
     }
 
-    public function unsubscribe(string $userId, string $endpoint): bool
+    public function refresh(string $userId, #[\SensitiveParameter] string $endpoint): ?string
+    {
+        $id = WebPushSubscriptionModel::query()
+            ->where('user_id', $userId)
+            ->where('endpoint_hash', hash('sha256', $endpoint))
+            ->value('id');
+
+        if (! is_string($id)) {
+            return null;
+        }
+
+        $this->markUsed($id);
+
+        return $id;
+    }
+
+    public function unsubscribe(string $userId, #[\SensitiveParameter] string $endpoint): bool
     {
         return WebPushSubscriptionModel::query()
             ->where('user_id', $userId)
@@ -79,16 +107,38 @@ final readonly class EloquentWebPushSubscriptionService implements WebPushSubscr
 
     public function markUsed(string $subscriptionId): void
     {
-        WebPushSubscriptionModel::query()->whereKey($subscriptionId)->update(['last_used_at' => now()]);
+        // Query bindings bypass the model's zone handling: written in the storage zone
+        WebPushSubscriptionModel::query()->whereKey($subscriptionId)->update(['last_used_at' => $this->bound(now())]);
     }
 
     public function prune(DateTimeInterface $before): int
     {
         return WebPushSubscriptionModel::query()
-            ->where(static fn ($query) => $query
-                ->where('last_used_at', '<', $before)
-                ->orWhere(static fn ($never) => $never->whereNull('last_used_at')->where('created_at', '<', $before)))
+            ->where(fn ($query) => $query
+                ->where('last_used_at', '<', $this->bound($before))
+                ->orWhere(fn ($never) => $never->whereNull('last_used_at')->where('created_at', '<', $this->bound($before))))
             ->delete();
+    }
+
+    /**
+     * Query bindings bypass the model's zone handling: compare and write in the storage zone.
+     */
+    private function bound(DateTimeInterface $instant): string
+    {
+        return $this->timezone->toStorage($instant)->format('Y-m-d H:i:s');
+    }
+
+    private function keepNewest(string $userId): void
+    {
+        $kept = WebPushSubscriptionModel::query()
+            ->where('user_id', $userId)
+            ->orderByRaw('coalesce(last_used_at, created_at) desc')
+            ->orderByDesc('id')
+            ->take(self::MAX_PER_USER)
+            ->pluck('id')
+            ->all();
+
+        WebPushSubscriptionModel::query()->where('user_id', $userId)->whereKeyNot($kept)->delete();
     }
 
     /**

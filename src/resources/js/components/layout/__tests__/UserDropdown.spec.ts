@@ -8,16 +8,26 @@ import es from '@/locales/es';
 import type { User } from '@/types/models';
 import { setCloudinaryConfig } from '@/utils/cloudinary';
 
-const page = reactive<{ url: string; props: { auth: { user: User | null } } }>({
+const page = reactive<{
+    url: string;
+    props: { auth: { user: User | null }; webPush?: { publicKey: string } | null };
+}>({
     url: '/',
     props: { auth: { user: null } },
 });
 
+const { post, forgetThisDevice } = vi.hoisted(() => ({
+    post: vi.fn(),
+    forgetThisDevice: vi.fn(),
+}));
+
 vi.mock('@inertiajs/vue3', () => ({
     usePage: (): typeof page => page,
-    router: { post: vi.fn() },
+    router: { post },
     Link: { template: '<a><slot /></a>' },
 }));
+
+vi.mock('@/utils/webPush', () => ({ forgetThisDevice }));
 
 function userWith(roles: string[], permissions: string[]): User {
     return {
@@ -190,5 +200,24 @@ describe('UserDropdown', () => {
         const avatar = wrapper.get('[data-testid="user-menu-avatar"]');
         expect(avatar.find('img').exists()).toBe(false);
         expect(avatar.text()).toBe('AP');
+    });
+
+    it('signs out through useAuth, so this browser stops getting push notifications first', async () => {
+        page.props.webPush = { publicKey: 'key' };
+        const order: string[] = [];
+        forgetThisDevice.mockImplementation(async () => void order.push('forget'));
+        post.mockImplementation(() => void order.push('post'));
+        const wrapper = await openMenuFor(userWith(['member'], []));
+
+        const signOut = wrapper
+            .findAll('button')
+            .find((button) => button.text().includes('Cerrar sesión'));
+        await signOut?.trigger('click');
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(order).toEqual(['forget', 'post']);
+        expect(post).toHaveBeenCalledWith('/cerrar-sesion');
+        expect(wrapper.emitted('navigate')).toHaveLength(1);
+        page.props.webPush = null;
     });
 });

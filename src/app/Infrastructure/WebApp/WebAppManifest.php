@@ -68,6 +68,17 @@ final readonly class WebAppManifest implements WebAppManifestInterface
         return $icon ?? self::CORE_ICONS.'/apple-touch-icon.png';
     }
 
+    public function notificationIcon(): string
+    {
+        foreach ($this->icons() as $icon) {
+            if ($icon->purpose === WebAppIconDTO::PURPOSE_ANY) {
+                return $icon->src;
+            }
+        }
+
+        return self::CORE_ICONS.'/android-chrome-192x192.png';
+    }
+
     /**
      * @return list<WebAppIconDTO>
      */

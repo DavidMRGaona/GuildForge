@@ -86,6 +86,24 @@ final class MinishlinkWebPushSenderTest extends TestCase
         $this->assertSame(WebPushDeliveryOutcome::RetryLater, $outcome);
     }
 
+    public function test_a_subscription_whose_keys_cannot_encrypt_is_unusable_and_nothing_is_sent(): void
+    {
+        $subscription = new WebPushSubscriptionDTO(
+            id: 'sub-1',
+            userId: 'user-1',
+            endpoint: self::ENDPOINT,
+            p256dh: 'BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+            auth: self::BROWSER_AUTH,
+            browser: 'chrome',
+            platform: 'android',
+            createdAt: new DateTimeImmutable,
+            lastUsedAt: null,
+        );
+
+        $this->assertSame(WebPushDeliveryOutcome::Unusable, $this->sender(new Response(201))->send($subscription, '{"id":"abc"}'));
+        $this->assertCount(0, $this->history);
+    }
+
     public function test_failures_are_logged_without_the_endpoint_or_the_keys(): void
     {
         $log = Log::spy();

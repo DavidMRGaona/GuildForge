@@ -88,6 +88,25 @@ final class WebPushSubscriptionControllerTest extends TestCase
             ->assertJsonValidationErrors('keys.p256dh');
         $this->actingAs($user)->postJson(self::URL, $this->payload(['keys' => ['p256dh' => self::BROWSER_P256DH, 'auth' => 'a+b/c==']]))
             ->assertJsonValidationErrors('keys.auth');
+        // The right length, but no uncompressed P-256 point (it must start with 0x04)
+        $this->actingAs($user)->postJson(self::URL, $this->payload(['keys' => ['p256dh' => 'BQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE', 'auth' => self::BROWSER_AUTH]]))
+            ->assertJsonValidationErrors('keys.p256dh');
+    }
+
+    public function test_an_account_keeps_its_20_most_recently_used_browsers(): void
+    {
+        $this->enableWebPush();
+        $user = UserModel::factory()->create();
+        for ($i = 1; $i <= 20; $i++) {
+            $this->subscribe($user, "https://web.push.apple.com/device-{$i}", ['last_used_at' => now()->subDays($i)]);
+        }
+
+        $this->actingAs($user)->postJson(self::URL, $this->payload())->assertCreated();
+
+        $endpoints = WebPushSubscriptionModel::query()->where('user_id', $user->id)->pluck('endpoint')->all();
+        $this->assertCount(20, $endpoints);
+        $this->assertContains(self::ENDPOINT, $endpoints);
+        $this->assertNotContains('https://web.push.apple.com/device-20', $endpoints);
     }
 
     public function test_an_account_removes_this_browser_and_only_its_own(): void
@@ -104,11 +123,50 @@ final class WebPushSubscriptionControllerTest extends TestCase
         $this->assertDatabaseCount('web_push_subscriptions', 0);
     }
 
+    public function test_refreshing_counts_as_a_use_of_the_account_own_browser(): void
+    {
+        $this->enableWebPush();
+        $owner = UserModel::factory()->create();
+        $subscription = $this->subscribe($owner, attributes: ['last_used_at' => now()->subDays(30)]);
+
+        $response = $this->actingAs($owner)->putJson(self::URL, ['endpoint' => self::ENDPOINT]);
+
+        $response->assertOk()->assertJson(['id' => $subscription->id]);
+        $response->assertSessionHas(WebPushSubscriptionServiceInterface::SESSION_KEY, $subscription->id);
+        $this->assertTrue($subscription->fresh()?->last_used_at?->isToday());
+    }
+
+    public function test_refreshing_never_moves_a_browser_to_another_account(): void
+    {
+        $this->enableWebPush();
+        $first = UserModel::factory()->create();
+        $second = UserModel::factory()->create();
+        $subscription = $this->subscribe($first, attributes: ['last_used_at' => now()->subDays(30)]);
+
+        // Another account signs in on a shared computer: the page refreshes on its own, nobody clicked
+        $this->actingAs($second)->putJson(self::URL, ['endpoint' => self::ENDPOINT])->assertNotFound();
+
+        $fresh = $subscription->fresh();
+        $this->assertNotNull($fresh);
+        $this->assertSame($first->id, $fresh->user_id);
+        $this->assertFalse($fresh->last_used_at?->isToday());
+    }
+
+    public function test_refreshing_never_creates_a_subscription(): void
+    {
+        $this->enableWebPush();
+
+        $this->actingAs(UserModel::factory()->create())->putJson(self::URL, ['endpoint' => self::ENDPOINT])->assertNotFound();
+
+        $this->assertDatabaseCount('web_push_subscriptions', 0);
+    }
+
     public function test_the_routes_do_not_exist_while_push_is_off(): void
     {
         $user = UserModel::factory()->create();
 
         $this->actingAs($user)->postJson(self::URL, $this->payload())->assertNotFound();
+        $this->actingAs($user)->putJson(self::URL, ['endpoint' => self::ENDPOINT])->assertNotFound();
         $this->actingAs($user)->deleteJson(self::URL, ['endpoint' => self::ENDPOINT])->assertNotFound();
     }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\WebPush;
 
+use App\Application\WebApp\Services\WebAppManifestInterface;
 use App\Domain\SiteNotifications\Repositories\SiteNotificationRepositoryInterface;
 use App\Domain\SiteNotifications\ValueObjects\StoredSiteNotice;
 use App\Domain\ValueObjects\UserId;
@@ -22,6 +23,7 @@ final class WebPushNoticeController extends Controller
 {
     public function __construct(
         private readonly SiteNotificationRepositoryInterface $notices,
+        private readonly WebAppManifestInterface $webApp,
     ) {}
 
     public function __invoke(Request $request, string $notification): JsonResponse
@@ -36,7 +38,10 @@ final class WebPushNoticeController extends Controller
             'title' => $notice->title,
             'body' => $notice->body,
             'url' => route('site-notifications.open', ['notification' => $notice->id], absolute: false),
-            'tag' => 'notice-'.$notice->id,
+            // One notification per group, as the bell keeps one row: a new reply replaces the last one
+            'tag' => 'notice-'.($notice->groupKey ?? $notice->id),
+            // The notice's own icon names a drawing of the bell, not an image: the site's icon
+            'icon' => $this->webApp->notificationIcon(),
         ]);
 
         $response->headers->set('Cache-Control', 'no-store, private');

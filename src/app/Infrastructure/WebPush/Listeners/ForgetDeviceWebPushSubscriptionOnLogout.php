@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\WebPush\Listeners;
 
 use App\Application\WebPush\Services\WebPushSubscriptionServiceInterface;
+use Illuminate\Auth\Events\CurrentDeviceLogout;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -20,9 +21,9 @@ final readonly class ForgetDeviceWebPushSubscriptionOnLogout
         private WebPushSubscriptionServiceInterface $subscriptions,
     ) {}
 
-    public function handle(Logout $event): void
+    public function handle(Logout|CurrentDeviceLogout $event): void
     {
-        if ($event->user === null || ! app()->bound('session.store')) {
+        if (! app()->bound('session.store')) {
             return;
         }
 

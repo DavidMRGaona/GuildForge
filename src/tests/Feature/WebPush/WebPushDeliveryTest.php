@@ -8,15 +8,21 @@ use App\Application\Impersonation\Services\ImpersonationContextInterface;
 use App\Application\Mail\DTOs\MailCategoryDTO;
 use App\Application\Mail\DTOs\MailSubjectDTO;
 use App\Application\Mail\Services\MailCategoryRegistryInterface;
+use App\Application\SiteNotifications\Contracts\HasSiteNotification;
 use App\Application\SiteNotifications\DTOs\SiteNotificationDTO;
 use App\Application\SiteNotifications\Services\SiteNotificationPreferenceServiceInterface;
+use App\Application\WebPush\Services\WebPushNotifierInterface;
 use App\Application\WebPush\Services\WebPushPreferenceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\WebPush\Jobs\SendWebPushJob;
+use ArrayObject;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Notifications\Events\NotificationSent;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Mockery;
+use RuntimeException;
 use Tests\Support\SiteNotifications\SiteTestNotification;
 use Tests\Support\WebPush\EnablesWebPush;
 use Tests\TestCase;
@@ -150,6 +156,51 @@ final class WebPushDeliveryTest extends TestCase
         Queue::assertNothingPushed();
     }
 
+    public function test_a_failing_preference_never_costs_the_bell_or_the_mail(): void
+    {
+        $sent = $this->sentChannels();
+        $this->enableWebPush();
+        $user = UserModel::factory()->create();
+        $this->subscribe($user);
+        $preference = Mockery::mock(WebPushPreferenceInterface::class);
+        $preference->shouldReceive('wantsPush')->andThrow(new RuntimeException('preferences unreadable'));
+        $this->app->instance(WebPushPreferenceInterface::class, $preference);
+
+        $user->notify($this->notification(channels: [HasSiteNotification::CHANNEL, 'mail']));
+
+        Queue::assertNothingPushed();
+        $this->assertDatabaseCount('site_notifications', 1);
+        $this->assertSame([HasSiteNotification::CHANNEL, 'mail'], $sent->getArrayCopy());
+    }
+
+    public function test_a_failing_notifier_never_costs_the_bell_or_the_mail(): void
+    {
+        $sent = $this->sentChannels();
+        $this->enableWebPush();
+        $user = UserModel::factory()->create();
+        $notifier = Mockery::mock(WebPushNotifierInterface::class);
+        $notifier->shouldReceive('notify')->andThrow(new RuntimeException('push is broken'));
+        $this->app->instance(WebPushNotifierInterface::class, $notifier);
+
+        $user->notify($this->notification(channels: [HasSiteNotification::CHANNEL, 'mail']));
+
+        $this->assertDatabaseCount('site_notifications', 1);
+        $this->assertSame([HasSiteNotification::CHANNEL, 'mail'], $sent->getArrayCopy());
+    }
+
+    /**
+     * @return ArrayObject<int, string> The channels each notification went out through, in order.
+     */
+    private function sentChannels(): ArrayObject
+    {
+        $sent = new ArrayObject;
+        Event::listen(NotificationSent::class, static function (NotificationSent $event) use ($sent): void {
+            $sent->append($event->channel);
+        });
+
+        return $sent;
+    }
+
     private function wantsPush(bool $wants): void
     {
         $preference = Mockery::mock(WebPushPreferenceInterface::class);
@@ -157,12 +208,15 @@ final class WebPushDeliveryTest extends TestCase
         $this->app->instance(WebPushPreferenceInterface::class, $preference);
     }
 
-    private function notification(?string $groupKey = null, ?MailSubjectDTO $subject = null): SiteTestNotification
+    /**
+     * @param  list<string>  $channels
+     */
+    private function notification(?string $groupKey = null, ?MailSubjectDTO $subject = null, array $channels = [HasSiteNotification::CHANNEL]): SiteTestNotification
     {
         return new SiteTestNotification('example.replies', new SiteNotificationDTO(
             title: 'Ana respondió en «La tumba»',
             url: '/foro/temas/la-tumba#m42',
             groupKey: $groupKey,
-        ), $subject);
+        ), $subject, channels: $channels);
     }
 }

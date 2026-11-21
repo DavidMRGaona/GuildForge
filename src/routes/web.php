@@ -344,6 +344,9 @@ Route::middleware('auth')->group(function (): void {
         Route::middleware(ThrottleWhereListed::class.':web-push-subscription')->group(function (): void {
             Route::post('/avisos/push/suscripcion', [WebPushSubscriptionController::class, 'store'])
                 ->name('web-push.subscribe');
+            // Refresh only: never creates or moves a subscription (the person's click does that)
+            Route::put('/avisos/push/suscripcion', [WebPushSubscriptionController::class, 'refresh'])
+                ->name('web-push.refresh');
             Route::delete('/avisos/push/suscripcion', [WebPushSubscriptionController::class, 'destroy'])
                 ->name('web-push.unsubscribe');
         });

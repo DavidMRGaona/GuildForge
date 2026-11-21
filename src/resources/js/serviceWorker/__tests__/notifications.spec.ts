@@ -157,6 +157,36 @@ describe('noticeNotification', () => {
         });
     });
 
+    it('shows the icon the site answered, or the one it was installed with', () => {
+        const answered = noticeNotification(
+            {
+                title: 'Aviso',
+                url: '/avisos',
+                tag: 'notice-1',
+                icon: 'https://res.cloudinary.com/demo/i.png',
+            },
+            settings,
+            ORIGIN
+        );
+        const forged = noticeNotification(
+            { title: 'Aviso', url: '/avisos', tag: 'notice-1', icon: 'javascript:alert(1)' },
+            settings,
+            ORIGIN
+        );
+
+        expect(answered?.options.icon).toBe('https://res.cloudinary.com/demo/i.png');
+        expect(forged?.options.icon).toBe('/icon.png');
+    });
+
+    it('accepts the tag of a group, as long as a group key can be', () => {
+        const tag = `notice-forum.topic:${'a'.repeat(180)}`;
+
+        expect(
+            noticeNotification({ title: 'Aviso', url: '/avisos', tag }, settings, ORIGIN)?.options
+                .tag
+        ).toBe(tag);
+    });
+
     it('leaves out an empty body', () => {
         const request = noticeNotification(
             { title: 'Aviso', body: null, url: '/avisos', tag: 'notice-1' },

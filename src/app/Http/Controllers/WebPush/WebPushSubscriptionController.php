@@ -7,8 +7,8 @@ namespace App\Http\Controllers\WebPush;
 use App\Application\Impersonation\Services\ImpersonationContextInterface;
 use App\Application\WebPush\Services\WebPushSubscriptionServiceInterface;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\WebPush\DestroyWebPushSubscriptionRequest;
 use App\Http\Requests\WebPush\StoreWebPushSubscriptionRequest;
+use App\Http\Requests\WebPush\WebPushEndpointRequest;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -38,7 +38,24 @@ final class WebPushSubscriptionController extends Controller
         return response()->json(['id' => $id], 201);
     }
 
-    public function destroy(DestroyWebPushSubscriptionRequest $request): JsonResponse|Response
+    /**
+     * The page tells the site, once per session, about the subscription its browser already has.
+     * Only the account's own: anything else answers 404 and the page drops it from the browser.
+     */
+    public function refresh(WebPushEndpointRequest $request): JsonResponse
+    {
+        if ($this->impersonation->isActive()) {
+            return $this->impersonating();
+        }
+
+        $id = $this->subscriptions->refresh($this->userId($request), $request->string('endpoint')->toString());
+        abort_if($id === null, 404);
+        $request->session()->put(WebPushSubscriptionServiceInterface::SESSION_KEY, $id);
+
+        return response()->json(['id' => $id]);
+    }
+
+    public function destroy(WebPushEndpointRequest $request): JsonResponse|Response
     {
         if ($this->impersonation->isActive()) {
             return $this->impersonating();

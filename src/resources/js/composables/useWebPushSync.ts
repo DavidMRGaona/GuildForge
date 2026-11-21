@@ -15,7 +15,7 @@ export function useWebPushSync(): void {
         () => (page.props.webPush as WebPushSharedProps | null | undefined)?.publicKey ?? null,
         (publicKey) => {
             if (publicKey !== null) {
-                void syncThisDevice();
+                void syncThisDevice(publicKey);
             }
         },
         { immediate: true }

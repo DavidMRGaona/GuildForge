@@ -17,6 +17,7 @@ use Minishlink\WebPush\ContentEncoding;
 use Minishlink\WebPush\MessageSentReport;
 use Minishlink\WebPush\Subscription;
 use Minishlink\WebPush\WebPush;
+use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
 use Throwable;
 
@@ -48,10 +49,17 @@ final readonly class MinishlinkWebPushSender implements WebPushSenderInterface
                 $payload,
             );
             $status = $report->getResponse()?->getStatusCode();
-        } catch (Throwable) {
-            // The exception may name the endpoint: neither it nor its message are logged
+        } catch (ClientExceptionInterface) {
+            // Out of reach. The exception may name the endpoint: neither it nor its message are logged
             $status = null;
             $report = null;
+        } catch (Throwable) {
+            // Before any request: the browser's keys cannot encrypt a message, now or ever
+            Log::warning('A push subscription has keys that cannot encrypt a message; it is forgotten', [
+                'service' => WebPushEndpointRule::serviceOf($subscription->endpoint),
+            ]);
+
+            return WebPushDeliveryOutcome::Unusable;
         }
 
         if ($report instanceof MessageSentReport && $report->isSuccess()) {

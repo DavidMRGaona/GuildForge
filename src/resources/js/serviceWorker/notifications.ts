@@ -17,8 +17,8 @@ export interface NotificationRequest {
 /** Ids of the site's notices: UUIDs (core#803). */
 const NOTICE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Tags the site gives: `notice-` and the notice id. */
-const TAG = /^[A-Za-z0-9._:-]{1,100}$/;
+/** Tags the site gives: `notice-` and the notice's group key or id (up to 191 characters). */
+const TAG = /^[A-Za-z0-9._:-]{1,200}$/;
 
 function field(value: unknown, key: string): unknown {
     return typeof value === 'object' && value !== null
@@ -75,7 +75,13 @@ export function noticeNotification(
     if (typeof body === 'string' && body !== '') {
         options.body = body;
     }
-    if (settings.icon !== '') {
+    const icon = field(json, 'icon');
+    if (
+        typeof icon === 'string' &&
+        (icon.startsWith('https://') || sitePathUrl(icon, origin) !== null)
+    ) {
+        options.icon = icon;
+    } else if (settings.icon !== '') {
         options.icon = settings.icon;
     }
 

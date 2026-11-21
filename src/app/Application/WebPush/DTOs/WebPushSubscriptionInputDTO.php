@@ -11,6 +11,7 @@ namespace App\Application\WebPush\DTOs;
 final readonly class WebPushSubscriptionInputDTO
 {
     public function __construct(
+        #[\SensitiveParameter]
         public string $endpoint,
         #[\SensitiveParameter]
         public string $p256dh,

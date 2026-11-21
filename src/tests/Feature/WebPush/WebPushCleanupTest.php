@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\WebPush;
 
+use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\Services\UserServiceInterface;
 use App\Application\WebPush\Services\WebPushSubscriptionServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Models\WebPushSubscriptionModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Tests\Support\WebPush\EnablesWebPush;
 use Tests\TestCase;
 
@@ -49,6 +51,19 @@ final class WebPushCleanupTest extends TestCase
         $this->assertNotNull(WebPushSubscriptionModel::query()->find($someoneElses->id));
     }
 
+    public function test_signing_out_this_device_only_forgets_its_subscription_too(): void
+    {
+        // EnsureSessionPassedTwoFactor signs a session out of this device alone (core#779)
+        $user = UserModel::factory()->create();
+        $thisBrowser = $this->subscribe($user);
+        $this->actingAs($user);
+        session()->put(WebPushSubscriptionServiceInterface::SESSION_KEY, $thisBrowser->id);
+
+        Auth::guard('web')->logoutCurrentDevice();
+
+        $this->assertNull(WebPushSubscriptionModel::query()->find($thisBrowser->id));
+    }
+
     public function test_a_deactivated_account_loses_its_subscriptions(): void
     {
         $user = UserModel::factory()->create();
@@ -68,6 +83,22 @@ final class WebPushCleanupTest extends TestCase
         app(UserServiceInterface::class)->anonymize($user->id);
 
         $this->assertDatabaseCount('web_push_subscriptions', 0);
+    }
+
+    public function test_an_account_anonymized_with_its_content_transferred_loses_its_subscriptions(): void
+    {
+        $user = UserModel::factory()->create();
+        $heir = UserModel::factory()->create();
+        $this->subscribe($user);
+        $kept = $this->subscribe($heir, 'https://web.push.apple.com/heir');
+
+        app(UserServiceInterface::class)->anonymizeWithContentTransfer(new AnonymizeUserDTO(
+            userId: $user->id,
+            contentAction: 'transfer',
+            transferToUserId: $heir->id,
+        ));
+
+        $this->assertSame([$kept->id], WebPushSubscriptionModel::query()->pluck('id')->all());
     }
 
     public function test_a_deleted_account_takes_its_subscriptions_along(): void

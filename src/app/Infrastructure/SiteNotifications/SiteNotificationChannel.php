@@ -103,8 +103,17 @@ final class SiteNotificationChannel
         // With real time on, the bell hears of it at once and asks for its counter (core#493)
         $this->realtime->publish(SiteNotificationsRealtimeChannel::for((string) $notifiable->id), SiteNotificationsRealtimeChannel::DELIVERED);
 
-        // And the person's browsers too, when they want this category pushed (core#803)
-        $this->push->notify((string) $notifiable->id, $noticeId, $category, $subject);
+        // And the person's browsers too, when they want this category pushed (core#803). The notice
+        // is stored already: a push problem never costs it, nor the mail sent after this channel
+        try {
+            $this->push->notify((string) $notifiable->id, $noticeId, $category, $subject);
+        } catch (Throwable $exception) {
+            Log::warning('A site notification could not be pushed; it stays in the bell.', [
+                'notification' => $notification::class,
+                'user_id' => $notifiable->id,
+                'exception' => $exception::class,
+            ]);
+        }
     }
 
     private function toNotice(MailCategoryDTO $category, SiteNotificationDTO $notice, ?MailSubjectDTO $subject): SiteNotice

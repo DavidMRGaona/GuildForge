@@ -23,8 +23,15 @@ interface WebPushSubscriptionServiceInterface
      */
     public function subscribe(string $userId, WebPushSubscriptionInputDTO $input): string;
 
+    /**
+     * Counts a use of the account's own subscription with that endpoint and returns its id; null
+     * when it has none. Never creates or moves one: only the person's own click subscribes a browser
+     * (subscribe()), so a page loaded by another account on a shared computer takes nothing over.
+     */
+    public function refresh(string $userId, #[\SensitiveParameter] string $endpoint): ?string;
+
     /** Forgets the account's subscription with that endpoint; false when it has none. */
-    public function unsubscribe(string $userId, string $endpoint): bool;
+    public function unsubscribe(string $userId, #[\SensitiveParameter] string $endpoint): bool;
 
     /** Forgets one subscription, only when it belongs to the account. */
     public function forgetForUser(string $userId, string $subscriptionId): void;

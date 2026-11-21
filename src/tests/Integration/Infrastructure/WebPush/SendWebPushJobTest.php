@@ -81,6 +81,16 @@ final class SendWebPushJobTest extends TestCase
         $this->assertNull(WebPushSubscriptionModel::query()->find($subscription->id));
     }
 
+    public function test_a_subscription_whose_keys_cannot_be_used_is_deleted(): void
+    {
+        [$subscription, $noticeId] = $this->subscribedWithNotice();
+        $this->outcome = WebPushDeliveryOutcome::Unusable;
+
+        $this->handle(new SendWebPushJob($subscription->id, $noticeId));
+
+        $this->assertNull(WebPushSubscriptionModel::query()->find($subscription->id));
+    }
+
     public function test_a_busy_push_service_is_tried_again_later(): void
     {
         [$subscription, $noticeId] = $this->subscribedWithNotice();

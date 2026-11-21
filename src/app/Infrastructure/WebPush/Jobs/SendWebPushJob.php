@@ -69,7 +69,7 @@ final class SendWebPushJob implements ShouldQueue
 
         match ($outcome) {
             WebPushDeliveryOutcome::Delivered => $subscriptions->markUsed($subscription->id),
-            WebPushDeliveryOutcome::Gone => $subscriptions->forget($subscription->id),
+            WebPushDeliveryOutcome::Gone, WebPushDeliveryOutcome::Unusable => $subscriptions->forget($subscription->id),
             WebPushDeliveryOutcome::RetryLater => throw WebPushRetryLaterException::make(),
             WebPushDeliveryOutcome::Failed => null,
         };

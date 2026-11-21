@@ -24,7 +24,7 @@ People turn push on per category and per browser. Nothing is pushed until they d
 
 ## Environment variables
 
-Push is on only when the three keys are set and valid. Anything else is off, without errors on the site. A missing or invalid key leaves one warning in the log of the worker or command that starts (never on every web request).
+Push is on only when the three keys are set and valid. Anything else is off, without errors on the site. A missing or invalid key leaves a warning in the log each time a console process starts: the queue worker, every command, and so every `schedule:run`, once a minute. Web requests never log it.
 
 | Variable | Required | Default | What it is |
 |---|---|---|---|
@@ -56,7 +56,9 @@ Safari delivers web push only to a site added to the home screen (iOS and iPadOS
 
 - Push services only see an encrypted notice id, never its text.
 - The browser's keys are stored encrypted; endpoints and keys are never logged (only the push service's host and the status).
-- A browser is forgotten when it signs out, when its push service answers 404 or 410, when the account is deactivated or anonymized, and after 90 days without use.
+- Only the person's own click subscribes a browser, or moves it to their account. When a page loads it only refreshes the account's own subscription: on a shared computer, another account signing in takes nothing over, and the browser drops a subscription the site does not know for that account.
+- An account keeps its 20 most recently used browsers.
+- A browser is forgotten when it signs out (also on this device alone), when its push service answers 404 or 410, when its keys cannot encrypt a message, when the account is deactivated or anonymized, and after 90 days without use.
 - Nothing is subscribed or sent while an administrator impersonates an account.
 
 ## Turning it on in a site
