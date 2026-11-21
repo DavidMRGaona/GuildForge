@@ -19,11 +19,13 @@ use App\Domain\Activity\ActivityKind;
 use App\Domain\Activity\ActivityRole;
 use App\Infrastructure\Activity\ActivityReader;
 use App\Infrastructure\Activity\ActivitySourceRegistry;
+use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Closure;
 use DateTimeImmutable;
 use Illuminate\Cache\ArrayStore;
 use Illuminate\Cache\Repository;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Tests\Support\Activity\FakeActivitySource;
@@ -31,6 +33,8 @@ use Tests\TestCase;
 
 final class ActivityReaderTest extends TestCase
 {
+    use LazilyRefreshDatabase;
+
     private const string ANA = '0195f3a2-7c1e-7d4b-9a8e-2f6c1b3d4e5f';
 
     private const string LUIS = '0195f3a2-7c1e-7d4b-9a8e-2f6c1b3d4e60';
@@ -90,6 +94,86 @@ final class ActivityReaderTest extends TestCase
         $this->assertFalse($result->isRead());
         $this->assertSame([], $result->facts);
         $log->shouldNotHaveReceived('warning');
+    }
+
+    public function test_a_type_two_sources_share_fails_rather_than_missing(): void
+    {
+        Log::spy();
+        $this->register('game-tables.session', 'game-tables');
+        $this->register('game-tables.session', 'game-tables');
+        $reader = $this->reader();
+
+        $this->assertSame(ActivityReadOutcome::Failed, $reader->facts('game-tables.session', '1')->outcome);
+        $this->assertSame(ActivityReadOutcome::Failed, $reader->history('game-tables.session', null, 10)->outcome);
+        $this->assertSame(ActivityReadOutcome::Failed, $reader->describe('game-tables.session', ['1'], null)->outcome);
+    }
+
+    public function test_while_a_source_cannot_be_built_a_type_nobody_offers_fails_and_recovers_once_it_builds(): void
+    {
+        $builds = 0;
+        $this->app->bind('recovering-reader-source', static function () use (&$builds): ActivitySourceInterface {
+            if (++$builds === 1) {
+                throw new RuntimeException('down');
+            }
+
+            return new class extends FakeActivitySource
+            {
+                public function type(): string
+                {
+                    return 'forum.post';
+                }
+            };
+        });
+        $this->registry->register('recovering-reader-source', 'forum');
+        Log::spy();
+        $reader = $this->reader();
+
+        $this->assertSame(ActivityReadOutcome::Failed, $reader->facts('forum.post', '1')->outcome);
+        $this->assertTrue($reader->facts('forum.post', '1')->isRead());
+        $this->assertSame(ActivityReadOutcome::Missing, $reader->facts('game-tables.session', '1')->outcome);
+    }
+
+    public function test_the_source_is_asked_with_a_uuid_id_in_lower_case(): void
+    {
+        $asked = [];
+        $this->register('game-tables.session', 'game-tables', facts: static function (string $id) use (&$asked): array {
+            $asked[] = $id;
+
+            return [];
+        });
+
+        $this->reader()->facts('game-tables.session', '0195F3A2-7C1E-7D4B-9A8E-2F6C1B3D4E61');
+
+        $this->assertSame(['0195f3a2-7c1e-7d4b-9a8e-2f6c1b3d4e61'], $asked);
+    }
+
+    public function test_facts_of_anonymized_accounts_are_left_out_and_deactivated_ones_kept(): void
+    {
+        $anonymized = UserModel::factory()->create();
+        $anonymized->forceFill(['anonymized_at' => now(), 'deleted_at' => now()])->save();
+        $deactivated = UserModel::factory()->create();
+        $deactivated->delete();
+        $active = UserModel::factory()->create();
+        $ids = [(string) $anonymized->id, (string) $deactivated->id, (string) $active->id];
+        $this->register('game-tables.session', 'game-tables',
+            facts: fn (): array => array_map(fn (string $id): ActivityFactDTO => $this->fact($id, ActivityRole::Player), $ids),
+            history: fn (): ActivityHistoryPageDTO => new ActivityHistoryPageDTO([
+                new ActivitySubjectFactsDTO('1', array_map(fn (string $id): ActivityFactDTO => $this->fact($id, ActivityRole::Player), $ids)),
+                new ActivitySubjectFactsDTO('2', [$this->fact((string) $anonymized->id, ActivityRole::Director)]),
+            ], 'next'),
+        );
+        $reader = $this->reader();
+        $kept = [strtolower((string) $deactivated->id), strtolower((string) $active->id)];
+
+        $this->assertSame($kept, array_map(static fn (ActivityFactDTO $fact): string => $fact->userId, $reader->facts('game-tables.session', '1')->facts));
+
+        $page = $reader->history('game-tables.session', null, 10)->page;
+        $this->assertNotNull($page);
+        $this->assertSame('next', $page->nextCursor);
+        $this->assertSame($kept, array_map(static fn (ActivityFactDTO $fact): string => $fact->userId, $page->subjects[0]->facts));
+        // The subject stays, with nothing left: what the consumer kept of that person goes
+        $this->assertSame('2', $page->subjects[1]->subjectId);
+        $this->assertSame([], $page->subjects[1]->facts);
     }
 
     public function test_a_source_that_throws_fails_without_its_message(): void
@@ -219,7 +303,7 @@ final class ActivityReaderTest extends TestCase
 
         $this->assertSame(ActivityReadOutcome::Read, $result->outcome);
         $this->assertTrue($result->isRead());
-        $this->assertSame($page, $result->page);
+        $this->assertEquals($page, $result->page);
         $this->assertSame([100, 1, ActivityHistoryPageDTO::MAX_LIMIT], $limits);
     }
 
@@ -279,6 +363,31 @@ final class ActivityReaderTest extends TestCase
         $this->assertSame('Enlace raro', $result->find('5')?->title);
         $this->assertNull($result->find('5')->url);
         $this->assertNull($result->find('2'));
+    }
+
+    public function test_subjects_asked_with_a_uuid_in_capitals_are_described_in_lower_case(): void
+    {
+        $id = '0195f3a2-7c1e-7d4b-9a8e-2f6c1b3d4e61';
+        $this->register('game-tables.session', 'game-tables', describe: static fn (array $ids): array => in_array($id, $ids, true)
+            ? [strtoupper($id) => new ActivitySubjectDTO($id, 'Mesa', '  /mesas/1  ')]
+            : []);
+
+        $result = $this->reader()->describe('game-tables.session', [strtoupper($id)], null);
+
+        $this->assertSame($id, $result->find($id)?->subjectId);
+        // The link as the core normalised it
+        $this->assertSame('/mesas/1', $result->find($id)->url);
+    }
+
+    public function test_a_describe_with_nothing_well_formed_fails(): void
+    {
+        $this->register('game-tables.session', 'game-tables', describe: static fn (): array => [
+            new ActivitySubjectDTO('1', 'Uno'),
+            new ActivitySubjectDTO('2', 'Dos'),
+        ]);
+        Log::spy();
+
+        $this->assertSame(ActivityReadOutcome::Failed, $this->reader()->describe('game-tables.session', ['1', '2'], null)->outcome);
     }
 
     public function test_describing_nothing_asks_nobody(): void

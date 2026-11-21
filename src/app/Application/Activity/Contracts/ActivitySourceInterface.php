@@ -23,6 +23,11 @@ use Illuminate\Contracts\Auth\Authenticatable;
  * Privacy: a source only reports what any signed-in member can know exists (published, non-private
  * tables, posts in categories members see, non-anonymous surveys…). Something restricted is never
  * reported, so a badge or a count built on it never reveals it.
+ *
+ * facts() and history() answer the same for everybody: they never read the signed-in user, the
+ * session or the request. They run in queued jobs and commands, where nobody is signed in; a query
+ * scoped to «what the current user may see» would answer nothing there, and the record kept from it
+ * would lose real facts.
  */
 interface ActivitySourceInterface
 {
@@ -41,7 +46,7 @@ interface ActivitySourceInterface
     /**
      * The current truth of one subject: one fact per person and role. Empty when it does not exist,
      * no longer counts (hidden, deleted, restricted) or has not happened yet. Never throw for an
-     * unknown id.
+     * unknown id, and never read who is signed in.
      *
      * @return list<ActivityFactDTO>
      */
@@ -50,7 +55,8 @@ interface ActivitySourceInterface
     /**
      * Every subject that counts, with its facts, in a stable order, `$limit` at most per page: for
      * recalculating from scratch. `$cursor` is null for the first page and then the page's
-     * nextCursor, opaque to the caller.
+     * nextCursor, opaque to the caller. Throw on a cursor it cannot read (never start again from the
+     * first page), and never read who is signed in.
      */
     public function history(?string $cursor, int $limit): ActivityHistoryPageDTO;
 

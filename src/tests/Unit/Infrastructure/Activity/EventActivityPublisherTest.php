@@ -35,6 +35,38 @@ final class EventActivityPublisherTest extends TestCase
         );
     }
 
+    public function test_a_subject_published_several_times_in_one_transaction_is_announced_once(): void
+    {
+        Event::fake([ActivityRecorded::class]);
+        $publisher = $this->publisher();
+
+        DB::transaction(static function () use ($publisher): void {
+            $publisher->recorded('game-tables.session', '0195F3A2-7C1E-7D4B-9A8E-2F6C1B3D4E61');
+            $publisher->recorded('game-tables.session', '0195f3a2-7c1e-7d4b-9a8e-2f6c1b3d4e61');
+            $publisher->recorded('game-tables.session', '43');
+        });
+
+        Event::assertDispatchedTimes(ActivityRecorded::class, 2);
+        Event::assertDispatched(
+            ActivityRecorded::class,
+            static fn (ActivityRecorded $event): bool => $event->subjectId === '0195f3a2-7c1e-7d4b-9a8e-2f6c1b3d4e61',
+        );
+    }
+
+    public function test_a_subject_published_in_a_rolled_back_transaction_is_announced_by_the_next_one(): void
+    {
+        Event::fake([ActivityRecorded::class]);
+        $publisher = $this->publisher();
+
+        DB::beginTransaction();
+        $publisher->recorded('game-tables.session', '42');
+        DB::rollBack();
+
+        DB::transaction(static fn () => $publisher->recorded('game-tables.session', '42'));
+
+        Event::assertDispatchedTimes(ActivityRecorded::class, 1);
+    }
+
     public function test_it_announces_nothing_when_the_transaction_rolls_back(): void
     {
         Event::fake([ActivityRecorded::class]);

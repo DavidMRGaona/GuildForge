@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Support\Activity;
 
+use App\Application\Activity\ActivityContractChecks;
 use App\Application\Activity\Contracts\ActivitySourceInterface;
 use App\Application\Activity\Contracts\OffersActivityAttributes;
 use App\Application\Activity\DTOs\ActivityAttributeDTO;
 use App\Application\Activity\DTOs\ActivityAttributeValueDTO;
-use App\Application\Activity\DTOs\ActivityContractChecks;
 use App\Application\Activity\DTOs\ActivityFactDTO;
 use App\Application\Activity\DTOs\ActivitySubjectDTO;
 use App\Application\Activity\DTOs\ActivitySubjectFactsDTO;
@@ -19,19 +19,16 @@ use App\Domain\SiteBlocks\LinkTargetRule;
 use Illuminate\Support\Str;
 
 /**
- * What every activity source must do (core#774). Use it in the source's test (or extend
- * ActivitySourceTestCase) and say how to build the source and a subject that counts:
+ * What every activity source must do (core#774). Extend ActivitySourceTestCase, which enables the
+ * module before each test, and say how to build the source and a subject that counts:
  *
  *     final class SessionActivitySourceTest extends ActivitySourceTestCase
  *     {
+ *         protected ?string $moduleName = 'game-tables';
+ *
  *         protected function activitySource(): ActivitySourceInterface
  *         {
  *             return $this->app->make(SessionActivitySource::class);
- *         }
- *
- *         protected function activitySourceOwner(): string
- *         {
- *             return 'game-tables';
  *         }
  *
  *         protected function createCountedActivitySubject(): string
@@ -40,7 +37,10 @@ use Illuminate\Support\Str;
  *         }
  *     }
  *
- * The test methods start with `test_activity_` so they never clash with the class's own.
+ * A test with another base class uses this trait directly, implements activitySourceOwner() and
+ * boots the module first (a ModuleTestCase with `$moduleName` and `$autoEnableModule = true`):
+ * test_activity_source_is_registered_and_read_by_the_core needs its provider to have registered
+ * the source. The test methods start with `test_activity_` so they never clash with the class's own.
  */
 trait ActivitySourceContractTests
 {

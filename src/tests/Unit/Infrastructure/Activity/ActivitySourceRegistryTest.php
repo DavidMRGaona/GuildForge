@@ -171,6 +171,80 @@ final class ActivitySourceRegistryTest extends TestCase
         );
     }
 
+    public function test_a_type_with_two_sources_is_unavailable_not_gone(): void
+    {
+        Log::spy();
+        $this->registry->registerMany([$this->source('forum.post'), $this->source('forum.post')], 'forum');
+        $this->registry->register($this->source('forum.discussion'), 'forum');
+
+        $this->assertTrue($this->registry->isUnavailable('forum.post'));
+        $this->assertFalse($this->registry->isUnavailable('forum.discussion'));
+        $this->assertFalse($this->registry->isUnavailable('game-tables.session'));
+    }
+
+    public function test_a_source_refused_for_its_type_is_gone_not_unavailable(): void
+    {
+        Log::spy();
+        $this->registry->register($this->source('game-tables.session'), 'forum');
+
+        $this->assertFalse($this->registry->isUnavailable('game-tables.session'));
+    }
+
+    public function test_a_source_that_failed_to_build_is_built_again_on_the_next_lookup(): void
+    {
+        $builds = 0;
+        $this->app->bind('recovering-activity-source', static function () use (&$builds): ActivitySourceInterface {
+            if (++$builds === 1) {
+                throw new RuntimeException('down');
+            }
+
+            return new class extends FakeActivitySource
+            {
+                public function type(): string
+                {
+                    return 'forum.post';
+                }
+            };
+        });
+        $this->registry->register('recovering-activity-source', 'forum');
+        $this->registry->register($this->source('forum.discussion'), 'forum');
+        Log::spy();
+
+        // Its type cannot be read yet: any type nobody offers may be its own
+        $this->assertNull($this->registry->find('forum.post'));
+        $this->assertTrue($this->registry->isUnavailable('forum.post'));
+        $this->assertTrue($this->registry->isUnavailable('game-tables.session'));
+        $this->assertFalse($this->registry->isUnavailable('forum.discussion'));
+
+        $this->assertNotNull($this->registry->find('forum.post'));
+        $this->assertFalse($this->registry->isUnavailable('forum.post'));
+        $this->assertFalse($this->registry->isUnavailable('game-tables.session'));
+        $this->assertSame(2, $builds);
+    }
+
+    public function test_a_source_that_throws_after_its_type_is_read_leaves_only_that_type_unavailable(): void
+    {
+        $failing = new class extends FakeActivitySource
+        {
+            public function type(): string
+            {
+                return 'forum.post';
+            }
+
+            public function kind(): ActivityKind
+            {
+                throw new RuntimeException('down');
+            }
+        };
+        Log::spy();
+        $this->registry->registerMany([$failing::class, $this->source('forum.post')], 'forum');
+
+        // The working one is not offered either: once the other builds, the two would clash
+        $this->assertNull($this->registry->find('forum.post'));
+        $this->assertTrue($this->registry->isUnavailable('forum.post'));
+        $this->assertFalse($this->registry->isUnavailable('forum.discussion'));
+    }
+
     public function test_a_class_registered_by_two_owners_keeps_the_first(): void
     {
         $class = $this->source('forum.post');

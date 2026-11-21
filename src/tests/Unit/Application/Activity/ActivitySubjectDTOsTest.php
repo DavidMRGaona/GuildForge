@@ -33,6 +33,24 @@ final class ActivitySubjectDTOsTest extends TestCase
         $this->assertSame($facts, $subject->facts);
     }
 
+    public function test_a_uuid_subject_id_is_kept_in_lower_case(): void
+    {
+        $upper = '0195F3A2-7C1E-7D4B-9A8E-2F6C1B3D4E61';
+
+        $this->assertSame(strtolower($upper), (new ActivitySubjectFactsDTO($upper, []))->subjectId);
+        $this->assertSame(strtolower($upper), (new ActivitySubjectDTO($upper, 'Mesa'))->subjectId);
+    }
+
+    public function test_the_same_uuid_subject_written_in_two_cases_is_one_subject_in_a_page(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new ActivityHistoryPageDTO([
+            new ActivitySubjectFactsDTO('0195F3A2-7C1E-7D4B-9A8E-2F6C1B3D4E61', []),
+            new ActivitySubjectFactsDTO('0195f3a2-7c1e-7d4b-9a8e-2f6c1b3d4e61', []),
+        ], null);
+    }
+
     public function test_a_subject_may_have_no_facts(): void
     {
         $this->assertSame([], (new ActivitySubjectFactsDTO('42', []))->facts);

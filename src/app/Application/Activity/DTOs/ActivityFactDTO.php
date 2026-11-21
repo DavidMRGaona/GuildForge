@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Application\Activity\DTOs;
 
+use App\Application\Activity\ActivityContractChecks;
 use App\Domain\Activity\ActivityIdentifierRule;
 use App\Domain\Activity\ActivityRole;
 use DateTimeImmutable;
+use DateTimeZone;
 use InvalidArgumentException;
 
 /**
@@ -15,14 +17,18 @@ use InvalidArgumentException;
  * their placement (1 = the winner). All the facts of one subject happened together: the players of
  * a table are its players.
  *
- * `$occurredAt` is an instant (when the subject took place or ended, as the source decides): compare
- * it as such, whatever its timezone.
+ * `$occurredAt` is an instant (when the subject took place or ended, as the source decides), kept in
+ * the storage zone (PHP's default zone, which the application sets to it): a value built in the
+ * display zone is the same instant, so a consumer that stores it through query bindings, which skip
+ * the models' conversion, never shifts it.
  */
 final readonly class ActivityFactDTO
 {
     public const int MAX_ATTRIBUTES = 20;
 
     public string $userId;
+
+    public DateTimeImmutable $occurredAt;
 
     /**
      * @param  array<string, ActivityAttributeValueDTO>  $attributes  attribute key => value
@@ -33,7 +39,7 @@ final readonly class ActivityFactDTO
     public function __construct(
         string $userId,
         public ActivityRole $role,
-        public DateTimeImmutable $occurredAt,
+        DateTimeImmutable $occurredAt,
         public array $attributes = [],
         public ?int $placement = null,
     ) {
@@ -44,6 +50,7 @@ final readonly class ActivityFactDTO
         }
 
         $this->userId = $normalized;
+        $this->occurredAt = $occurredAt->setTimezone(new DateTimeZone(date_default_timezone_get()));
 
         if ($placement !== null && $placement < 1) {
             throw new InvalidArgumentException('An activity placement starts at 1 (the winner).');

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Activity\DTOs;
+namespace App\Application\Activity;
 
 /**
  * @internal What the activity DTOs and the reader check at run time (core#774): a module may pass

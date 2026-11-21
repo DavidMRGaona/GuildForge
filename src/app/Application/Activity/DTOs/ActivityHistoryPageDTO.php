@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Activity\DTOs;
 
+use App\Application\Activity\ActivityContractChecks;
 use InvalidArgumentException;
 
 /**

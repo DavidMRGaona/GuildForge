@@ -10,6 +10,7 @@ use App\Application\Activity\DTOs\ActivityFactDTO;
 use App\Application\Activity\Services\ActivitySourceRegistryInterface;
 use App\Domain\Activity\ActivityRole;
 use DateTimeImmutable;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\Support\Activity\ActivitySourceContractTests;
 use Tests\Support\Activity\InMemoryActivitySource;
@@ -19,6 +20,7 @@ use Tests\TestCase;
 final class InMemoryActivitySourceContractTest extends TestCase
 {
     use ActivitySourceContractTests;
+    use LazilyRefreshDatabase;
 
     protected function setUp(): void
     {

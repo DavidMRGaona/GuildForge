@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Activity;
 
+use App\Application\Activity\ActivityContractChecks;
 use App\Application\Activity\Contracts\ActivitySourceInterface;
 use App\Application\Activity\Contracts\OffersActivityAttributes;
 use App\Application\Activity\DTOs\ActivityAttributeDTO;
 use App\Application\Activity\DTOs\ActivityAttributeValueDTO;
-use App\Application\Activity\DTOs\ActivityContractChecks;
 use App\Application\Activity\DTOs\ActivityDescriptionsResultDTO;
+use App\Application\Activity\DTOs\ActivityFactDTO;
 use App\Application\Activity\DTOs\ActivityFactsResultDTO;
 use App\Application\Activity\DTOs\ActivityHistoryPageDTO;
 use App\Application\Activity\DTOs\ActivityHistoryResultDTO;
@@ -21,10 +22,11 @@ use App\Application\Activity\Services\ActivityReaderInterface;
 use App\Application\Activity\Services\ActivitySourceRegistryInterface;
 use App\Domain\Activity\ActivityIdentifierRule;
 use App\Domain\SiteBlocks\LinkTargetRule;
+use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Support\DailyWarnings;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Cache\Repository as Cache;
-use Illuminate\Contracts\Container\Container;
+use Illuminate\Contracts\Foundation\Application;
 use InvalidArgumentException;
 use Throwable;
 
@@ -33,11 +35,16 @@ use Throwable;
  * the source from the container (so it never carries one request's state into another), catches
  * anything it throws and checks what it returns against the DTOs' rules. Anything wrong is a
  * `Failed` result, warned once a day per type and reason, never an empty answer: a consumer only
- * replaces what it keeps with what was read. Bound scoped, so a long-running worker warns again
- * the next day.
+ * replaces what it keeps with what was read. `Missing` is only for a type no module registers.
+ * Facts of anonymized accounts are dropped (one query per call), so a recalculation never brings
+ * back what was erased; deactivated accounts keep theirs. Bound scoped, so a long-running worker
+ * warns again the next day.
  */
 final readonly class ActivityReader implements ActivityReaderInterface
 {
+    /** How many account ids one query asks about */
+    private const int ACCOUNT_QUERY_CHUNK = 1000;
+
     private DailyWarnings $warnings;
 
     /**
@@ -45,7 +52,7 @@ final readonly class ActivityReader implements ActivityReaderInterface
      */
     public function __construct(
         private ActivitySourceRegistryInterface $registry,
-        private Container $container,
+        private Application $container,
         ?Cache $cache = null,
     ) {
         $this->warnings = new DailyWarnings(
@@ -88,11 +95,13 @@ final readonly class ActivityReader implements ActivityReaderInterface
     {
         $registration = $this->registry->find($type);
         if (! $registration instanceof ActivitySourceRegistrationDTO) {
-            return ActivityFactsResultDTO::missing();
+            return $this->registry->isUnavailable($type) ? ActivityFactsResultDTO::failed() : ActivityFactsResultDTO::missing();
         }
 
+        $subjectId = ActivityIdentifierRule::stableId($subjectId);
+
         // Nothing the publisher lets through carries such an id: no subject has it
-        if (! ActivityIdentifierRule::isStableId($subjectId)) {
+        if ($subjectId === null) {
             return ActivityFactsResultDTO::read([]);
         }
 
@@ -117,14 +126,16 @@ final readonly class ActivityReader implements ActivityReaderInterface
             return ActivityFactsResultDTO::failed();
         }
 
-        return ActivityFactsResultDTO::read($subject->facts);
+        $kept = $this->withoutAnonymizedAccounts($registration, [$subject]);
+
+        return $kept === null ? ActivityFactsResultDTO::failed() : ActivityFactsResultDTO::read($kept[0]->facts);
     }
 
     public function history(string $type, ?string $cursor, int $limit): ActivityHistoryResultDTO
     {
         $registration = $this->registry->find($type);
         if (! $registration instanceof ActivitySourceRegistrationDTO) {
-            return ActivityHistoryResultDTO::missing();
+            return $this->registry->isUnavailable($type) ? ActivityHistoryResultDTO::failed() : ActivityHistoryResultDTO::missing();
         }
 
         $source = $this->build($registration);
@@ -149,19 +160,21 @@ final readonly class ActivityReader implements ActivityReaderInterface
             return ActivityHistoryResultDTO::failed();
         }
 
-        return ActivityHistoryResultDTO::read($page);
+        $subjects = $this->withoutAnonymizedAccounts($registration, $page->subjects);
+
+        return $subjects === null ? ActivityHistoryResultDTO::failed() : ActivityHistoryResultDTO::read(new ActivityHistoryPageDTO($subjects, $page->nextCursor));
     }
 
     public function describe(string $type, array $subjectIds, ?Authenticatable $viewer): ActivityDescriptionsResultDTO
     {
         $registration = $this->registry->find($type);
         if (! $registration instanceof ActivitySourceRegistrationDTO) {
-            return ActivityDescriptionsResultDTO::missing();
+            return $this->registry->isUnavailable($type) ? ActivityDescriptionsResultDTO::failed() : ActivityDescriptionsResultDTO::missing();
         }
 
         $asked = array_values(array_unique(array_filter(
-            $subjectIds,
-            ActivityIdentifierRule::isStableId(...),
+            array_map(ActivityIdentifierRule::stableId(...), $subjectIds),
+            static fn (?string $id): bool => $id !== null,
         )));
 
         if ($asked === []) {
@@ -183,14 +196,14 @@ final readonly class ActivityReader implements ActivityReaderInterface
 
         $wanted = array_fill_keys($asked, true);
         $subjects = [];
-        $malformed = false;
+        $malformed = 0;
 
         foreach ($described as $key => $subject) {
-            $key = (string) $key;
+            $key = ActivityIdentifierRule::stableId((string) $key);
 
             // Somebody else's subject would be shown under this one's id
             if (! $this->isSubject($subject) || $subject->subjectId !== $key) {
-                $malformed = true;
+                $malformed++;
 
                 continue;
             }
@@ -201,13 +214,17 @@ final readonly class ActivityReader implements ActivityReaderInterface
             }
 
             unset($wanted[$key]);
-            $subjects[] = $subject->url === null || $this->allowedLink($subject->url)
-                ? $subject
-                : new ActivitySubjectDTO($subject->subjectId, $subject->title);
+            $link = $subject->url === null ? null : $this->link($subject->url);
+            $subjects[] = $link === $subject->url ? $subject : new ActivitySubjectDTO($subject->subjectId, $subject->title, $link);
         }
 
-        if ($malformed) {
+        if ($malformed > 0) {
             $this->warn($registration, 'invalid_description');
+
+            // Nothing well formed at all (a list instead of a map keyed by id): the source is broken
+            if ($malformed === count($described)) {
+                return ActivityDescriptionsResultDTO::failed();
+            }
         }
 
         return ActivityDescriptionsResultDTO::read($subjects);
@@ -293,10 +310,56 @@ final readonly class ActivityReader implements ActivityReaderInterface
         return $subject instanceof ActivitySubjectDTO;
     }
 
-    private function allowedLink(string $url): bool
+    /** The link as LinkTargetRule normalises it, or null when it is refused; http only where the site itself runs on it */
+    private function link(string $url): ?string
     {
-        // http only where the site itself runs on it
-        return LinkTargetRule::normalize($url, app()->environment(['local', 'testing'])) !== null;
+        return LinkTargetRule::normalize($url, $this->container->environment('local', 'testing'));
+    }
+
+    /**
+     * The subjects without the facts of anonymized accounts, or null (warned) when that cannot be
+     * known: never keep what may have been erased.
+     *
+     * @param  list<ActivitySubjectFactsDTO>  $subjects
+     * @return list<ActivitySubjectFactsDTO>|null
+     */
+    private function withoutAnonymizedAccounts(ActivitySourceRegistrationDTO $registration, array $subjects): ?array
+    {
+        $userIds = [];
+        foreach ($subjects as $subject) {
+            foreach ($subject->facts as $fact) {
+                $userIds[$fact->userId] = true;
+            }
+        }
+
+        if ($userIds === []) {
+            return $subjects;
+        }
+
+        $anonymized = [];
+
+        try {
+            foreach (array_chunk(array_map(strval(...), array_keys($userIds)), self::ACCOUNT_QUERY_CHUNK) as $chunk) {
+                $found = UserModel::withTrashed()->whereIn('id', $chunk)->whereNotNull('anonymized_at')->pluck('id');
+
+                foreach ($found as $id) {
+                    $anonymized[strtolower((string) $id)] = true;
+                }
+            }
+        } catch (Throwable $exception) {
+            $this->warn($registration, 'accounts', $exception);
+
+            return null;
+        }
+
+        if ($anonymized === []) {
+            return $subjects;
+        }
+
+        return array_map(static fn (ActivitySubjectFactsDTO $subject): ActivitySubjectFactsDTO => new ActivitySubjectFactsDTO(
+            $subject->subjectId,
+            array_values(array_filter($subject->facts, static fn (ActivityFactDTO $fact): bool => ! isset($anonymized[$fact->userId]))),
+        ), $subjects);
     }
 
     /**

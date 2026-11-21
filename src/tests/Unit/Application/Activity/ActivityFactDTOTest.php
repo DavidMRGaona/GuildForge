@@ -9,6 +9,7 @@ use App\Application\Activity\DTOs\ActivityAttributeValueDTO;
 use App\Application\Activity\DTOs\ActivityFactDTO;
 use App\Domain\Activity\ActivityRole;
 use DateTimeImmutable;
+use DateTimeZone;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
@@ -25,9 +26,25 @@ final class ActivityFactDTOTest extends TestCase
 
         $this->assertSame(self::USER, $fact->userId);
         $this->assertSame(ActivityRole::Player, $fact->role);
-        $this->assertSame($at, $fact->occurredAt);
+        $this->assertEquals($at, $fact->occurredAt);
         $this->assertSame(['game_system' => $system], $fact->attributes);
         $this->assertSame(2, $fact->placement);
+    }
+
+    public function test_the_instant_is_kept_in_the_storage_zone(): void
+    {
+        $default = date_default_timezone_get();
+        date_default_timezone_set('UTC');
+
+        try {
+            $fact = new ActivityFactDTO(self::USER, ActivityRole::Player, new DateTimeImmutable('2026-07-01 20:00:00', new DateTimeZone('Europe/Madrid')));
+        } finally {
+            date_default_timezone_set($default);
+        }
+
+        // The same instant, read in the zone the application stores instants in
+        $this->assertSame('UTC', $fact->occurredAt->getTimezone()->getName());
+        $this->assertSame('2026-07-01 18:00:00', $fact->occurredAt->format('Y-m-d H:i:s'));
     }
 
     public function test_attributes_and_placement_are_optional(): void
@@ -85,6 +102,7 @@ final class ActivityFactDTOTest extends TestCase
     {
         $value = new ActivityAttributeValueDTO('warhammer-40k', 'Warhammer 40K');
         $this->assertSame('warhammer-40k', $value->id);
+        $this->assertSame('0195f3a2-0000-7000-8000-00000000000a', (new ActivityAttributeValueDTO('0195F3A2-0000-7000-8000-00000000000A', 'Pathfinder'))->id);
         $this->assertSame('Warhammer 40K', $value->label);
 
         foreach ([['', 'Label'], ['a b', 'Label'], ['id', '  ']] as [$id, $label]) {

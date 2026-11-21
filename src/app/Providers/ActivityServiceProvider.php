@@ -25,6 +25,7 @@ final class ActivityServiceProvider extends ServiceProvider
         // Built by hand so the cache is only asked for when warning, not at boot
         $this->app->singleton(ActivitySourceRegistryInterface::class, static fn ($app): ActivitySourceRegistry => new ActivitySourceRegistry($app));
         $this->app->scoped(ActivityReaderInterface::class, ActivityReader::class);
-        $this->app->bind(ActivityPublisherInterface::class, EventActivityPublisher::class);
+        // Scoped: what an open transaction already announces is known to every caller of the request or job
+        $this->app->scoped(ActivityPublisherInterface::class, EventActivityPublisher::class);
     }
 }

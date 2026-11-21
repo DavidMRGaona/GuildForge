@@ -13,17 +13,24 @@ use InvalidArgumentException;
  */
 final readonly class ActivitySubjectDTO
 {
+    /** Kept in lower case when it is a UUID */
+    public string $subjectId;
+
     /**
      * @throws InvalidArgumentException when the id is not stable or the title is blank
      */
     public function __construct(
-        public string $subjectId,
+        string $subjectId,
         public string $title,
         public ?string $url = null,
     ) {
-        if (! ActivityIdentifierRule::isStableId($subjectId)) {
+        $normalized = ActivityIdentifierRule::stableId($subjectId);
+
+        if ($normalized === null) {
             throw new InvalidArgumentException('A described activity subject needs a stable id.');
         }
+
+        $this->subjectId = $subjectId = $normalized;
 
         if (trim($title) === '') {
             throw new InvalidArgumentException("Described activity subject '{$subjectId}' needs a title.");

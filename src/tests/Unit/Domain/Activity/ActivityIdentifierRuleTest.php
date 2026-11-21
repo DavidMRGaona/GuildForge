@@ -47,6 +47,14 @@ final class ActivityIdentifierRuleTest extends TestCase
         $this->assertFalse(ActivityIdentifierRule::isStableId($id));
     }
 
+    public function test_a_uuid_id_is_kept_in_lower_case_and_any_other_as_it_is(): void
+    {
+        $this->assertSame('0195f3a2-7c1e-7d4b-9a8e-2f6c1b3d4e5f', ActivityIdentifierRule::stableId('0195F3A2-7C1E-7D4B-9A8E-2F6C1B3D4E5F'));
+        $this->assertSame('Warhammer-40K', ActivityIdentifierRule::stableId('Warhammer-40K'));
+        $this->assertSame('42', ActivityIdentifierRule::stableId('42'));
+        $this->assertNull(ActivityIdentifierRule::stableId('a b'));
+    }
+
     public function test_attribute_keys_are_snake_case(): void
     {
         $this->assertTrue(ActivityIdentifierRule::isAttributeKey('game_system'));

@@ -14,6 +14,7 @@ use App\Application\Activity\DTOs\ActivitySubjectDTO;
 use App\Application\Activity\DTOs\ActivitySubjectFactsDTO;
 use App\Domain\Activity\ActivityKind;
 use Illuminate\Contracts\Auth\Authenticatable;
+use InvalidArgumentException;
 
 /**
  * A core activity source whose subjects live in memory, as a module's would live in its tables:
@@ -63,10 +64,19 @@ final class InMemoryActivitySource implements ActivitySourceInterface, OffersAct
     public function history(?string $cursor, int $limit): ActivityHistoryPageDTO
     {
         // The cursor is the last id of the previous page: opaque to the caller
-        $after = $cursor === null ? null : base64_decode($cursor, true);
+        $after = null;
+        if ($cursor !== null) {
+            $after = base64_decode($cursor, true);
+
+            // Never start again from the first page: the reader reads a throw as failed
+            if ($after === false || $after === '') {
+                throw new InvalidArgumentException('Unreadable activity history cursor.');
+            }
+        }
+
         $ids = array_values(array_filter(
             array_map(strval(...), array_keys(self::$subjects)),
-            static fn (string $id): bool => $after === null || $after === false || strcmp($id, $after) > 0,
+            static fn (string $id): bool => $after === null || strcmp($id, $after) > 0,
         ));
         $page = array_slice($ids, 0, $limit);
         $more = count($ids) > $limit;

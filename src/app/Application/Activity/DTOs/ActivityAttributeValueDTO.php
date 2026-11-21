@@ -13,13 +13,20 @@ use InvalidArgumentException;
  */
 final readonly class ActivityAttributeValueDTO
 {
+    /** Kept in lower case when it is a UUID */
+    public string $id;
+
     public function __construct(
-        public string $id,
+        string $id,
         public string $label,
     ) {
-        if (! ActivityIdentifierRule::isStableId($id)) {
+        $normalized = ActivityIdentifierRule::stableId($id);
+
+        if ($normalized === null) {
             throw new InvalidArgumentException('An activity attribute value needs a stable id (letters, digits, ".", "_", ":", "-").');
         }
+
+        $this->id = $normalized;
 
         if (trim($label) === '') {
             throw new InvalidArgumentException("Activity attribute value '{$id}' needs a label.");

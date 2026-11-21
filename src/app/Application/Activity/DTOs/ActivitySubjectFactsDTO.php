@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Activity\DTOs;
 
+use App\Application\Activity\ActivityContractChecks;
 use App\Domain\Activity\ActivityIdentifierRule;
 use InvalidArgumentException;
 
@@ -14,6 +15,9 @@ use InvalidArgumentException;
  */
 final readonly class ActivitySubjectFactsDTO
 {
+    /** Kept in lower case when it is a UUID */
+    public string $subjectId;
+
     /**
      * @param  list<ActivityFactDTO>  $facts
      *
@@ -21,12 +25,16 @@ final readonly class ActivitySubjectFactsDTO
      *                                  or the same person holds the same role twice
      */
     public function __construct(
-        public string $subjectId,
+        string $subjectId,
         public array $facts,
     ) {
-        if (! ActivityIdentifierRule::isStableId($subjectId)) {
+        $normalized = ActivityIdentifierRule::stableId($subjectId);
+
+        if ($normalized === null) {
             throw new InvalidArgumentException('An activity subject needs a stable id (letters, digits, ".", "_", ":", "-").');
         }
+
+        $this->subjectId = $subjectId = $normalized;
 
         if (! ActivityContractChecks::isListOf($facts, ActivityFactDTO::class)) {
             throw new InvalidArgumentException("The facts of activity subject '{$subjectId}' must be a list of ActivityFactDTO.");

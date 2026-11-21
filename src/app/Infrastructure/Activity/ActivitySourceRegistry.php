@@ -14,13 +14,15 @@ use Illuminate\Contracts\Container\Container;
 use Throwable;
 
 /**
- * Activity sources registered by the core and the modules (core#774), each built once the first
- * time one is asked for, only to check it and read its type and kind. It keeps what it read and the
- * class, never the instance: it is a singleton, and an instance kept here would carry what it read
- * in one request or job into the next. It fails closed: a class that cannot be built, is not a
- * source, has an invalid type or one that is not its owner's, or a type another one also has, is
- * left out with a warning once a day per class and reason. Warnings name the class, the module, the
- * type and the reason, and an exception only by its class.
+ * Activity sources registered by the core and the modules (core#774), each built the first time one
+ * is asked for, only to check it and read its type and kind. It keeps what it read and the class,
+ * never the instance: it is a singleton, and an instance kept here would carry what it read in one
+ * request or job into the next. It fails closed: a class that is not a source, has an invalid type
+ * or one that is not its owner's is refused for good; a type another one also has is offered by
+ * neither; a class that throws is refused only this time and built again on the next lookup, so a
+ * passing failure in a long-running worker does not last until it restarts. Warnings (once a day per
+ * class and reason) name the class, the module, the type and the reason, and an exception only by
+ * its class.
  */
 final class ActivitySourceRegistry implements ActivitySourceRegistryInterface
 {
@@ -30,8 +32,20 @@ final class ActivitySourceRegistry implements ActivitySourceRegistryInterface
     /** @var array<string, ?string> Class (or container id) => owning module (null for the core) */
     private array $classes = [];
 
-    /** @var array<string, ActivitySourceRegistrationDTO>|null Type => registration, sorted by type */
-    private ?array $resolved = null;
+    /** @var array<string, ActivitySourceRegistrationDTO|false> Class => what it read, or false when refused for good */
+    private array $built = [];
+
+    /** @var array<string, ActivitySourceRegistrationDTO>|null Type => registration, sorted by type; null until resolved */
+    private ?array $offered = null;
+
+    /** @var array<string, true> Types registered but not offered now: duplicated, or a class that failed */
+    private array $unavailable = [];
+
+    /** Whether a class failed before its type could be read */
+    private bool $unbuildable = false;
+
+    /** @var array<string, ActivitySourceRegistrationDTO>|null What the latest lookup offered, cached or not */
+    private ?array $latest = null;
 
     private readonly DailyWarnings $warnings;
 
@@ -65,7 +79,7 @@ final class ActivitySourceRegistry implements ActivitySourceRegistryInterface
         }
 
         $this->classes[$class] = $module;
-        $this->resolved = null;
+        $this->offered = $this->latest = null;
     }
 
     public function registerMany(array $classes, ?string $module = null): void
@@ -81,7 +95,8 @@ final class ActivitySourceRegistry implements ActivitySourceRegistryInterface
             $this->classes,
             static fn (?string $owner): bool => $owner !== $module,
         );
-        $this->resolved = null;
+        $this->built = array_intersect_key($this->built, $this->classes);
+        $this->offered = $this->latest = null;
     }
 
     public function all(): array
@@ -94,54 +109,95 @@ final class ActivitySourceRegistry implements ActivitySourceRegistryInterface
         return $this->resolveAll()[$type] ?? null;
     }
 
+    public function isUnavailable(string $type): bool
+    {
+        // The latest lookup's answer: resolving again would build a failing class once more and
+        // could contradict the find() just made
+        $offered = $this->latest ?? $this->resolveAll();
+
+        if (isset($offered[$type])) {
+            return false;
+        }
+
+        return isset($this->unavailable[$type]) || $this->unbuildable;
+    }
+
     /**
      * @return array<string, ActivitySourceRegistrationDTO>
      */
     private function resolveAll(): array
     {
-        if ($this->resolved !== null) {
-            return $this->resolved;
+        if ($this->offered !== null) {
+            return $this->offered;
         }
 
         /** @var array<string, list<ActivitySourceRegistrationDTO>> $byType */
         $byType = [];
+        /** @var array<string, true> $failing types read by a class that then threw */
+        $failing = [];
+        $unbuildable = false;
 
         foreach ($this->classes as $class => $module) {
-            $registration = $this->build($class, $module);
-            if ($registration instanceof ActivitySourceRegistrationDTO) {
-                $byType[$registration->type][] = $registration;
+            $outcome = $this->built[$class] ?? $this->build($class, $module);
+
+            if ($outcome instanceof ActivitySourceRegistrationDTO) {
+                $this->built[$class] = $outcome;
+                $byType[$outcome->type][] = $outcome;
+            } elseif ($outcome === false) {
+                $this->built[$class] = false;
+            } elseif (is_string($outcome)) {
+                // It threw after its type was read: that type is unknown now, not gone
+                $failing[$outcome] = true;
+            } else {
+                $unbuildable = true;
             }
         }
 
-        $resolved = [];
+        $offered = [];
+        $unavailable = $failing;
 
         foreach ($byType as $type => $registrations) {
-            // Two with one type: whichever won, a consumer's record of the other would be read from it
+            // Two with one type (one of them failing now counts too: once it builds they clash):
+            // whichever won, a consumer's record of the other would be read from it
+            if (isset($failing[$type])) {
+                continue;
+            }
+
             if (count($registrations) > 1) {
                 $this->warnings->warn('registry|'.$type.'|duplicate', 'Two activity sources have the same type; neither is offered.', [
                     'type' => $type,
                     'classes' => array_map(static fn (ActivitySourceRegistrationDTO $registration): string => $registration->class, $registrations),
                     'reason' => 'duplicate',
                 ]);
+                $unavailable[$type] = true;
 
                 continue;
             }
 
-            $resolved[$type] = $registrations[0];
+            $offered[$type] = $registrations[0];
         }
 
-        ksort($resolved, SORT_STRING);
+        ksort($offered, SORT_STRING);
+        $this->unavailable = $unavailable;
+        $this->unbuildable = $unbuildable;
 
-        return $this->resolved = $resolved;
+        // A passing failure is never remembered: the next lookup builds that class again
+        if (! $unbuildable && $failing === []) {
+            $this->offered = $offered;
+        }
+
+        return $this->latest = $offered;
     }
 
     /**
-     * The type and kind of the class, read once from an instance built only for this, or null (with
-     * a warning) when it cannot be offered.
+     * What an instance built only for this reads: its registration, false when it is refused for
+     * good (not a source, an invalid or foreign type), or, when it throws, the type it had read
+     * (null before that), so the failure is retried.
      */
-    private function build(string $class, ?string $module): ?ActivitySourceRegistrationDTO
+    private function build(string $class, ?string $module): ActivitySourceRegistrationDTO|false|string|null
     {
         $context = ['class' => $class, 'module' => $module];
+        $readType = null;
 
         try {
             $source = $this->container->make($class);
@@ -163,13 +219,17 @@ final class ActivitySourceRegistry implements ActivitySourceRegistryInterface
                 return $this->refuse($class, 'owner', 'An activity source type does not start with its module name (core. for the core); it is left out.', $context);
             }
 
+            $readType = $type->value;
             $kind = $source->kind();
         } catch (Throwable $exception) {
             // Only the class: a module's message may carry what a person can see
-            return $this->refuse($class, 'build', 'An activity source could not be built; it is left out.', [
+            $this->warnings->warn('registry|'.$class.'|build', 'An activity source could not be built; it is tried again on the next lookup.', [
                 ...$context,
+                'reason' => 'build',
                 'exception' => $exception::class,
             ]);
+
+            return $readType;
         }
 
         return new ActivitySourceRegistrationDTO($type->value, $kind, $module, $class);
@@ -178,10 +238,10 @@ final class ActivitySourceRegistry implements ActivitySourceRegistryInterface
     /**
      * @param  array<string, mixed>  $context
      */
-    private function refuse(string $class, string $reason, string $message, array $context): null
+    private function refuse(string $class, string $reason, string $message, array $context): false
     {
         $this->warnings->warn('registry|'.$class.'|'.$reason, $message, [...$context, 'reason' => $reason]);
 
-        return null;
+        return false;
     }
 }
