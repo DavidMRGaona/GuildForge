@@ -816,7 +816,7 @@ The sidebar groups belong to the core (`App\Filament\Support\PanelNavigationGrou
 | Comunicación | Announcements, surveys, forum |
 | Personas | Users, roles, association members |
 | Sitio web | Hero slides, public menu, footer, «Nosotros», legal pages, link page, cookies |
-| Catálogos (collapsed) | Lists other entries use: game systems, publishers, content warnings, tournament profiles, tags |
+| Catálogos (collapsed) | Lists other entries use: game systems, publishers, content warnings, genres, tournament profiles, tags |
 | Sistema (collapsed) | «Configuración» (every settings page), modules, updates |
 
 A resource or page names its group with the enum's label, **as a string**:
@@ -841,7 +841,7 @@ Sort slots, so modules never depend on each other's numbers (core entries in bra
 | Comunicación | announcements Anuncios 10 · surveys Encuestas 20 · forum Foro 30, Moderación del foro 35 |
 | Personas | [Usuarios 10 · Roles 20] · memberships Socios 30 · contacts Contactos 40 |
 | Sitio web | [Hero slides 10 · Navegación 20 · Pie de página 25 · Nosotros 30 · Páginas legales 40] · link-page Página de enlaces 50 · cookie-consent Cookies 60 |
-| Catálogos | game-tables Sistemas de juego 10, Editoriales 20, Avisos de contenido 30 · tournaments Perfiles de torneo 40 · [Etiquetas 90] |
+| Catálogos | game-tables Sistemas de juego 10, Editoriales 20, Avisos de contenido 30, Géneros 35 · tournaments Perfiles de torneo 40 · [Etiquetas 90] |
 | Sistema | [Configuración 10 · Módulos 20 · Actualizaciones de módulos 30 · Actualización del core 40] |
 
 A new module takes a free number in the group that fits and adds its row here.
