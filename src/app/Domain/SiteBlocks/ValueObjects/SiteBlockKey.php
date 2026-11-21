@@ -16,7 +16,7 @@ final readonly class SiteBlockKey
     public const string CORE_OWNER = 'core';
 
     /** The owner is a module name (kebab-case); the name is snake_case or kebab-case. */
-    private const string PATTERN = '/^(?<owner>[a-z0-9]+(?:-[a-z0-9]+)*)\.(?<name>[a-z0-9]+(?:[_-][a-z0-9]+)*)$/';
+    private const string PATTERN = '/^(?<owner>[a-z0-9]+(?:-[a-z0-9]+)*)\.(?<name>[a-z0-9]+(?:[_-][a-z0-9]+)*)$/D';
 
     private function __construct(
         public string $value,

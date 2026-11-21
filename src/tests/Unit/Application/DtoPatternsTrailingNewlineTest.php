@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Application;
 
+use App\Application\Proposals\DTOs\ProposalRequestFieldDTO;
 use App\Application\Publications\DTOs\PublicationDTO;
 use App\Application\Publications\DTOs\PublicationTopicDTO;
 use App\Application\Publications\Enums\PublicationState;
@@ -42,5 +43,12 @@ final class DtoPatternsTrailingNewlineTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         new SurveySubjectAttributeDTO("game_system\n", 'Sistema', 'D&D');
+    }
+
+    public function test_a_proposal_request_field_name_with_a_trailing_newline_is_rejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        ProposalRequestFieldDTO::boolean("players\n", 'Jugadores');
     }
 }

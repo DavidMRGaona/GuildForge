@@ -13,7 +13,7 @@ use App\Application\Proposals\Contracts\EventProposalRequestInterface;
 interface EventProposalRequestRegistryInterface
 {
     /** `<module>.<kebab-case name>` */
-    public const string KEY_PATTERN = '/^[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]+(?:-[a-z0-9]+)*$/';
+    public const string KEY_PATTERN = '/^[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]+(?:-[a-z0-9]+)*$/D';
 
     /**
      * @param  class-string  $requestClass

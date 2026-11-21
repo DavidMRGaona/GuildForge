@@ -136,6 +136,7 @@ final class RegistrationFieldRegistryTest extends TestCase
             $this->field('fixture'),
             $this->field('fixture.Newsletter'),
             $this->field('fixture.news.letter'),
+            $this->field("fixture.newsletter\n"),
             $this->field('fixture.ok'),
         ], 'fixture');
 
