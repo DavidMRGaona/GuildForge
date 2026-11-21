@@ -65,6 +65,8 @@ Offering blocks the administration places in the footer or inside a popup (a sub
 
 Adding sections and counters to the members' public profiles (`/miembros/<handle>`) is covered in [Profile sections](./profile-sections.md): implement `ProfileSectionInterface` (a list or summary drawn with a Vue component) or `ProfileStatInterface` (a number), return them from `registerProfileSections()` and `registerProfileStats()`, and decide what the person viewing may see with the module's own access service. Featured badges (up to three under the name, on the card and next to authors) come from a `ProfileBadgeSourceInterface` returned by `registerProfileBadgeSources()`; a module that shows authors draws them with one `ProfileBadgesInterface::forAuthors()` call per page and `ProfileBadges.vue` (see [Badges](./profile-sections.md#badges)).
 
+Telling other modules who took part in the module's things and how (who played or ran a table, who won a tournament), for the achievements module or any other consumer, is covered in [Activity sources](./activity-sources.md): implement `ActivitySourceInterface`, return it from `registerActivitySources()`, report only what any signed-in member can know exists, and call `ActivityPublisherInterface::recorded()` whenever a subject's facts may have changed.
+
 ---
 
 ## Getting started
@@ -485,7 +487,7 @@ final class MyModuleServiceProvider extends ModuleServiceProvider
 
 Register dynamic relationships on core models in `register()`, not `boot()` (see [Extending core functionality](#extending-core-functionality)).
 
-The other hooks are read by the core when the module loads: `registerPermissions()`, `registerSlots()`, `registerPagePrefixes()`, `registerRoutes()`, `registerCalendarSources()`, `registerCalendarAttendanceSources()`, `registerSearchSources()`, `registerSurveySubjectSources()`, `registerPublicationSources()`, `registerLinkableRecordSources()`, `registerKnowledgeCapabilities()`, `registerMailCategories()` and `registerNavigation()`. The panel reads `registerFilamentPages()`, `registerFilamentWidgets()`, `getSettingsPage()` and `getSettingsSchema()`. The full list is in the [quick reference](#serviceprovider-methods).
+The other hooks are read by the core when the module loads: `registerPermissions()`, `registerSlots()`, `registerPagePrefixes()`, `registerRoutes()`, `registerCalendarSources()`, `registerCalendarAttendanceSources()`, `registerSearchSources()`, `registerSurveySubjectSources()`, `registerActivitySources()`, `registerPublicationSources()`, `registerLinkableRecordSources()`, `registerKnowledgeCapabilities()`, `registerMailCategories()` and `registerNavigation()`. The panel reads `registerFilamentPages()`, `registerFilamentWidgets()`, `getSettingsPage()` and `getSettingsSchema()`. The full list is in the [quick reference](#serviceprovider-methods).
 
 `onEnable()` and `onDisable()` are declared on the base class, but the core never calls them: set up data in migrations and seeders, which run when the module is first enabled.
 
@@ -2459,6 +2461,7 @@ To build the same ZIP locally, run `make module-zip` on the host and pick the mo
 | `registerProfileStats()` | `class-string<ProfileStatInterface>[]` | Counters of the public profiles, apart from the sections; counted for the person viewing, `null` rather than a misleading 0 (see [Profile sections](./profile-sections.md#stats)) |
 | `registerProfileBadgeSources()` | `class-string<ProfileBadgeSourceInterface>[]` | Featured badges of the public profiles (at most three per account), asked once per page for every visible author; badge keys start with the module, each badge checked and failing closed (see [Profile sections](./profile-sections.md#badges)) |
 | `registerSurveySubjectSources()` | `class-string<SurveySubjectSourceInterface>[]` | Records the surveys module can survey (tables, tournaments…) |
+| `registerActivitySources()` | `class-string<ActivitySourceInterface>[]` | Who took part in the module's things and how, for the achievements module; types start with the module, only what any signed-in member can know exists, read by consumers through a reader that fails closed (see [Activity sources](./activity-sources.md)) |
 | `registerPublicationSources()` | `class-string<PublicationSourceInterface>[]` | Published records other modules may announce elsewhere (see [Publication sources](./publications.md)) |
 | `registerLinkableRecordSources()` | `class-string<LinkableRecordSourceInterface>[]` | Records other modules may link their data to, as each viewer may see them; `find()` returns `null` for what the viewer may not see (see [Linkable records](./linkable-records.md)) |
 | `registerEventProposalRequests()` | `class-string<EventProposalRequestInterface>[]` | Requests added to event proposals made from the web; keys prefixed with the module, values checked by the core and applied on approval (see [Event proposal requests](./proposal-requests.md)) |

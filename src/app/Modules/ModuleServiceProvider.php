@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules;
 
+use App\Application\Activity\Contracts\ActivitySourceInterface;
 use App\Application\Calendar\Contracts\CalendarAttendanceSourceInterface;
 use App\Application\Calendar\Contracts\CalendarEntrySourceInterface;
 use App\Application\Content\Contracts\EditorTextSourceInterface;
@@ -410,6 +411,20 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * @return array<class-string<SurveySubjectSourceInterface>>
      */
     public function registerSurveySubjectSources(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register the activity sources this module offers (core#774): who played, ran, organized or
+     * attended its things, for the achievements module and any other consumer. Each type starts with
+     * the module name and a dot (`<module>.session`); a source only reports what any signed-in member
+     * can know exists, and the module calls ActivityPublisherInterface::recorded() whenever a subject's
+     * facts may have changed, also when it stops counting.
+     *
+     * @return array<class-string<ActivitySourceInterface>>
+     */
+    public function registerActivitySources(): array
     {
         return [];
     }

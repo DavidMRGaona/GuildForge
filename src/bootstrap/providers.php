@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Infrastructure\Mail\Providers\DynamicMailServiceProvider;
+use App\Providers\ActivityServiceProvider;
 use App\Providers\AppServiceProvider;
 use App\Providers\AuthorizationServiceProvider;
 use App\Providers\Filament\AdminPanelProvider;
@@ -23,6 +24,7 @@ use App\Providers\WebAppServiceProvider;
 use App\Providers\WebPushServiceProvider;
 
 return [
+    ActivityServiceProvider::class,
     AppServiceProvider::class,
     AuthorizationServiceProvider::class,
     DynamicMailServiceProvider::class,

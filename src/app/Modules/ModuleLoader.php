@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules;
 
+use App\Application\Activity\Services\ActivitySourceRegistryInterface;
 use App\Application\Authorization\DTOs\PermissionDefinitionDTO;
 use App\Application\Authorization\Services\PermissionRegistryInterface;
 use App\Application\Calendar\Services\CalendarAttendanceSourceRegistryInterface;
@@ -145,6 +146,9 @@ final class ModuleLoader
 
         // Register survey subject sources from the provider
         $this->registerProviderSurveySubjectSources($provider, $module->name()->value);
+
+        // Register activity sources from the provider
+        $this->registerProviderActivitySources($provider, $module->name()->value);
 
         // Register publication sources from the provider
         $this->registerProviderPublicationSources($provider, $module->name()->value);
@@ -436,6 +440,22 @@ final class ModuleLoader
         if ($this->app->bound(SurveySubjectSourceRegistryInterface::class)) {
             $sourceRegistry = $this->app->make(SurveySubjectSourceRegistryInterface::class);
             $sourceRegistry->registerMany($sources, $moduleName);
+        }
+    }
+
+    /**
+     * Register activity sources from a module provider.
+     */
+    private function registerProviderActivitySources(ModuleServiceProvider $provider, string $moduleName): void
+    {
+        $sources = $provider->registerActivitySources();
+
+        if ($sources === []) {
+            return;
+        }
+
+        if ($this->app->bound(ActivitySourceRegistryInterface::class)) {
+            $this->app->make(ActivitySourceRegistryInterface::class)->registerMany($sources, $moduleName);
         }
     }
 
