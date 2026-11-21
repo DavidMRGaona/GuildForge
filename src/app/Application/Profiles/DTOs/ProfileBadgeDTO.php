@@ -14,10 +14,12 @@ use App\Domain\Profiles\ProfileBadgeColour;
  * The core checks every badge a source gives before anybody sees it and leaves out, with a warning
  * once a day, one whose key is not `<module>.<name>` of the source's own module (the rules of a
  * profile section key), whose label is empty, whose icon is not in ProfileBadgeIcons::NAMES, whose
- * image is not an `https` address or whose link is refused by the rule of site block links (an
+ * image is not an `https` address of Cloudinary (`res.cloudinary.com`, the only image host the site's
+ * content security policy allows) or whose link is refused by the rule of site block links (an
  * absolute `https` address or a path of the site). Label and description are plain text, never
- * HTML: control characters are dropped, runs of blanks become one space and they are cut to
- * LABEL_MAX_LENGTH and DESCRIPTION_MAX_LENGTH characters.
+ * HTML: invisible format characters (bidirectional and zero-width marks) and control characters are
+ * dropped, runs of blanks become one space and they are cut to LABEL_MAX_LENGTH and
+ * DESCRIPTION_MAX_LENGTH characters.
  */
 final readonly class ProfileBadgeDTO
 {
@@ -30,7 +32,7 @@ final readonly class ProfileBadgeDTO
      * @param  string  $label  the badge's name, already translated
      * @param  string  $description  what it was given for, already translated; may be empty
      * @param  string  $icon  one of ProfileBadgeIcons::NAMES
-     * @param  string|null  $imageUrl  an `https` image, drawn cropped to a square instead of the icon
+     * @param  string|null  $imageUrl  an `https` image of Cloudinary, drawn in a circle instead of the icon
      * @param  string|null  $url  where the badge links to: an absolute `https` address or a path of the site
      */
     public function __construct(

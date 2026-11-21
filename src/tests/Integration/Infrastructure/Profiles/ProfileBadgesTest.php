@@ -216,6 +216,50 @@ final class ProfileBadgesTest extends TestCase
         $log->shouldHaveReceived('warning')->times(7);
     }
 
+    public function test_only_a_cloudinary_image_is_kept(): void
+    {
+        $log = Log::spy();
+        $owner = $this->owner('Ana', ProfileVisibility::Public);
+        $this->source(new FakeProfileBadgeSource(answer: static fn (array $ids): array => [$ids[0] => [
+            FakeProfileBadgeSource::badge('achievements.cloudinary', imageUrl: 'https://res.cloudinary.com/demo/image/upload/w_48,h_48,c_fill/badge.png'),
+            FakeProfileBadgeSource::badge('achievements.elsewhere', imageUrl: 'https://images.example.com/badge.png'),
+            FakeProfileBadgeSource::badge('achievements.lookalike', imageUrl: 'https://res.cloudinary.com.example.com/badge.png'),
+        ]]));
+        $this->source(new FakeProfileBadgeSource(answer: static fn (array $ids): array => [$ids[0] => [
+            FakeProfileBadgeSource::badge('achievements.port', imageUrl: 'https://res.cloudinary.com:8443/demo/badge.png'),
+            FakeProfileBadgeSource::badge('achievements.path', imageUrl: '/images/badge.png'),
+        ]]));
+
+        $this->assertSame(['achievements.cloudinary'], $this->keys($this->forAuthors([$owner->id], null)[$owner->id]));
+        $this->assertWarned($log, 'image');
+    }
+
+    public function test_a_label_made_only_of_invisible_characters_is_left_out(): void
+    {
+        $log = Log::spy();
+        $owner = $this->owner('Ana', ProfileVisibility::Public);
+        $this->source(new FakeProfileBadgeSource(answer: static fn (array $ids): array => [$ids[0] => [
+            FakeProfileBadgeSource::badge('achievements.invisible', label: "\u{200B}\u{2060}\u{FEFF}\u{200D}"),
+            FakeProfileBadgeSource::badge('achievements.visible', label: "Ve\u{200B}terana"),
+        ]]));
+
+        $badges = $this->forAuthors([$owner->id], null)[$owner->id];
+
+        $this->assertSame(['achievements.visible'], $this->keys($badges));
+        $this->assertSame('Veterana', $badges[0]->label);
+        $this->assertWarned($log, 'label');
+    }
+
+    public function test_a_source_may_answer_ids_in_capitals(): void
+    {
+        $owner = $this->owner('Ana', ProfileVisibility::Public);
+        $this->source(new FakeProfileBadgeSource(answer: static fn (array $ids): array => [
+            strtoupper($ids[0]) => [FakeProfileBadgeSource::badge('achievements.first')],
+        ]));
+
+        $this->assertSame(['achievements.first'], $this->keys($this->forAuthors([$owner->id], null)[$owner->id] ?? []));
+    }
+
     public function test_texts_are_cut_and_lose_their_control_characters(): void
     {
         $owner = $this->owner('Ana', ProfileVisibility::Public);

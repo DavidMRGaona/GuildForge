@@ -6,6 +6,7 @@ namespace App\Http\Middleware;
 
 use App\Application\Realtime\Services\RealtimeConfigurationInterface;
 use App\Application\Security\Services\ContentSecurityPolicySourcesInterface;
+use App\Infrastructure\Seo\CloudinaryImageUrlBuilder;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -103,7 +104,7 @@ final readonly class SecurityHeadersMiddleware
      */
     private function imgSrc(): string
     {
-        $sources = "'self' https://res.cloudinary.com https://*.tile.openstreetmap.org data: blob:";
+        $sources = "'self' https://".CloudinaryImageUrlBuilder::HOST.' https://*.tile.openstreetmap.org data: blob:';
 
         if (app()->environment('local')) {
             $sources .= ' http://localhost:5173';

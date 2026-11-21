@@ -1,6 +1,6 @@
 # Profile sections
 
-Every account has a public profile at `/miembros/<handle>`. The core draws its header (public name, avatar, banner, «Socio» badge, member since) and its own «Sobre mí» section; the modules add the rest: a list of the person's latest forum posts, the tables they run, how many messages they wrote. A module offers **sections** (a list, a summary or a text, drawn by a Vue component), **stats** (a number with an optional link) and **featured badges** (up to three under the name, core ≥ the release with #776); the owner chooses, in the profile editor, which ones show and in what order. No module depends on another, and none of them decides who may see the profile: the core does, before anything is drawn.
+Every account has a public profile at `/miembros/<handle>`. The core draws its header (public name, avatar, banner, «Socio» badge, member since) and its own «Sobre mí» section; the modules add the rest: a list of the person's latest forum posts, the tables they run, how many messages they wrote. A module offers **sections** (a list, a summary or a text, drawn by a Vue component) and **stats** (a number with an optional link); the owner chooses, in the profile editor, which ones show and in what order. A module may also give **featured badges** (up to three under the name, core ≥ the release with #776): which ones is the module's choice (the achievements module lets the owner star them in its own section), not the profile editor's. No module depends on another, and none of them decides who may see the profile: the core does, before anything is drawn.
 
 Requires core ≥ the release with #742; set `requires.core` to it.
 
@@ -366,7 +366,7 @@ return [
 
 ## Badges
 
-A profile shows up to three **featured badges** under the name, on its card and, through the batched call below, next to its owner wherever a module shows authors (the forum's post headers). Requires core ≥ the release with #776. The achievements module gives them (the badges each owner chose); any module may, through a **badge source**. No module knows another: the forum draws whatever badges the core gives it, without knowing where they come from.
+A profile shows up to three **featured badges** under the name, on its card and, through the batched call below, next to its owner wherever a module shows authors (the forum's post headers). Requires core ≥ the release with #776. Any module may give them through a **badge source**, and the source decides which badges are featured (the achievements module: the ones the owner starred in its section, else the rarest); the core's profile editor has no say in them. No module knows another: the forum draws whatever badges the core gives it, without knowing where they come from.
 
 ### Giving badges: `ProfileBadgeSourceInterface`
 
@@ -393,7 +393,7 @@ final readonly class FeaturedAchievementBadges implements ProfileBadgeSourceInte
                 description: $row->description,
                 icon: $row->icon,                          // one of ProfileBadgeIcons::NAMES
                 colour: ProfileBadgeColour::from($row->colour),
-                imageUrl: $row->image_url,                 // https (Cloudinary), or null
+                imageUrl: $row->image_url,                 // https://res.cloudinary.com/…, or null
                 url: route('achievements.show', $row->slug, absolute: false),
             );
         }
@@ -419,11 +419,11 @@ public function registerProfileBadgeSources(): array
 | Field | Rule (a badge that breaks it is left out, with a warning) |
 |---|---|
 | `key` | `<module>.<badge>` of the source's own module, with the rules of a section key (`ProfileKey`); unique among one account's badges (a repeated key is left out). |
-| `label` | The badge's name, translated: its accessible name. Plain text: control characters and bidirectional marks are dropped, blanks collapse to one space, cut to 60 characters (`LABEL_MAX_LENGTH`). Empty after that: left out. |
+| `label` | The badge's name, translated: its accessible name. Plain text: control characters and invisible format characters (bidirectional and zero-width marks, Unicode `Cf`) are dropped, blanks collapse to one space, cut to 60 characters (`LABEL_MAX_LENGTH`). Empty after that: left out. On the badge itself it is cut with an ellipsis on narrow screens; the tooltip shows it whole. |
 | `description` | What it was given for, translated; may be empty. Same cleaning, cut to 200 characters (`DESCRIPTION_MAX_LENGTH`). |
 | `icon` | One of `App\Application\Profiles\ProfileBadgeIcons::NAMES` (Lucide names): `award`, `book-open`, `calendar-check`, `castle`, `compass`, `crown`, `dices`, `feather`, `flag`, `flame`, `gem`, `hand-heart`, `handshake`, `heart`, `hourglass`, `map`, `map-pin`, `medal`, `message-square`, `mountain`, `puzzle`, `rocket`, `scroll-text`, `shield`, `sparkles`, `sprout`, `star`, `sword`, `swords`, `target`, `ticket`, `trophy`, `users`, `vote`, `wand-sparkles`, `zap`. Check yours in tests with `ProfileBadgeIcons::isKnown()`. |
 | `colour` | `App\Domain\Profiles\ProfileBadgeColour`: `slate`, `red`, `orange`, `amber`, `green`, `teal`, `sky`, `blue`, `violet`, `pink`. Each is a 700 shade with white text in the light scheme and a 300 shade with dark text in the dark one: at least 4.5:1 in both. |
-| `imageUrl` | Optional, an absolute `https` address (never a path or `http`): drawn cropped to a square instead of the icon. Use a Cloudinary URL (the site's content security policy allows images from Cloudinary) cropped to a square: it is drawn at 24 × 24 px, so 48 × 48 is enough for dense screens. |
+| `imageUrl` | Optional, an `https` address of Cloudinary (`res.cloudinary.com`, `CloudinaryImageUrlBuilder::HOST`, the only image host the site's content security policy allows; any other host, a port, a path or `http` leaves the badge out). Drawn in a circle instead of the icon, at 24 × 24 px: give a square crop of 48 × 48 for dense screens. |
 | `url` | Optional, where the badge links to: an absolute `https` address or a path of the site (`LinkTargetRule`). |
 
 ### Showing authors' badges: `ProfileBadgesInterface::forAuthors()`
@@ -480,8 +480,10 @@ defineProps<{ authorName: string; authorBadges: ProfileBadge[] }>();
 | `size` | `'md'` (default): icon or image and label, 32 px high, for the profile and the card. `'sm'`: 24 px icons alone, for a post header; the label is still the accessible name and shows in the tooltip. |
 
 - A list (`<ul>`, labelled «Insignias destacadas») that wraps on narrow screens.
-- With `imageUrl` the image (cropped to a circle), otherwise the icon on the badge's colour; an icon the browser does not know is drawn as `award`.
-- **Accessible.** The label is the badge's name (visible in `md`, `sr-only` or the image's `alt` in `sm`). A badge with a description, or any `sm` badge, is a focusable button (a link when it has `url`) whose description is its `aria-describedby`, so a screen reader reads it; it also shows as a tooltip on hover, on keyboard focus and on a tap, and closes with Escape, a tap elsewhere, or when the pointer or focus leaves. A badge with nothing more to say is plain text.
+- With `imageUrl` the image (in a circle), otherwise the icon on the badge's colour; an icon the browser does not know is drawn as `award`. In `md` a long label is cut with an ellipsis (`max-w-48`).
+- **Accessible.** Every badge is a focusable control: a link when it has `url`, else a button. Its label is its name (visible in `md`, `sr-only` or the image's `alt` in `sm`) and its description is its `aria-describedby` (a `hidden` element, read once). A tooltip with the whole label and the description shows on hover, on keyboard focus and when a button is tapped; it closes with Escape, a tap elsewhere, or when the pointer or focus leaves, and the pointer may move onto it.
+- **Touch and links.** A badge with `url` opens it when tapped, so on a touch screen its tooltip is not shown: put what the description says on the page it opens.
+- **Never clipped.** The tooltip is drawn in `<body>` with fixed coordinates (below the badge, above it when there is no room, always inside the window), so a host with `overflow-hidden` (a post card) does not cut it.
 - Links to the site go through Inertia; any other address is a plain link.
 
 ## Failing closed

@@ -129,8 +129,9 @@ const numberFormat = computed(() => new Intl.NumberFormat(locale.value));
 <template>
     <article class="pb-12 sm:pb-16" aria-labelledby="profile-name">
         <!-- The band of the account page (/perfil); with a banner, the banner is its background -->
-        <div class="relative overflow-hidden bg-muted py-8 sm:py-12" data-testid="profile-band">
-            <template v-if="bannerUrl">
+        <div class="relative bg-muted py-8 sm:py-12" data-testid="profile-band">
+            <!-- Only the banner is clipped: what opens from the header (a badge's tooltip) may leave the band -->
+            <div v-if="bannerUrl" class="absolute inset-0 overflow-hidden">
                 <img
                     :src="bannerUrl"
                     alt=""
@@ -139,7 +140,7 @@ const numberFormat = computed(() => new Intl.NumberFormat(locale.value));
                     data-testid="profile-banner"
                 />
                 <div class="absolute inset-0 bg-black/55" aria-hidden="true" />
-            </template>
+            </div>
 
             <header class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div class="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">

@@ -12,6 +12,7 @@ use App\Application\Profiles\Services\ProfileBadgesInterface;
 use App\Application\Profiles\Services\ProfileBadgeSourceRegistryInterface;
 use App\Domain\Profiles\ValueObjects\ProfileKey;
 use App\Domain\SiteBlocks\LinkTargetRule;
+use App\Infrastructure\Seo\CloudinaryImageUrlBuilder;
 use App\Infrastructure\Support\DailyWarnings;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Contracts\Container\Container;
@@ -29,8 +30,11 @@ use Throwable;
  */
 final class ProfileBadgeCollector
 {
-    /** Bidirectional marks: dropped, so a label never turns the text around it */
-    private const string BIDI = '/[\x{061C}\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}]/u';
+    /**
+     * Invisible format characters (Unicode Cf): bidirectional marks, which could turn the text around
+     * them, and zero-width ones, which could make a label that looks empty. Dropped.
+     */
+    private const string INVISIBLE = '/\p{Cf}/u';
 
     private readonly DailyWarnings $warnings;
 
@@ -74,7 +78,8 @@ final class ProfileBadgeCollector
 
         foreach ($this->registrations() as $registration) {
             foreach ($this->ask($registration, $userIds) ?? [] as $userId => $given) {
-                $userId = (string) $userId;
+                // Ids are asked about in lower case; a source may answer them as its database keeps them
+                $userId = strtolower((string) $userId);
 
                 // Only who was asked about: anybody else may have a profile this person may not see
                 if (! isset($asked[$userId])) {
@@ -208,11 +213,10 @@ final class ProfileBadgeCollector
 
         $imageUrl = null;
         if ($item->imageUrl !== null) {
-            $imageUrl = LinkTargetRule::normalize($item->imageUrl);
+            $imageUrl = $this->cloudinaryImage($item->imageUrl);
 
-            // An image is always another host's: never a path, never plain http
-            if ($imageUrl === null || ! str_starts_with(strtolower($imageUrl), 'https://')) {
-                return $this->refuse($registration, 'image', 'A profile badge image is not an https address; it is left out.');
+            if ($imageUrl === null) {
+                return $this->refuse($registration, 'image', 'A profile badge image is not an https address of Cloudinary; it is left out.');
             }
         }
 
@@ -237,15 +241,31 @@ final class ProfileBadgeCollector
     }
 
     /**
-     * Plain text on one line: bidirectional marks dropped, control characters and runs of blanks as
+     * Plain text on one line: invisible format characters dropped, control characters and runs of blanks as
      * one space, cut to the limit in characters.
      */
     private function text(string $text, int $limit): string
     {
-        $clean = preg_replace(self::BIDI, '', $text);
+        $clean = preg_replace(self::INVISIBLE, '', $text);
         $clean = $clean === null ? '' : preg_replace('/[\p{Cc}\s]+/u', ' ', $clean);
 
         return $clean === null ? '' : trim(mb_substr(trim($clean), 0, $limit));
+    }
+
+    /**
+     * The image as it can be drawn: an `https` address of Cloudinary on the default port, the only host
+     * the content security policy lets the page load images from. Null for anything else.
+     */
+    private function cloudinaryImage(string $url): ?string
+    {
+        $normalized = LinkTargetRule::normalize($url);
+        $parts = $normalized === null ? false : parse_url($normalized);
+
+        if ($parts === false || strtolower($parts['scheme'] ?? '') !== 'https' || isset($parts['port'])) {
+            return null;
+        }
+
+        return strtolower($parts['host'] ?? '') === CloudinaryImageUrlBuilder::HOST ? $normalized : null;
     }
 
     /**
