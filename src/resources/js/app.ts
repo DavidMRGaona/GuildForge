@@ -19,6 +19,7 @@ import { setCloudinaryConfig, type CloudinaryConfig } from '@/utils/cloudinary';
 import { removeServerSeoTags, useServerSeo } from '@/composables/useSeo';
 import { useBellVisible } from '@/composables/useSiteNotifications';
 import { useUnreadTitle } from '@/composables/useUnreadTitle';
+import { useWebPushSync } from '@/composables/useWebPushSync';
 import { listenToHistoryFirst } from '@/utils/historyPops';
 import { registerServiceWorkerAfterLoad } from '@/utils/serviceWorker';
 
@@ -147,6 +148,8 @@ void createInertiaApp({
                 // Wherever the bell shows, the tab title says how many notices are unread
                 const bellVisible = useBellVisible();
                 useUnreadTitle(() => bellVisible.value);
+                // The site keeps track of this browser's push subscription (core#803)
+                useWebPushSync();
                 return () => h(App, props);
             },
         })

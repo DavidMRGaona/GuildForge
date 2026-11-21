@@ -21,6 +21,7 @@ final readonly class StoredSiteNotice
         public int $count,
         public ?DateTimeImmutable $readAt,
         public DateTimeImmutable $notifiedAt,
+        public ?string $groupKey = null,
     ) {}
 
     public function isUnread(): bool

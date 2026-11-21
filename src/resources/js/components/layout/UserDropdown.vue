@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue';
-import { Link, router } from '@inertiajs/vue3';
+import { Link } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
 import { ChevronDown, User, UserCog, UserRound, Settings, LogOut, CircleHelp } from '@lucide/vue';
 import { useAuth } from '@/composables/useAuth';
@@ -14,7 +14,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const { user, can } = useAuth();
+const { user, can, logout: signOut } = useAuth();
 const routes = useRoutes();
 
 const isOpen = ref(false);
@@ -48,10 +48,11 @@ function handleClickOutside(event: MouseEvent): void {
     }
 }
 
+// Through useAuth(): it stops this browser's push notifications before signing out (core#803)
 function logout(): void {
     closeDropdown();
     emit('navigate');
-    router.post(routes.auth.logout);
+    signOut();
 }
 
 onMounted(() => {

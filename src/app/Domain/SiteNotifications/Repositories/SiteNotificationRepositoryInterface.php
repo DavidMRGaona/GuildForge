@@ -17,8 +17,13 @@ interface SiteNotificationRepositoryInterface
     /**
      * Store the notice. With a group key, an unread row of the person with the same key takes it
      * instead: one more notice, its actor counted, and the newest notice's texts and link.
+     *
+     * @return string The id of the row that holds it (a push message names it, core#803).
      */
-    public function deliver(UserId $userId, SiteNotice $notice): void;
+    public function deliver(UserId $userId, SiteNotice $notice): string;
+
+    /** The person's row, unless it is hidden; null when it is not theirs. */
+    public function findVisible(UserId $userId, string $id): ?StoredSiteNotice;
 
     public function unreadCount(UserId $userId): int;
 

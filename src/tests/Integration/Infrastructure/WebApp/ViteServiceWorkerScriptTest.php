@@ -67,7 +67,7 @@ final class ViteServiceWorkerScriptTest extends TestCase
     {
         $this->build('void 0;');
         $manifest = Mockery::mock(WebAppManifestInterface::class);
-        $manifest->shouldReceive('manifest')->andThrow(new RuntimeException('secret detail'));
+        $manifest->shouldReceive('manifest', 'notificationIcon')->andThrow(new RuntimeException('secret detail'));
         $this->app->instance(WebAppManifestInterface::class, $manifest);
         $log = Log::spy();
 

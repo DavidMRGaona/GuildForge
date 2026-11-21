@@ -14,6 +14,7 @@ use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\UserModelQueryServiceInterface;
 use App\Application\Services\UserServiceInterface;
 use App\Application\SiteNotifications\Services\SiteNotificationServiceInterface;
+use App\Application\WebPush\Services\WebPushSubscriptionServiceInterface;
 use App\Domain\Exceptions\UserNotFoundException;
 use App\Domain\Mail\Repositories\MailDigestItemRepositoryInterface;
 use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
@@ -55,6 +56,8 @@ final class UserServiceTest extends TestCase
 
     private UserProfileServiceInterface&MockInterface $profiles;
 
+    private WebPushSubscriptionServiceInterface&MockInterface $pushSubscriptions;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -73,6 +76,10 @@ final class UserServiceTest extends TestCase
         $this->proposals->shouldReceive('deleteUnpublishedOf')->byDefault()->andReturn(0);
         $this->profiles = Mockery::mock(UserProfileServiceInterface::class);
         $this->profiles->shouldReceive('forget')->byDefault();
+        // Listens to UserAnonymized and UserDeactivated (core#803); this test has no database
+        $this->pushSubscriptions = Mockery::mock(WebPushSubscriptionServiceInterface::class);
+        $this->pushSubscriptions->shouldReceive('forgetUser')->byDefault();
+        $this->app->instance(WebPushSubscriptionServiceInterface::class, $this->pushSubscriptions);
 
         $this->service = new UserService(
             $this->userModelQuery,
@@ -195,6 +202,9 @@ final class UserServiceTest extends TestCase
         $this->siteNotificationPreferences->shouldReceive('deleteForUser')->once()->with(Mockery::on(fn (UserId $id): bool => $id->value() === $userId->value()));
         $this->siteNotificationService->shouldReceive('forgetActor')->once()->with($userId->value());
         $this->mailDigestItems->shouldReceive('deleteForActor')->once()->with($userId->value());
+        // And the browsers that received its push notifications (core#803). The id is not checked:
+        // the mocked model casts its key as an integer, so the event carries another value here
+        $this->pushSubscriptions->shouldReceive('forgetUser')->once();
 
         $this->service->anonymize($userId->value());
 

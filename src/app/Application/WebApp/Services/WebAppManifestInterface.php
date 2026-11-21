@@ -19,4 +19,7 @@ interface WebAppManifestInterface
      * iOS paints a transparent one black.
      */
     public function appleTouchIcon(): string;
+
+    /** The image notifications show: the smallest `any` icon of the manifest (core#803). */
+    public function notificationIcon(): string;
 }

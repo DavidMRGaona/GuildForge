@@ -54,6 +54,11 @@ Schedule::command('mail:send-digests')
     ->hourlyAt(5)
     ->withoutOverlapping();
 
+// Browser push (core#803): subscriptions nothing used for 90 days
+Schedule::command('web-push:prune')
+    ->daily()
+    ->withoutOverlapping();
+
 // Notification centre (core#491): read notices go after 90 days and unread ones after 180
 Schedule::command('site-notifications:prune')
     ->daily()

@@ -1,6 +1,17 @@
 import { usePage, router } from '@inertiajs/vue3';
 import { computed, type ComputedRef } from 'vue';
 import type { AuthSettings, User } from '@/types/models';
+import { forgetThisDevice } from '@/utils/webPush';
+
+/** How long signing out waits for this browser's push subscription to be forgotten. */
+const LOGOUT_PUSH_TIMEOUT_MS = 2000;
+
+function forgetThisDeviceWithin(userId: string, milliseconds: number): Promise<void> {
+    return Promise.race([
+        forgetThisDevice(userId),
+        new Promise<void>((resolve) => setTimeout(resolve, milliseconds)),
+    ]);
+}
 
 interface AuthComposable {
     user: ComputedRef<User | null>;
@@ -122,7 +133,14 @@ export function useAuth(): AuthComposable {
     };
 
     const logout = (): void => {
-        router.post('/cerrar-sesion');
+        // This browser stops getting the account's push notifications first (core#803); the
+        // server forgets it on sign-out too, so a slow or failed request never holds this up
+        const userId = user.value?.id ?? null;
+        const forget =
+            page.props.webPush && userId !== null
+                ? forgetThisDeviceWithin(userId, LOGOUT_PUSH_TIMEOUT_MS)
+                : Promise.resolve();
+        void forget.then(() => router.post('/cerrar-sesion'));
     };
 
     return {

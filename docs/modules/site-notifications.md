@@ -137,6 +137,7 @@ When a notification goes through the `site` channel to an account, the core, at 
 5. Stores nothing when `actorId` is the recipient.
 6. Logs a warning, once per class and icon, when `icon` is not one the bell draws (`SiteNotificationIcons::isKnown()`); the notice is still stored and shows the default icon.
 7. Stores the notice, or adds it to the unread row of its group.
+8. Sends it as a push notification (core#803) to the person's browsers when the installation has push on and the person wants that category pushed: modules do nothing for it. The push message carries the row id only; the browser reads the title and body with the person's session (`GET /avisos/{id}/push`), so everything here about texts and access holds there too, and a grouped row shows its current title. Nothing is pushed while impersonating. See [Push notifications](../web-push.md).
 
 For a category with `mail: false`, the mail channel sends nothing even if `via()` lists `mail`, and the profile has no mail control for it.
 

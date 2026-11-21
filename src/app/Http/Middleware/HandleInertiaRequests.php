@@ -22,6 +22,7 @@ use App\Application\Services\ThemeSettingsServiceInterface;
 use App\Application\Services\TimezoneServiceInterface;
 use App\Application\SiteNotifications\Services\SiteNotificationServiceInterface;
 use App\Application\Social\SocialNetwork;
+use App\Application\WebPush\Services\WebPushConfigurationInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Http\Middleware\Concerns\IdentifiesLivewireRequests;
 use App\Infrastructure\Impersonation\ImpersonationContext;
@@ -136,6 +137,7 @@ final class HandleInertiaRequests extends Middleware
             'siteNotifications' => fn (): ?array => $this->getSiteNotifications($request),
             // Where the browser opens the WebSocket (core#493); null without real time or session
             'realtime' => fn (): ?array => $this->getRealtimeConfig($request),
+            'webPush' => fn (): ?array => $this->getWebPushConfig($request),
             // Whether an enabled module is the cookie consent provider (core#700); lets the browser tell «no banner» from «not loaded yet»
             'cookieConsentModule' => $this->hasCookieConsentModule(...),
             // Whom the administrator is viewing the site as (core#580); null outside an impersonation
@@ -316,6 +318,33 @@ final class HandleInertiaRequests extends Middleware
         } catch (\Throwable $e) {
             // The bell is not worth a broken page
             $this->logDebugError('getSiteNotifications', $e);
+
+            return null;
+        }
+    }
+
+    /**
+     * The VAPID public key browsers subscribe with (core#803), for signed-in accounts while push is
+     * on. Never while impersonating: nobody subscribes a browser for someone else.
+     *
+     * @return array{publicKey: string}|null
+     */
+    private function getWebPushConfig(Request $request): ?array
+    {
+        if (! $request->user() instanceof UserModel) {
+            return null;
+        }
+
+        try {
+            if (app(ImpersonationContextInterface::class)->isActive()) {
+                return null;
+            }
+
+            $publicKey = app(WebPushConfigurationInterface::class)->publicKey();
+
+            return $publicKey === null ? null : ['publicKey' => $publicKey];
+        } catch (\Throwable $e) {
+            $this->logDebugError('getWebPushConfig', $e);
 
             return null;
         }

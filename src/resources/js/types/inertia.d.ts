@@ -1,6 +1,7 @@
 import type { AuthSettings, User } from './models';
 import type { SeoProps } from './seo';
 import type { RealtimeSharedProps } from './realtime';
+import type { WebPushSharedProps } from './webPush';
 import type { ImpersonationSharedProps } from './impersonation';
 import type { SiteNotificationsSharedProps } from './siteNotifications';
 import type { ModuleSlots } from './slots';
@@ -32,6 +33,8 @@ declare module '@inertiajs/vue3' {
         /** Unread notices of the bell (core#491); null for guests. */
         siteNotifications: SiteNotificationsSharedProps | null;
         realtime: RealtimeSharedProps | null;
+        /** Browser push notifications (core#803); null while off, for guests and while impersonating. */
+        webPush: WebPushSharedProps | null;
         /** Whether an enabled module declares itself the cookie consent provider (core#700). */
         cookieConsentModule: boolean;
         /** Whom an administrator is viewing the site as (core#580); null outside an impersonation. */
