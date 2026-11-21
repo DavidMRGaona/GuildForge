@@ -2,10 +2,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     applicationServerKey,
     forgetThisDevice,
+    isAppleMobileOutsideHomeScreen,
+    removeDevice,
+    resyncThisDevice,
+    sendTestNotice,
     subscribedWithKey,
     subscribeThisDevice,
     syncThisDevice,
+    thisDevicePushState,
+    WEB_PUSH_DEVICE_URL,
     WEB_PUSH_SUBSCRIPTION_URL,
+    WEB_PUSH_TEST_URL,
     type WebPushEnvironment,
 } from '../webPush';
 
@@ -35,9 +42,10 @@ function fakeSubscription(key: string | null = PUBLIC_KEY): FakeSubscription {
 function environment(
     options: {
         existing?: FakeSubscription | null;
-        permission?: NotificationPermission;
+        permission?: NotificationPermission | 'unsupported';
         status?: number;
         supported?: boolean;
+        homeScreen?: boolean;
     } = {}
 ): {
     env: WebPushEnvironment;
@@ -73,6 +81,7 @@ function environment(
                 setItem: (key: string, value: string) => void storage.set(key, value),
                 removeItem: (key: string) => void storage.delete(key),
             },
+            needsHomeScreen: () => options.homeScreen === true,
         },
         fetch,
         subscribe,
@@ -257,5 +266,147 @@ describe('forgetThisDevice', () => {
         (env.fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('offline'));
 
         await expect(forgetThisDevice('user-a', env)).resolves.toBeUndefined();
+    });
+});
+
+describe('isAppleMobileOutsideHomeScreen', () => {
+    const IPHONE =
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1';
+    const MAC =
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15';
+
+    it('asks an iPhone, or an iPad that says it is a Mac, to add the site to the home screen', () => {
+        expect(isAppleMobileOutsideHomeScreen(IPHONE, 5, false)).toBe(true);
+        expect(isAppleMobileOutsideHomeScreen(MAC, 5, false)).toBe(true);
+    });
+
+    it('leaves alone the site on the home screen and a real Mac', () => {
+        expect(isAppleMobileOutsideHomeScreen(IPHONE, 5, true)).toBe(false);
+        expect(isAppleMobileOutsideHomeScreen(MAC, 0, false)).toBe(false);
+    });
+});
+
+describe('thisDevicePushState', () => {
+    it('tells each state apart', async () => {
+        expect(await thisDevicePushState(environment({ homeScreen: true }).env)).toBe(
+            'home-screen'
+        );
+        expect(await thisDevicePushState(environment({ supported: false }).env)).toBe(
+            'unsupported'
+        );
+        expect(await thisDevicePushState(environment({ permission: 'unsupported' }).env)).toBe(
+            'unsupported'
+        );
+        expect(await thisDevicePushState(environment({ permission: 'denied' }).env)).toBe('denied');
+        expect(await thisDevicePushState(environment({ permission: 'default' }).env)).toBe(
+            'available'
+        );
+        expect(await thisDevicePushState(environment({ existing: null }).env)).toBe('available');
+        expect(await thisDevicePushState(environment({ existing: fakeSubscription() }).env)).toBe(
+            'subscribed'
+        );
+    });
+});
+
+describe('removeDevice', () => {
+    it('removes another device of the account and leaves this browser alone', async () => {
+        const subscription = fakeSubscription();
+        const { env, fetch } = environment({ existing: subscription, status: 204 });
+
+        expect(await removeDevice('device-1', 'user-a', false, env)).toBe(true);
+
+        expect(fetch).toHaveBeenCalledWith(
+            WEB_PUSH_DEVICE_URL + 'device-1',
+            expect.objectContaining({ method: 'DELETE' })
+        );
+        expect(subscription.unsubscribe).not.toHaveBeenCalled();
+    });
+
+    it('drops the browser subscription too when it removes this device', async () => {
+        const subscription = fakeSubscription();
+        const { env, storage } = environment({ existing: subscription, status: 204 });
+        storage.set('webPush.synced:user-a', '1');
+
+        expect(await removeDevice('device-1', 'user-a', true, env)).toBe(true);
+
+        expect(subscription.unsubscribe).toHaveBeenCalled();
+        expect(storage.has('webPush.synced:user-a')).toBe(false);
+    });
+
+    it('keeps the browser subscription when the site could not remove it', async () => {
+        const subscription = fakeSubscription();
+        const { env } = environment({ existing: subscription, status: 500 });
+
+        expect(await removeDevice('device-1', 'user-a', true, env)).toBe(false);
+        expect(subscription.unsubscribe).not.toHaveBeenCalled();
+    });
+});
+
+describe('sendTestNotice', () => {
+    it('says the test was sent', async () => {
+        const { env, fetch } = environment({ existing: fakeSubscription(), status: 204 });
+
+        expect(await sendTestNotice('user-a', env)).toBe('sent');
+        expect(fetch).toHaveBeenCalledWith(
+            WEB_PUSH_TEST_URL,
+            expect.objectContaining({ method: 'POST' })
+        );
+    });
+
+    it('drops the subscription the push service no longer takes', async () => {
+        const subscription = fakeSubscription();
+        const { env } = environment({ existing: subscription, status: 410 });
+
+        expect(await sendTestNotice('user-a', env)).toBe('gone');
+        expect(subscription.unsubscribe).toHaveBeenCalled();
+    });
+
+    it('keeps everything when it could not be sent now', async () => {
+        const subscription = fakeSubscription();
+        const { env } = environment({ existing: subscription, status: 503 });
+
+        expect(await sendTestNotice('user-a', env)).toBe('unavailable');
+        expect(subscription.unsubscribe).not.toHaveBeenCalled();
+    });
+});
+
+describe('resyncThisDevice', () => {
+    it('tells the site again even when this tab already did in this session', async () => {
+        const { env, fetch, storage } = environment({ existing: fakeSubscription(), status: 200 });
+        storage.set('webPush.synced:user-a', '1');
+
+        await resyncThisDevice(PUBLIC_KEY, 'user-a', env);
+
+        expect(methods(fetch)).toEqual(['PUT']);
+        expect(storage.get('webPush.synced:user-a')).toBe('1');
+    });
+
+    it('drops the subscription the site no longer knows for this account', async () => {
+        const subscription = fakeSubscription();
+        const { env, storage } = environment({ existing: subscription, status: 404 });
+        storage.set('webPush.synced:user-a', '1');
+
+        await resyncThisDevice(PUBLIC_KEY, 'user-a', env);
+
+        expect(subscription.unsubscribe).toHaveBeenCalled();
+        expect(storage.has('webPush.synced:user-a')).toBe(false);
+    });
+});
+
+describe('a service worker that never gets ready', () => {
+    it('gives up after a while instead of waiting forever', async () => {
+        vi.useFakeTimers();
+        try {
+            const { env } = environment();
+            env.serviceWorker = { ready: new Promise<ServiceWorkerRegistration>(() => undefined) };
+            env.readyTimeoutMs = 1000;
+
+            const state = thisDevicePushState(env);
+            await vi.advanceTimersByTimeAsync(1000);
+
+            await expect(state).resolves.toBe('available');
+        } finally {
+            vi.useRealTimers();
+        }
     });
 });

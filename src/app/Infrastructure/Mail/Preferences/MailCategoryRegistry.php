@@ -113,5 +113,9 @@ final class MailCategoryRegistry implements MailCategoryRegistryInterface
         if ($category->digestible && ! $category->mail) {
             throw InvalidMailCategoryException::digestWithoutMail($category->key);
         }
+
+        if ($category->pushSuggested && ! $category->site) {
+            throw InvalidMailCategoryException::pushWithoutSite($category->key);
+        }
     }
 }

@@ -955,6 +955,61 @@ export default {
                     mail: 'Por correo',
                     alsoOnSite: 'También se avisa en la web.',
                     siteOnly: 'Solo se avisa en la web.',
+                    push: 'En tus dispositivos',
+                    suggested: 'Sugerido',
+                    pushNeedsSite:
+                        'Para recibirlo en tus dispositivos, actívalo también en la web.',
+                },
+                push: {
+                    title: 'Avisos en tus dispositivos',
+                    description:
+                        'Recibe como notificaciones del sistema los avisos que actives abajo en «En tus dispositivos», aunque tengas la web cerrada. Valen para todos los dispositivos que actives aquí.',
+                    enable: 'Recibir avisos en este dispositivo',
+                    unsupported:
+                        'Este navegador no puede recibir avisos. Prueba con otro navegador o dispositivo.',
+                    homeScreen:
+                        'En iPhone y iPad, primero añade la web a la pantalla de inicio: pulsa «Compartir» y después «Añadir a la pantalla de inicio». Luego abre la web desde ese icono y vuelve aquí.',
+                    denied: 'Has bloqueado las notificaciones de esta web. Para recibirlas, permítelas en los ajustes del sitio de tu navegador (el icono junto a la dirección) y recarga la página.',
+                    subscribed: 'Este dispositivo recibe tus avisos.',
+                    enableError:
+                        'No se han podido activar los avisos en este dispositivo. Inténtalo de nuevo.',
+                    suggested: 'Activar las sugeridas',
+                    suggestedHint:
+                        'Activa «En tus dispositivos» en los avisos marcados como sugeridos. Después guarda los cambios.',
+                    test: 'Mandar un aviso de prueba',
+                    testSent: 'Aviso de prueba enviado. Debería llegarte en unos segundos.',
+                    testGone: 'Este dispositivo ya no recibía avisos. Vuelve a activarlos.',
+                    testUnavailable:
+                        'No se ha podido mandar el aviso de prueba. Inténtalo dentro de un rato.',
+                    devices: {
+                        title: 'Dispositivos que reciben avisos',
+                        empty: 'Todavía no recibes avisos en ningún dispositivo.',
+                        current: 'Este dispositivo',
+                        name: '{browser} en {platform}',
+                        added: 'Activado el {date}',
+                        lastUsed: 'Último uso el {date}',
+                        remove: 'Quitar',
+                        removeLabel: 'Dejar de recibir avisos en {device}',
+                        removeError: 'No se ha podido quitar el dispositivo. Inténtalo de nuevo.',
+                    },
+                    browsers: {
+                        chrome: 'Chrome',
+                        edge: 'Edge',
+                        firefox: 'Firefox',
+                        safari: 'Safari',
+                        opera: 'Opera',
+                        samsung: 'Samsung Internet',
+                        other: 'Otro navegador',
+                    },
+                    platforms: {
+                        android: 'Android',
+                        ios: 'iPhone o iPad',
+                        macos: 'macOS',
+                        windows: 'Windows',
+                        linux: 'Linux',
+                        chromeos: 'ChromeOS',
+                        other: 'otro sistema',
+                    },
                 },
                 delivery: {
                     immediate: 'Al momento',

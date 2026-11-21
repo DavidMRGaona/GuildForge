@@ -12,6 +12,9 @@ describe('readSettings', () => {
                     fallbackBody: 'Asociación de ejemplo',
                     fallbackPath: '/avisos',
                     icon: '/favicons/light/android-chrome-192x192.png',
+                    testTitle: 'Aviso de prueba',
+                    testBody: 'Los avisos llegan a este dispositivo.',
+                    testPath: '/perfil?tab=mail',
                 },
                 ORIGIN
             )
@@ -20,6 +23,9 @@ describe('readSettings', () => {
             fallbackBody: 'Asociación de ejemplo',
             fallbackPath: '/avisos',
             icon: '/favicons/light/android-chrome-192x192.png',
+            testTitle: 'Aviso de prueba',
+            testBody: 'Los avisos llegan a este dispositivo.',
+            testPath: '/perfil?tab=mail',
         });
     });
 
@@ -29,6 +35,9 @@ describe('readSettings', () => {
             fallbackBody: '',
             fallbackPath: '/',
             icon: '',
+            testTitle: 'example.test',
+            testBody: '',
+            testPath: '/',
         });
     });
 

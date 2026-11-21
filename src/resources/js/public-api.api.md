@@ -636,6 +636,9 @@ export default _default;
 ```ts
 import { type ComputedRef } from 'vue';
 import type { AuthSettings, User } from '@/types/models';
+export interface LogoutOptions {
+    url?: string;
+}
 interface AuthComposable {
     user: ComputedRef<User | null>;
     isAuthenticated: ComputedRef<boolean>;
@@ -650,7 +653,7 @@ interface AuthComposable {
     canAll: (permissions: string[]) => boolean;
     hasRole: (role: string) => boolean;
     hasAnyRole: (roles: string[]) => boolean;
-    logout: () => void;
+    logout: (options?: LogoutOptions) => void;
 }
 export declare function useAuth(): AuthComposable;
 export {};

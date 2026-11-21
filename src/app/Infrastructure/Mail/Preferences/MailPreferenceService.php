@@ -16,6 +16,7 @@ use App\Domain\Mail\Exceptions\MailPreferenceNotEditableException;
 use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
 use App\Domain\SiteNotifications\Repositories\SiteNotificationPreferenceRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
+use App\Domain\WebPush\Repositories\WebPushPreferenceRepositoryInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
@@ -31,6 +32,7 @@ final readonly class MailPreferenceService implements MailPreferenceServiceInter
         private MailPreferenceRepositoryInterface $preferences,
         private iterable $rules,
         private SiteNotificationPreferenceRepositoryInterface $sitePreferences,
+        private WebPushPreferenceRepositoryInterface $pushPreferences,
     ) {}
 
     public function sectionsFor(object $user): array
@@ -43,6 +45,7 @@ final readonly class MailPreferenceService implements MailPreferenceServiceInter
         $disabled = $this->preferences->disabledFor($userId);
         $digest = $this->preferences->digestFor($userId);
         $siteDisabled = $this->sitePreferences->disabledFor($userId);
+        $pushEnabled = $this->pushPreferences->enabledFor($userId);
 
         /** @var array<string, list<MailPreferenceDTO>> $sections */
         $sections = [];
@@ -71,6 +74,8 @@ final readonly class MailPreferenceService implements MailPreferenceServiceInter
                 mail: $category->mail,
                 site: $category->site,
                 siteEnabled: $category->site && ($category->isMandatory() || ! in_array($category->key, $siteDisabled, true)),
+                pushEnabled: $category->site && ! $category->isMandatory() && in_array($category->key, $pushEnabled, true),
+                pushSuggested: $category->pushSuggested && ! $category->isMandatory(),
             );
         }
 

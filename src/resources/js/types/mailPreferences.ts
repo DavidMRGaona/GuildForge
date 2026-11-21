@@ -21,6 +21,25 @@ export interface MailPreference {
     site?: boolean;
     /** Whether the person sees its notices there; always true for a mandatory one. */
     siteEnabled?: boolean;
+    /** Whether its notices also reach the person's devices as push notifications (core#804). Missing = false. */
+    pushEnabled?: boolean;
+    /** Whether the category suggests push; it never turns it on. Missing = false. */
+    pushSuggested?: boolean;
+}
+
+/** A browser of the account that receives push notifications (core#804). */
+export interface PushDevice {
+    id: string;
+    /** `chrome`, `edge`, `firefox`, `safari`, `opera`, `samsung` or `other`. */
+    browser: string;
+    /** `android`, `ios`, `macos`, `windows`, `linux`, `chromeos` or `other`. */
+    platform: string;
+    /** The browser of this session. */
+    current: boolean;
+    /** ISO 8601 in the display zone. */
+    createdAt: string | null;
+    /** Last use (subscribed, refreshed by a page of the site or sent a notice), ISO 8601 in the display zone. */
+    lastUsedAt: string | null;
 }
 
 /** A group of categories under one heading («Cuenta», «Partidas»…). */
@@ -62,4 +81,6 @@ export interface MailPreferencesProps {
     mutedSubjects: MutedMailSubject[];
     /** When the daily digest goes out, `HH:MM` in the display zone. */
     digestTime: string;
+    /** Devices of the account that receive push notifications (core#804); empty while push is off. Missing = none. */
+    pushDevices?: PushDevice[];
 }

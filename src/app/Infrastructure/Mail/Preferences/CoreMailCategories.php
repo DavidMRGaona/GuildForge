@@ -107,6 +107,8 @@ final class CoreMailCategories
                 // Proposals arrive in bursts
                 digestible: true,
                 site: true,
+                // Someone is waiting for the review (core#804)
+                pushSuggested: true,
             ),
             MailCategoryDTO::optional(
                 key: self::PROPOSALS_STATUS,
@@ -117,6 +119,7 @@ final class CoreMailCategories
                 audience: static fn (object $user): bool => self::mayHaveProposals($user),
                 icon: 'clipboard-check',
                 site: true,
+                pushSuggested: true,
             ),
             MailCategoryDTO::optional(
                 key: self::SITE_NEWS,

@@ -11,6 +11,7 @@ import MailPreferenceSection from '@/components/profile/MailPreferenceSection.vu
 import MailSectionTabs from '@/components/profile/MailSectionTabs.vue';
 import MailViewSwitch from '@/components/profile/MailViewSwitch.vue';
 import MutedMailSubjectsBlock from '@/components/profile/MutedMailSubjectsBlock.vue';
+import PushDevicesBlock from '@/components/profile/PushDevicesBlock.vue';
 import { useMailPreferencesView } from '@/composables/useMailPreferencesView';
 import { useVerificationGate } from '@/composables/useVerificationGate';
 import type {
@@ -18,7 +19,9 @@ import type {
     MailPause,
     MailPreferenceSection as Section,
     MutedMailSubject,
+    PushDevice,
 } from '@/types/mailPreferences';
+import type { WebPushSharedProps } from '@/types/webPush';
 
 interface Props {
     sections: Section[];
@@ -27,15 +30,22 @@ interface Props {
     mutedSubjects?: MutedMailSubject[];
     /** When the daily digest goes out, `HH:MM` in the display zone (core#333). */
     digestTime?: string;
+    /** Devices of the account that receive push notifications (core#804). */
+    pushDevices?: PushDevice[];
 }
 
-const props = withDefaults(defineProps<Props>(), { mutedSubjects: () => [], digestTime: '08:00' });
+const props = withDefaults(defineProps<Props>(), {
+    mutedSubjects: () => [],
+    digestTime: '08:00',
+    pushDevices: () => [],
+});
 
 const ENDPOINT = '/perfil/correos';
 // Laravel names the errors of the submitted maps `preferences.<category key>` (mail) and
-// `site.<category key>` (notification centre, core#491)
+// `site.<category key>` (notification centre, core#491) and `push.<category key>` (core#804)
 const ERROR_PREFIX = 'preferences.';
 const SITE_ERROR_PREFIX = 'site.';
+const PUSH_ERROR_PREFIX = 'push.';
 
 const { t } = useI18n();
 const page = usePage();
@@ -68,6 +78,44 @@ const siteSaved = computed<Record<string, boolean>>(() => {
     return state;
 });
 
+/**
+ * Push on this site (core#804): the shared prop carries the key while it is configured (and
+ * nobody is impersonating). Without it there is no push switch nor devices block.
+ */
+const webPush = computed(
+    () => (page.props.webPush as WebPushSharedProps | null | undefined) ?? null
+);
+const userId = computed(
+    () => (page.props.auth as { user?: { id: string } | null } | undefined)?.user?.id ?? null
+);
+const pushOffered = computed(() => webPush.value !== null && userId.value !== null);
+
+/** Saved push switch of the optional categories with site notices (core#804). */
+const pushSaved = computed<Record<string, boolean>>(() => {
+    const state: Record<string, boolean> = {};
+    for (const section of props.sections) {
+        for (const category of section.categories) {
+            if (category.site === true && !category.mandatory) {
+                state[category.key] = category.pushEnabled === true;
+            }
+        }
+    }
+
+    return state;
+});
+
+/** Categories whose push is suggested (core#804). */
+const pushSuggested = computed<string[]>(() =>
+    props.sections.flatMap((section) =>
+        section.categories
+            .filter(
+                (category) =>
+                    category.site === true && !category.mandatory && category.pushSuggested === true
+            )
+            .map((category) => category.key)
+    )
+);
+
 // Cards (all at a glance) or tabs (one section at a time); the choices and the save are the same
 const { view } = useMailPreferencesView();
 const selectedKey = ref<string>(props.sections[0]?.key ?? '');
@@ -92,18 +140,33 @@ const digestible = computed<Set<string>>(() => {
 
 const choices = ref<Record<string, MailDelivery>>({ ...saved.value });
 const siteChoices = ref<Record<string, boolean>>({ ...siteSaved.value });
+const pushChoices = ref<Record<string, boolean>>({ ...pushSaved.value });
 const processing = ref(false);
 /** Translated errors by category key: the mail choice and the web switch each keep their own. */
 const errors = ref<Record<string, string>>({});
 const siteErrors = ref<Record<string, string>>({});
+const pushErrors = ref<Record<string, string>>({});
 const generalError = ref<string | null>(null);
 
-// A reload brings the saved state again (after saving, or from another tab of the browser)
-watch(saved, (state) => {
-    choices.value = { ...state };
+// A reload brings the saved state again (after saving, or from another tab of the browser). One
+// that changes nothing saved (the devices block reloading its list) keeps the unsaved choices
+function sameState(a: Record<string, unknown>, b: Record<string, unknown> | undefined): boolean {
+    return b !== undefined && JSON.stringify(a) === JSON.stringify(b);
+}
+watch(saved, (state, previous) => {
+    if (!sameState(state, previous)) {
+        choices.value = { ...state };
+    }
 });
-watch(siteSaved, (state) => {
-    siteChoices.value = { ...state };
+watch(siteSaved, (state, previous) => {
+    if (!sameState(state, previous)) {
+        siteChoices.value = { ...state };
+    }
+});
+watch(pushSaved, (state, previous) => {
+    if (!sameState(state, previous)) {
+        pushChoices.value = { ...state };
+    }
 });
 
 /** Only what differs from the saved state travels: the server keeps the rest as it is. */
@@ -127,23 +190,67 @@ const siteChanges = computed<Record<string, boolean>>(() => {
 
     return diff;
 });
+const pushChanges = computed<Record<string, boolean>>(() => {
+    const diff: Record<string, boolean> = {};
+    for (const [key, value] of Object.entries(pushChoices.value)) {
+        if (pushSaved.value[key] !== undefined && pushSaved.value[key] !== value) {
+            diff[key] = value;
+        }
+    }
+
+    return diff;
+});
 const hasChanges = computed(
-    () => Object.keys(changes.value).length > 0 || Object.keys(siteChanges.value).length > 0
+    () =>
+        Object.keys(changes.value).length > 0 ||
+        Object.keys(siteChanges.value).length > 0 ||
+        Object.keys(pushChanges.value).length > 0
+);
+
+/** Suggested categories not pushed now, following the current choices (core#804). */
+const suggestedOff = computed(
+    () => pushSuggested.value.filter((key) => pushChoices.value[key] !== true).length
 );
 const locked = computed(() => processing.value || gate.blocked.value);
 
-function setChoice(key: string, value: MailDelivery): void {
-    choices.value = { ...choices.value, [key]: value };
+function clearErrors(): void {
     errors.value = {};
     siteErrors.value = {};
+    pushErrors.value = {};
     generalError.value = null;
+}
+
+function setChoice(key: string, value: MailDelivery): void {
+    choices.value = { ...choices.value, [key]: value };
+    clearErrors();
 }
 
 function setSiteChoice(key: string, value: boolean): void {
     siteChoices.value = { ...siteChoices.value, [key]: value };
-    errors.value = {};
-    siteErrors.value = {};
-    generalError.value = null;
+    clearErrors();
+}
+
+function setPushChoice(key: string, value: boolean): void {
+    pushChoices.value = { ...pushChoices.value, [key]: value };
+    clearErrors();
+}
+
+/**
+ * «Activar las sugeridas» (core#804): turns on the push switch of the suggested categories, and
+ * their web switch, which push needs. Saved with the rest, like any other switch.
+ */
+function enableSuggested(): void {
+    const push = { ...pushChoices.value };
+    const site = { ...siteChoices.value };
+    for (const key of pushSuggested.value) {
+        push[key] = true;
+        if (site[key] !== undefined) {
+            site[key] = true;
+        }
+    }
+    pushChoices.value = push;
+    siteChoices.value = site;
+    clearErrors();
 }
 
 /** Only the maps that changed travel: the server keeps the rest as it is. */
@@ -155,6 +262,9 @@ function payload(): Record<string, Record<string, boolean | MailDelivery>> {
     if (Object.keys(siteChanges.value).length > 0) {
         data.site = siteChanges.value;
     }
+    if (Object.keys(pushChanges.value).length > 0) {
+        data.push = pushChanges.value;
+    }
 
     return data;
 }
@@ -164,9 +274,7 @@ function save(): void {
         return;
     }
 
-    errors.value = {};
-    siteErrors.value = {};
-    generalError.value = null;
+    clearErrors();
 
     router.put(ENDPOINT, payload(), {
         preserveScroll: true,
@@ -180,17 +288,23 @@ function save(): void {
         onError: (received) => {
             const byCategory: Record<string, string> = {};
             const siteByCategory: Record<string, string> = {};
+            const pushByCategory: Record<string, string> = {};
             for (const [field, message] of Object.entries(received)) {
                 if (field.startsWith(ERROR_PREFIX)) {
                     byCategory[field.slice(ERROR_PREFIX.length)] = message;
                 } else if (field.startsWith(SITE_ERROR_PREFIX)) {
                     siteByCategory[field.slice(SITE_ERROR_PREFIX.length)] = message;
+                } else if (field.startsWith(PUSH_ERROR_PREFIX)) {
+                    pushByCategory[field.slice(PUSH_ERROR_PREFIX.length)] = message;
                 }
             }
             errors.value = byCategory;
             siteErrors.value = siteByCategory;
+            pushErrors.value = pushByCategory;
             generalError.value =
-                Object.keys(byCategory).length === 0 && Object.keys(siteByCategory).length === 0
+                Object.keys(byCategory).length === 0 &&
+                Object.keys(siteByCategory).length === 0 &&
+                Object.keys(pushByCategory).length === 0
                     ? t('auth.profile.mail.error')
                     : null;
         },
@@ -235,6 +349,17 @@ function save(): void {
                 <MailPauseBlock :pause="pause" :blocked="gate.blocked.value" />
             </div>
 
+            <!-- Push on this device and the account's devices (core#804), before the switches it adds -->
+            <PushDevicesBlock
+                v-if="pushOffered && webPush && userId"
+                :devices="pushDevices"
+                :public-key="webPush.publicKey"
+                :user-id="userId"
+                :blocked="gate.blocked.value"
+                :suggested-off="suggestedOff"
+                @enable-suggested="enableSuggested"
+            />
+
             <div v-if="sections.length > 1" class="flex justify-end">
                 <MailViewSwitch v-model="view" />
             </div>
@@ -249,9 +374,12 @@ function save(): void {
                     :busy="locked"
                     :errors="errors"
                     :site-errors="siteErrors"
+                    :push-choices="pushOffered ? pushChoices : null"
+                    :push-errors="pushErrors"
                     :digest-time="digestTime"
                     @change="setChoice"
                     @site-change="setSiteChoice"
+                    @push-change="setPushChoice"
                 />
             </div>
 
@@ -278,9 +406,12 @@ function save(): void {
                         :busy="locked"
                         :errors="errors"
                         :site-errors="siteErrors"
+                        :push-choices="pushOffered ? pushChoices : null"
+                        :push-errors="pushErrors"
                         :digest-time="digestTime"
                         @change="setChoice"
                         @site-change="setSiteChoice"
+                        @push-change="setPushChoice"
                     />
                 </div>
             </div>

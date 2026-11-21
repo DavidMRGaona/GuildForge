@@ -374,6 +374,80 @@ final class MailPreferencesControllerTest extends TestCase
             ->assertSessionHasErrors('site');
     }
 
+    public function test_the_mail_tab_says_which_categories_are_pushed_and_which_suggest_it(): void
+    {
+        $this->registerSiteCategories();
+        $user = UserModel::factory()->create();
+        DB::table('user_web_push_preferences')->insert([
+            'id' => (string) Str::uuid(), 'user_id' => $user->id, 'category' => 'example.likes',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)->get('/perfil?tab=mail')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('mailPreferences.sections.0.categories.1.key', 'example.reminders')
+                ->where('mailPreferences.sections.0.categories.1.pushEnabled', false)
+                ->where('mailPreferences.sections.0.categories.3.key', 'example.replies')
+                ->where('mailPreferences.sections.0.categories.3.pushEnabled', false)
+                ->where('mailPreferences.sections.0.categories.3.pushSuggested', true)
+                ->where('mailPreferences.sections.0.categories.4.key', 'example.likes')
+                ->where('mailPreferences.sections.0.categories.4.pushEnabled', true)
+                ->where('mailPreferences.sections.0.categories.4.pushSuggested', false));
+    }
+
+    public function test_it_saves_the_push_switches_with_the_others(): void
+    {
+        $this->registerSiteCategories();
+        $user = UserModel::factory()->create();
+
+        $this->actingAs($user)
+            ->put('/perfil/correos', [
+                'site' => ['example.likes' => false],
+                'push' => ['example.replies' => true],
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertSame(['example.replies'], DB::table('user_web_push_preferences')->where('user_id', $user->id)->pluck('category')->all());
+
+        // The push switches alone are enough
+        $this->actingAs($user)
+            ->put('/perfil/correos', ['push' => ['example.replies' => false]])
+            ->assertSessionHas('success');
+
+        $this->assertSame(0, DB::table('user_web_push_preferences')->count());
+    }
+
+    public function test_a_refused_push_switch_saves_nothing_at_all(): void
+    {
+        $this->registerSiteCategories();
+        $user = UserModel::factory()->create();
+
+        $this->actingAs($user)
+            ->put('/perfil/correos', [
+                'site' => ['example.likes' => false],
+                'push' => ['example.replies' => true, 'example.reminders' => true],
+            ])
+            ->assertSessionHasErrors('push.example.reminders');
+
+        $this->assertSame(0, DB::table('user_site_notification_preferences')->count());
+        $this->assertSame(0, DB::table('user_web_push_preferences')->count());
+    }
+
+    public function test_push_switches_must_be_booleans(): void
+    {
+        $this->registerSiteCategories();
+        $user = UserModel::factory()->create();
+
+        $this->actingAs($user)
+            ->put('/perfil/correos', ['push' => ['example.replies' => 'yes']])
+            ->assertSessionHasErrors('push.example.replies');
+
+        $this->actingAs($user)
+            ->put('/perfil/correos', ['push' => 'everything'])
+            ->assertSessionHasErrors('push');
+    }
+
     private function registerSiteCategories(): void
     {
         $this->app->make(MailCategoryRegistryInterface::class)->registerMany([
@@ -383,6 +457,7 @@ final class MailPreferencesControllerTest extends TestCase
                 label: 'Replies',
                 description: 'In topics you follow',
                 site: true,
+                pushSuggested: true,
             ),
             MailCategoryDTO::optional(
                 key: 'example.likes',

@@ -17,6 +17,7 @@ use App\Domain\Mail\Repositories\MailPauseRepositoryInterface;
 use App\Domain\Mail\Repositories\MailPreferenceRepositoryInterface;
 use App\Domain\Mail\Repositories\MailSubjectMuteRepositoryInterface;
 use App\Domain\SiteNotifications\Repositories\SiteNotificationPreferenceRepositoryInterface;
+use App\Domain\WebPush\Repositories\WebPushPreferenceRepositoryInterface;
 use App\Infrastructure\Mail\Channels\PreferenceAwareMailChannel;
 use App\Infrastructure\Mail\Digest\MailDigestService;
 use App\Infrastructure\Mail\Footer\CurrentMailFooter;
@@ -73,6 +74,7 @@ final class MailPreferencesServiceProvider extends ServiceProvider
             $app->make(MailPreferenceRepositoryInterface::class),
             $app->tagged(MailDeliveryRuleInterface::TAG),
             $app->make(SiteNotificationPreferenceRepositoryInterface::class),
+            $app->make(WebPushPreferenceRepositoryInterface::class),
         ));
 
         $this->app->bind(MailCategoryOptOutStatisticsInterface::class, MailCategoryOptOutStatistics::class);

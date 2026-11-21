@@ -13,6 +13,12 @@ export interface ServiceWorkerSettings {
     fallbackPath: string;
     /** Icon of every notification, empty when there is none. */
     icon: string;
+    /** Title of the test notice sent from the «Avisos» tab (core#804). */
+    testTitle: string;
+    /** Its text. */
+    testBody: string;
+    /** Where it leads: the «Avisos» tab. */
+    testPath: string;
 }
 
 function text(value: unknown): string {
@@ -43,12 +49,17 @@ export function sameOriginPath(value: unknown, origin: string): string {
 export function readSettings(raw: unknown, origin: string): ServiceWorkerSettings {
     const settings =
         typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+    const host = new URL(origin).host;
     const title = text(settings.fallbackTitle);
+    const testTitle = text(settings.testTitle);
 
     return {
-        fallbackTitle: title !== '' ? title : new URL(origin).host,
+        fallbackTitle: title !== '' ? title : host,
         fallbackBody: text(settings.fallbackBody),
         fallbackPath: sameOriginPath(settings.fallbackPath, origin),
         icon: text(settings.icon),
+        testTitle: testTitle !== '' ? testTitle : host,
+        testBody: text(settings.testBody),
+        testPath: sameOriginPath(settings.testPath, origin),
     };
 }

@@ -975,6 +975,23 @@ The packages above stay out of every module bundle and come from the import map.
 
 Link core pages through `useRoutes()` (`@/composables/useRoutes`), never with hand-written URLs; for example a consent checkbox links `useRoutes().legal.privacy` (core ≥ 3.16).
 
+#### Signing out
+
+Sign out with `useAuth().logout()` (`@/composables/useAuth`), never with a form or a `router.post()` of the module's own. Before the request, this browser stops receiving the account's push notifications (at most two seconds, then the sign-out goes on anyway; see [Push notifications](../web-push.md)). A module that signs out through a route of its own, to land somewhere else afterwards, passes it (core ≥ the release with #804):
+
+```typescript
+import { useAuth } from '@/composables/useAuth';
+
+const { logout } = useAuth();
+
+// The module's route signs out and redirects where it wants
+logout({ url: `/partidas/invitaciones/${token}/salir` });
+```
+
+- `url` must be a route of this site (a path, or an absolute address of the same origin). Anything else (another site, `//host`, `javascript:`) is ignored and the core's `/cerrar-sesion` is used, so a value read from a link can never post the sign-out elsewhere.
+- The route must end the session like the core's does (`Auth::guard('web')->logout()`, invalidate the session and regenerate the token); the server also forgets this browser's push subscription on the `Logout` event, whatever route fires it.
+- On a button, call it with parentheses (`@click="logout()"`). `@click="logout"` passes the click event as `options`, which `vue-tsc` rejects (`TS2322`); a module that still does it in plain JavaScript signs out through `/cerrar-sesion`, since only a string `url` counts.
+
 ### Frontend translations
 
 Texts for pages and components live in `resources/js/locales/es.ts` and `en.ts`, under one top-level key (`module:make` writes `myModule: { title }`):

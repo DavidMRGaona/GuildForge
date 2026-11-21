@@ -22,6 +22,28 @@ browser ◀───────────────────────
 
 People turn push on per category and per browser. Nothing is pushed until they do.
 
+## What people see
+
+In **Ajustes de la cuenta**, tab **Avisos** (core#804), only while push is on:
+
+- **Avisos en tus dispositivos**: the button **Recibir avisos en este dispositivo**, which is the only thing that asks the browser for permission. When the browser cannot, it says why instead: no support, notifications blocked for the site (and how to allow them), or, on iPhone and iPad, the step to add the site to the home screen first.
+- The account's devices (browser, system, last use: subscribed, refreshed by a page of the site or sent a notice), the current one marked, each with **Quitar**.
+- **Mandar un aviso de prueba**, to the current device only, sent at once (3 a minute, 10 an hour per account). It shows a fixed text, even with the site's tab in front, and creates no notice in the bell.
+- One more switch per optional category with site notices, **En tus dispositivos**, off for everyone until the person turns it on, and for all their devices at once. It follows the web switch: a notice the bell does not get is never pushed, and neither is a muted subject. Mandatory categories are never pushed. A category may be marked **Sugerido** (`pushSuggested`); **Activar las sugeridas** turns those on in the form, to be saved with the rest.
+
+The guide `core.site.push-notifications` explains it to members.
+
+## Checking it in a real browser
+
+Automated tests cannot reach a push service. After turning push on in a site (or on a development machine, where Chrome accepts `http://localhost`), check by hand:
+
+1. Turn it on with the button, accept the permission and send a test notice: it arrives within seconds.
+2. Turn **En tus dispositivos** on for a category, close every tab of the site and make a notice of that category arrive: the notification shows its title; clicking it opens the notice and marks it read.
+3. With a tab of the site in front, the same notice shows only in the bell.
+4. Remove the device from the list: nothing more arrives, and the button is offered again.
+
+Do it in Chrome (desktop and Android), Firefox and Safari: on macOS, and on an iPhone or iPad with the site on the home screen. Safari expects every push message to show a notification; watch whether a message that shows none (a tab of the site in front) ends the subscription. If it does, the worker has to show the notification every time, with the notice's tag, and close it at once while a tab is in front.
+
 ## Environment variables
 
 Push is on only when the three keys are set and valid. Anything else is off, without errors on the site. A missing or invalid key leaves a warning in the log each time a console process starts: the queue worker, every command, and so every `schedule:run`, once a minute. Web requests never log it.
@@ -59,7 +81,8 @@ Safari delivers web push only to a site added to the home screen (iOS and iPadOS
 - Only the person's own click subscribes a browser, or moves it to their account. When a page loads it only refreshes the account's own subscription: on a shared computer, another account signing in takes nothing over, and the browser drops a subscription the site does not know for that account.
 - An account keeps its 20 most recently used browsers.
 - A browser is forgotten when it signs out (also on this device alone), when its push service answers 404 or 410, when its keys cannot encrypt a message, when the account is deactivated or anonymized, and after 90 days without use.
-- Nothing is subscribed or sent while an administrator impersonates an account.
+- Nothing is subscribed or sent while an administrator impersonates an account, and no device is removed or tested.
+- What each person chose is kept in `user_web_push_preferences` (one row per category turned on). Deactivating an account keeps it, for when it is restored; anonymizing deletes it.
 
 ## Turning it on in a site
 

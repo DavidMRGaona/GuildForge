@@ -10,10 +10,12 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Support\Calendar\RegistersPersonalCalendarSources;
+use Tests\Support\WebPush\EnablesWebPush;
 use Tests\TestCase;
 
 final class CoreSiteGuidesTest extends TestCase
 {
+    use EnablesWebPush;
     use LazilyRefreshDatabase;
     use RegistersPersonalCalendarSources;
 
@@ -30,6 +32,8 @@ final class CoreSiteGuidesTest extends TestCase
     private const string VERIFY_EMAIL_GUIDE = 'core.account.verify-email';
 
     private const string PERSONAL_CALENDAR_GUIDE = 'core.events.personal-calendar';
+
+    private const string PUSH_GUIDE = 'core.site.push-notifications';
 
     protected function setUp(): void
     {
@@ -152,6 +156,26 @@ final class CoreSiteGuidesTest extends TestCase
         $this->actingAs($this->member());
 
         $this->get('/ayuda/'.self::VERIFY_EMAIL_GUIDE)->assertOk();
+    }
+
+    public function test_the_push_guide_is_hidden_while_push_is_not_configured(): void
+    {
+        $this->actingAs($this->member());
+
+        $this->get('/ayuda/'.self::PUSH_GUIDE)->assertNotFound();
+    }
+
+    public function test_the_push_guide_opens_the_notices_tab_while_push_is_configured(): void
+    {
+        $this->enableWebPush();
+        $this->actingAs($this->member());
+
+        $this->get('/ayuda/'.self::PUSH_GUIDE)->assertOk()->assertInertia(function (Assert $page): void {
+            $html = $page->toArray()['props']['guide']['html'];
+            $this->assertIsString($html);
+            $this->assertStringContainsString('/perfil?tab=mail', $html);
+            $this->assertStringNotContainsString('{{', $html);
+        });
     }
 
     public function test_the_personal_calendar_guide_is_hidden_without_attendance_sources(): void

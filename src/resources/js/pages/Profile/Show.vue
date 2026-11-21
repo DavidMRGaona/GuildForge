@@ -111,6 +111,7 @@ const hasModuleTabs = computed(() => hasSlotComponents('profile-sections'));
                         :pause="mailPreferences.pause"
                         :muted-subjects="mailPreferences.mutedSubjects"
                         :digest-time="mailPreferences.digestTime"
+                        :push-devices="mailPreferences.pushDevices ?? []"
                     />
                     <div
                         v-else-if="mailPreferencesFailed"

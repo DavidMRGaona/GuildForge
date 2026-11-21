@@ -50,6 +50,55 @@ describe('useAuth().logout', () => {
         expect(post).toHaveBeenCalledWith('/cerrar-sesion');
     });
 
+    it('forgets this browser first, then signs out through the route a module gives', async () => {
+        page.props = { webPush: { publicKey: 'key' }, auth: { user: { id: 'user-a' } } };
+        const order: string[] = [];
+        forgetThisDevice.mockImplementation(async () => void order.push('forget'));
+        post.mockImplementation((url: string) => void order.push(`post ${url}`));
+
+        useAuth().logout({ url: '/partidas/invitacion/abc/salir?volver=1' });
+        await vi.runAllTimersAsync();
+
+        expect(order).toEqual(['forget', 'post /partidas/invitacion/abc/salir?volver=1']);
+    });
+
+    it('takes an absolute address of this site as its path', async () => {
+        page.props = { webPush: null };
+
+        useAuth().logout({ url: `${window.location.origin}/partidas/salir` });
+        await vi.runAllTimersAsync();
+
+        expect(post).toHaveBeenCalledWith('/partidas/salir');
+    });
+
+    it('never sends the sign-out to another site', async () => {
+        page.props = { webPush: null };
+
+        for (const url of [
+            'https://evil.test/cerrar-sesion',
+            '//evil.test/cerrar-sesion',
+            '/\\evil.test/cerrar-sesion',
+            '/.//evil.test/cerrar-sesion',
+            '/partidas/..//evil.test/cerrar-sesion',
+            'javascript:alert(1)',
+        ]) {
+            post.mockReset();
+            useAuth().logout({ url });
+            await vi.runAllTimersAsync();
+
+            expect(post).toHaveBeenCalledWith('/cerrar-sesion');
+        }
+    });
+
+    it('signs out through the core when it gets a click event instead of options', async () => {
+        page.props = { webPush: null };
+
+        useAuth().logout(new MouseEvent('click') as unknown as { url?: string });
+        await vi.runAllTimersAsync();
+
+        expect(post).toHaveBeenCalledWith('/cerrar-sesion');
+    });
+
     it('signs out at once while push is off', async () => {
         page.props = { webPush: null };
 

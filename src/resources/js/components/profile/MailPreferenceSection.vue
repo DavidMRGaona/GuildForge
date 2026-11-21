@@ -25,6 +25,10 @@ interface Props {
     errors?: Record<string, string>;
     /** Translated errors of the web switch, by category key (core#491). */
     siteErrors?: Record<string, string>;
+    /** Current push switch by key (core#804); null when push is not offered on the site. */
+    pushChoices?: Record<string, boolean> | null;
+    /** Translated errors of the push switch, by category key. */
+    pushErrors?: Record<string, string>;
     /** When the daily digest goes out (`HH:MM`), for the categories that offer it (core#333). */
     digestTime?: string;
 }
@@ -34,12 +38,15 @@ const props = withDefaults(defineProps<Props>(), {
     siteChoices: () => ({}),
     errors: () => ({}),
     siteErrors: () => ({}),
+    pushChoices: null,
+    pushErrors: () => ({}),
     digestTime: '08:00',
 });
 
 const emit = defineEmits<{
     change: [key: string, value: MailDelivery];
     'site-change': [key: string, value: boolean];
+    'push-change': [key: string, value: boolean];
 }>();
 
 const { t } = useI18n();
@@ -56,6 +63,10 @@ function choiceOf(key: string, saved: MailDelivery): MailDelivery {
 
 function siteChoiceOf(key: string, saved: boolean | undefined): boolean {
     return props.siteChoices[key] ?? saved === true;
+}
+
+function pushChoiceOf(key: string, saved: boolean | undefined): boolean | null {
+    return props.pushChoices === null ? null : (props.pushChoices[key] ?? saved === true);
 }
 
 // Received at once or in the daily digest: everything but «no recibir» counts as on
@@ -118,6 +129,8 @@ const summary = computed(() =>
                         :delivery="choiceOf(category.key, category.delivery)"
                         :site="siteChoiceOf(category.key, category.siteEnabled)"
                         :site-error="siteErrors[category.key] ?? ''"
+                        :push="pushChoiceOf(category.key, category.pushEnabled)"
+                        :push-error="pushErrors[category.key] ?? ''"
                         :base-id="control.baseId"
                         :label-id="control.labelId"
                         :described-by="control.describedBy"
@@ -125,6 +138,7 @@ const summary = computed(() =>
                         :digest-time="digestTime"
                         @update:delivery="emit('change', category.key, $event)"
                         @update:site="emit('site-change', category.key, $event)"
+                        @update:push="emit('push-change', category.key, $event)"
                     />
                 </template>
                 <template v-else-if="category.digestible" #control="control">

@@ -59,7 +59,7 @@ final readonly class ViteServiceWorkerScript implements ServiceWorkerScriptInter
     }
 
     /**
-     * @return array{fallbackTitle: string, fallbackBody: string, fallbackPath: string, icon: string}
+     * @return array{fallbackTitle: string, fallbackBody: string, fallbackPath: string, icon: string, testTitle: string, testBody: string, testPath: string}
      */
     private function settings(): array
     {
@@ -68,6 +68,10 @@ final readonly class ViteServiceWorkerScript implements ServiceWorkerScriptInter
             'fallbackBody' => $this->siteName(),
             'fallbackPath' => route('site-notifications.index', absolute: false),
             'icon' => $this->manifest->notificationIcon(),
+            // The test notice of the «Avisos» tab (core#804)
+            'testTitle' => __('web_app.service_worker.test_title'),
+            'testBody' => __('web_app.service_worker.test_body'),
+            'testPath' => route('profile.show', ['tab' => 'mail'], absolute: false),
         ];
     }
 

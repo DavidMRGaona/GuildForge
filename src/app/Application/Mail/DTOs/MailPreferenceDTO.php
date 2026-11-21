@@ -27,5 +27,9 @@ final readonly class MailPreferenceDTO
         public bool $site = false,
         /** Whether the person sees its notices there; always true for a mandatory one, false without `site`. */
         public bool $siteEnabled = false,
+        /** Whether the person receives its notices as browser push notifications (core#804); false without `site`. */
+        public bool $pushEnabled = false,
+        /** Whether the category suggests push (core#804); it never turns it on. */
+        public bool $pushSuggested = false,
     ) {}
 }

@@ -14,6 +14,7 @@ use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\UserModelQueryServiceInterface;
 use App\Application\Services\UserServiceInterface;
 use App\Application\SiteNotifications\Services\SiteNotificationServiceInterface;
+use App\Application\WebPush\Services\WebPushPreferenceServiceInterface;
 use App\Application\WebPush\Services\WebPushSubscriptionServiceInterface;
 use App\Domain\Exceptions\UserNotFoundException;
 use App\Domain\Mail\Repositories\MailDigestItemRepositoryInterface;
@@ -58,6 +59,8 @@ final class UserServiceTest extends TestCase
 
     private WebPushSubscriptionServiceInterface&MockInterface $pushSubscriptions;
 
+    private WebPushPreferenceServiceInterface&MockInterface $pushPreferences;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -80,6 +83,10 @@ final class UserServiceTest extends TestCase
         $this->pushSubscriptions = Mockery::mock(WebPushSubscriptionServiceInterface::class);
         $this->pushSubscriptions->shouldReceive('forgetUser')->byDefault();
         $this->app->instance(WebPushSubscriptionServiceInterface::class, $this->pushSubscriptions);
+        // And to UserAnonymized for the push choices (core#804)
+        $this->pushPreferences = Mockery::mock(WebPushPreferenceServiceInterface::class);
+        $this->pushPreferences->shouldReceive('forgetUser')->byDefault();
+        $this->app->instance(WebPushPreferenceServiceInterface::class, $this->pushPreferences);
 
         $this->service = new UserService(
             $this->userModelQuery,
@@ -205,6 +212,7 @@ final class UserServiceTest extends TestCase
         // And the browsers that received its push notifications (core#803). The id is not checked:
         // the mocked model casts its key as an integer, so the event carries another value here
         $this->pushSubscriptions->shouldReceive('forgetUser')->once();
+        $this->pushPreferences->shouldReceive('forgetUser')->once();
 
         $this->service->anonymize($userId->value());
 

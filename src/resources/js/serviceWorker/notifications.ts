@@ -88,6 +88,34 @@ export function noticeNotification(
     return { title, options };
 }
 
+/** Tag of the test notice: a second test replaces the first. */
+const TEST_TAG = 'push-test';
+
+/**
+ * Whether a push message is the test sent from the «Avisos» tab (core#804): `{"test": true}`,
+ * which carries no notice.
+ */
+export function isTestPush(payload: unknown): boolean {
+    return field(payload, 'test') === true;
+}
+
+/**
+ * The test notice, with the site's own fixed text: nothing of the person travels in it.
+ */
+export function testNotification(settings: ServiceWorkerSettings): NotificationRequest {
+    const options: ShownNotificationOptions = {
+        body: settings.testBody,
+        tag: TEST_TAG,
+        data: { url: settings.testPath },
+    };
+
+    if (settings.icon !== '') {
+        options.icon = settings.icon;
+    }
+
+    return { title: settings.testTitle, options };
+}
+
 /**
  * The notification shown when the notice itself cannot be read: it only says there is one and
  * leads to the list of notices. A push message must always show something.

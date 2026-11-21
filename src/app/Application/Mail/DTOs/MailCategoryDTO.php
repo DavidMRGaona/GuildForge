@@ -30,6 +30,8 @@ final readonly class MailCategoryDTO
      * @param  bool  $digestible  Whether a person may get it as a daily digest instead (core#333). Never mandatory.
      * @param  bool  $mail  Whether it is sent by mail (every category before core#491 is).
      * @param  bool  $site  Whether it also appears in the site's notification centre, the bell (core#491).
+     * @param  bool  $pushSuggested  Whether the profile suggests receiving it as a browser push notification (core#804).
+     *                               Only with `site`; it never turns push on for anybody.
      */
     private function __construct(
         public string $key,
@@ -42,6 +44,7 @@ final readonly class MailCategoryDTO
         public bool $digestible = false,
         public bool $mail = true,
         public bool $site = false,
+        public bool $pushSuggested = false,
     ) {}
 
     /**
@@ -52,7 +55,9 @@ final readonly class MailCategoryDTO
      * joined, someone left), never those that ask to act soon.
      *
      * With `site: true` it also appears in the notification centre (core#491), with its own
-     * switch; `mail: false` keeps it out of mail altogether («me gusta»).
+     * switch; `mail: false` keeps it out of mail altogether («me gusta»). Its notices can also go
+     * out as browser push notifications, off until the person turns them on (core#804);
+     * `pushSuggested: true` marks it as worth it (a mention, a reply, something to review).
      *
      * @param  (Closure(object): bool)|null  $audience
      */
@@ -66,8 +71,9 @@ final readonly class MailCategoryDTO
         bool $digestible = false,
         bool $site = false,
         bool $mail = true,
+        bool $pushSuggested = false,
     ): self {
-        return new self($key, $section, $label, $description, null, $audience, $icon, $digestible, $mail, $site);
+        return new self($key, $section, $label, $description, null, $audience, $icon, $digestible, $mail, $site, $pushSuggested);
     }
 
     /**
@@ -88,6 +94,7 @@ final readonly class MailCategoryDTO
         bool $site = false,
         bool $mail = true,
     ): self {
+        // Never pushed: the bell and the mail already carry it, so there is no push to suggest
         return new self($key, $section, $label, $description, $reason, $audience, $icon, false, $mail, $site);
     }
 

@@ -636,6 +636,14 @@ class AppServiceProvider extends ServiceProvider
                 Limit::perHour(60)->by('user-hour:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
             ]
         );
+        // A test notice from the «Avisos» tab (core#804), each one a request to the push service
+        RateLimiter::for(
+            'web-push-test',
+            static fn (Request $request): array => [
+                Limit::perMinute(3)->by('user:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
+                Limit::perHour(10)->by('user-hour:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
+            ]
+        );
         // Two-factor authentication from the account settings (core#769): six attempts a minute per
         // account, since a code is typed on these routes too
         RateLimiter::for(
