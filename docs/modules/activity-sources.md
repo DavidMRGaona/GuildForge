@@ -17,6 +17,7 @@ A module that runs things people take part in (tables, tournaments, events, foru
 9. [Reading sources](#reading-sources)
 10. [Failing closed](#failing-closed)
 11. [Testing](#testing)
+12. [The core's own sources](#the-cores-own-sources)
 
 ## Pieces
 
@@ -231,3 +232,33 @@ A test with another base class can use the trait `ActivitySourceContractTests` d
 It checks that the type starts with the module, the source is registered and read by the core, `facts()` of an unknown id is empty, the facts of a counted subject pass the core's rules, the history walks to the end without repeats and agrees with `facts()`, `describe()` answers only for what was asked, and the attributes are valid. Override `unknownActivitySubjectId()` when the source's ids are not UUIDs.
 
 Test the privacy rule yourself, beyond the contract: a private table, a hidden category, an anonymous survey or a guest never appear in `facts()` or `history()`, the answer is the same with nobody signed in, an unreadable cursor throws, and each change that makes something stop counting publishes it (`Event::fake([ActivityRecorded::class])`).
+
+## The core's own sources
+
+The core reports three things only it knows (core#777), registered under `core.` in `ActivityServiceProvider::CORE_SOURCES`, before any module's. A consumer reads them like any other source, through `ActivityReaderInterface`. None of them depends on who is signed in, and none reports an anonymized or deactivated account (a deactivated profile cannot be seen by anybody, so it counts again only once restored).
+
+| Type | Kind | Role | Attributes | Subject id | Date (`occurredAt`) |
+|---|---|---|---|---|---|
+| `core.account` | `account` | `owner` | none | the account's UUID | when the account was created |
+| `core.profile-completed` | `profile_completed` | `owner` | none | the account's UUID | when the profile became complete |
+| `core.proposal` | `proposal` | `proposer` | `content_type`: `event` or `article` | `events:<uuid>` or `articles:<uuid>` | when a reviewer approved it |
+
+- **`core.account`**: one subject per active account, the account age. The consumer decides what seniority means from `occurredAt`.
+- **`core.profile-completed`**: the account has a public name, an avatar and a «Sobre mí» (`ProfileCompletenessRule`, written as a query in the source). The date is `user_profiles.completed_at`: `ProfileCompletion` sets it the first time all three are there and clears it when one goes, so changing something unrelated (visibility, banner, the text of «Sobre mí») never moves it. A profile that was already complete when the column was added has its last change as the date. If the profile stops being complete, `facts()` is empty; if it is completed again it counts again with the new date. What a consumer already granted is the consumer's business.
+- **`core.proposal`**: an event or article proposed from the web (core#570) that was approved, is still published and whose proposer's account is active. Content created in the panel is not a proposal. Unpublishing it in the panel, deleting it or deactivating or anonymizing the proposer stops it counting. The history goes through events first, then articles, each by id.
+
+**When they are published.** The core publishes through model observers, so any path counts: registration, the panel, a command, a seeder.
+
+| Change | Published |
+|---|---|
+| An account is created | `core.account`, `core.profile-completed` |
+| An account is anonymized, deactivated, restored or deleted | `core.account`, `core.profile-completed` and each of its approved proposals |
+| The public name or the avatar changes | `core.profile-completed` |
+| «Sobre mí» changes or the profile row is deleted | `core.profile-completed` |
+| A proposal is approved (reviewer or publishing directly), or an approved one is unpublished, published again, reassigned or deleted | `core.proposal` |
+
+Changes made with a query builder or a mass `update()` raise no model event and are not published; the consumer's recalculation (`history()`) corrects them.
+
+**Describing them.** `describe()` of an account or a profile names the person and links `/miembros/<handle>` only when the viewer may see the profile (`ProfileAccessRule`: the owner always, a hidden profile or a deactivated account nobody else); for anybody else the title names nobody («Cuenta de una persona») and there is no link. A proposal gives the title of the published event or article and its public link (`/eventos/<slug>`, `/articulos/<slug>`): counting already means published, which any guest can open.
+
+**Testing a core source** uses the trait directly (it is not a module): `use ActivitySourceContractTests;`, `activitySourceOwner()` returns `core`, and the test class has the database (`LazilyRefreshDatabase`). `Tests\Support\Activity\FakesActivityEvents` drops the scoped publisher when it fakes `ActivityRecorded`, so a publisher built before the fake does not dispatch for real. Observers resolve the publisher from the container on every call for the same reason: an observer lives as long as the process and the publisher is scoped.
