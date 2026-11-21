@@ -12,8 +12,9 @@ use ZipArchive;
 /**
  * Checks an .xlsx before openspout opens it, since openspout builds a whole row in memory and fills
  * the gaps up to its last cell reference: every entry is inflated once and its real bytes counted
- * (the sizes the archive declares can lie), and no row of any worksheet may reach past the last
- * column a spreadsheet has, whether through a cell reference or through cells without one.
+ * (the sizes the archive declares can lie), and in every entry, whatever its name (the workbook's
+ * relations may point a sheet anywhere), no row may reach past the last column a spreadsheet has,
+ * through a cell reference or through cells without one, nor carry a row number past its last row.
  */
 final class XlsxPreflight
 {
@@ -23,17 +24,19 @@ final class XlsxPreflight
     /** Columns of Excel and LibreOffice (A to XFD). */
     public const int MAX_SHEET_COLUMNS = 16384;
 
+    /** Rows of Excel and LibreOffice. */
+    public const int MAX_SHEET_ROWS = 1048576;
+
     private const int CHUNK_BYTES = 65536;
 
     /** A single tag longer than this is no worksheet. */
     private const int MAX_TAG_BYTES = 1048576;
 
-    private const string WORKSHEET_PATTERN = '#^xl/worksheets/[^/]+\.xml$#';
-
     /** `<row …>` and `<c …>` start tags, with or without a prefix; quoted values may hold `>`. */
     private const string TAG_PATTERN = '/<(?:[A-Za-z_][\w.-]*:)?(row|c)(?=[\s\/>])((?:[^>"\']|"[^"]*"|\'[^\']*\')*)>/';
 
-    private const string REFERENCE_PATTERN = '/(?:^|\s)r\s*=\s*(["\'])([A-Za-z]+)\d+\1/';
+    /** The `r` of a cell (`B7`) or of a row (`7`). */
+    private const string REFERENCE_PATTERN = '/(?:^|\s)r\s*=\s*(["\'])([A-Za-z]*)(\d+)\1/';
 
     public function check(string $path, SpreadsheetLimitsDTO $limits): void
     {
@@ -76,7 +79,6 @@ final class XlsxPreflight
             throw new SpreadsheetReadException(SpreadsheetReadFailure::Unreadable);
         }
 
-        $isWorksheet = preg_match(self::WORKSHEET_PATTERN, $name) === 1;
         $inflated = 0;
         $pending = '';
         $rowWidth = 0;
@@ -95,14 +97,10 @@ final class XlsxPreflight
                     throw new SpreadsheetReadException(SpreadsheetReadFailure::TooLarge, limit: $limits->maxBytes);
                 }
 
-                if ($isWorksheet) {
-                    $pending = $this->scan($pending.$chunk, $rowWidth, $limits, $maxColumns, final: false);
-                }
+                $pending = $this->scan($pending.$chunk, $rowWidth, $limits, $maxColumns, final: false);
             }
 
-            if ($isWorksheet) {
-                $this->scan($pending, $rowWidth, $limits, $maxColumns, final: true);
-            }
+            $this->scan($pending, $rowWidth, $limits, $maxColumns, final: true);
         } finally {
             fclose($stream);
         }
@@ -128,6 +126,13 @@ final class XlsxPreflight
         preg_match_all(self::TAG_PATTERN, $complete, $tags, PREG_SET_ORDER);
 
         foreach ($tags as $tag) {
+            $hasReference = preg_match(self::REFERENCE_PATTERN, $tag[2], $reference) === 1;
+
+            // openspout fills in every row up to the number it reads; the budget bounds the rest.
+            if ($hasReference && (strlen($reference[3]) > 7 || (int) $reference[3] > self::MAX_SHEET_ROWS)) {
+                throw new SpreadsheetReadException(SpreadsheetReadFailure::Unreadable);
+            }
+
             if ($tag[1] === 'row') {
                 $rowWidth = 0;
 
@@ -135,7 +140,7 @@ final class XlsxPreflight
             }
 
             // A cell without a reference takes the column after the previous one.
-            $rowWidth = preg_match(self::REFERENCE_PATTERN, $tag[2], $reference) === 1
+            $rowWidth = $hasReference && $reference[2] !== ''
                 ? max($rowWidth, $this->columnIndex($reference[2], $maxColumns))
                 : $rowWidth + 1;
 

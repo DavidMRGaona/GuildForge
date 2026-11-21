@@ -219,6 +219,45 @@ final class OpenSpoutSpreadsheetReaderTest extends TestCase
         );
     }
 
+    public function test_a_quote_inside_an_unquoted_csv_field_is_text_and_hides_no_separator(): void
+    {
+        $sheet = $this->reader->read($this->temporaryFile("Nombre;Nota\nAna;dijo \"hola\"\n\"Luis\";\"he said \"\"hi\"\"\"\n"));
+
+        $this->assertSame('dijo "hola"', $sheet->rows[0]->value('Nota'));
+        $this->assertSame('he said "hi"', $sheet->rows[1]->value('Nota'));
+
+        $this->assertFailure(SpreadsheetReadFailure::TooManyColumns, $this->temporaryFile('Nombre;a"b'.str_repeat(';', 20_000)."\nAna\n"));
+    }
+
+    public function test_every_part_of_the_workbook_is_checked_not_only_the_usual_sheet_names(): void
+    {
+        $rels = $this->entryOf(self::FIXTURES.'members.xlsx', 'xl/_rels/workbook.xml.rels');
+
+        $this->assertFailure(SpreadsheetReadFailure::TooManyColumns, $this->workbook([
+            'xl/_rels/workbook.xml.rels' => str_replace('worksheets/sheet1.xml', 'datos/hoja.xml', $rels),
+            'xl/datos/hoja.xml' => $this->sheetXml('<row r="1"><c r="A1" t="inlineStr"><is><t>Nombre</t></is></c><c r="ZZZZ1"/></row>'),
+        ]));
+    }
+
+    public function test_a_row_number_beyond_the_last_spreadsheet_row_is_refused_before_reading(): void
+    {
+        $this->assertFailure(SpreadsheetReadFailure::Unreadable, $this->workbook([
+            'xl/worksheets/sheet1.xml' => $this->sheetXml('<row r="1"><c r="A1" t="inlineStr"><is><t>Nombre</t></is></c></row><row r="2000000"/>'),
+        ]));
+    }
+
+    public function test_empty_rows_filled_in_by_openspout_count_against_the_budget(): void
+    {
+        $this->assertFailure(
+            SpreadsheetReadFailure::TooLarge,
+            $this->workbook(['xl/worksheets/sheet1.xml' => $this->sheetXml(
+                '<row r="1"><c r="A1" t="inlineStr"><is><t>Nombre</t></is></c></row>'
+                .'<row r="1000000"><c r="A1000000" t="inlineStr"><is><t>Ana</t></is></c></row>',
+            )]),
+            new SpreadsheetLimitsDTO(maxBytes: 200_000),
+        );
+    }
+
     public function test_it_stops_at_the_row_limit(): void
     {
         $exception = $this->assertFailure(SpreadsheetReadFailure::TooManyRows, self::FIXTURES.'members-utf8-bom.csv', new SpreadsheetLimitsDTO(maxRows: 2));
@@ -282,6 +321,16 @@ final class OpenSpoutSpreadsheetReaderTest extends TestCase
         $zip->close();
 
         return $path;
+    }
+
+    private function entryOf(string $path, string $name): string
+    {
+        $zip = new ZipArchive;
+        $zip->open($path);
+        $contents = (string) $zip->getFromName($name);
+        $zip->close();
+
+        return $contents;
     }
 
     private function sheetXml(string $rows): string

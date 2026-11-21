@@ -37,40 +37,15 @@ final readonly class CsvDialect
     }
 
     /**
-     * Whether some record has more fields than the cap, empty ones included, counted before openspout
-     * builds the row. Quoted fields may hold separators and line breaks; «""» toggles twice.
+     * The text in UTF-8, without BOM. Windows-1252 bytes it does not define become «?».
      */
-    public function hasRecordWiderThan(string $content, int $cap): bool
+    public function toUtf8(string $content): string
     {
-        $length = strlen($content);
-        $stops = $this->delimiter."\"\r\n";
-        $position = 0;
-        $fields = 1;
-        $quoted = false;
-
-        while ($position < $length) {
-            $position += strcspn($content, $quoted ? '"' : $stops, $position);
-
-            if ($position >= $length) {
-                break;
-            }
-
-            $character = $content[$position];
-
-            if ($character === '"') {
-                $quoted = ! $quoted;
-            } elseif ($character === $this->delimiter) {
-                if (++$fields > $cap) {
-                    return true;
-                }
-            } else {
-                $fields = 1;
-            }
-
-            $position++;
+        if ($this->encoding === self::UTF8) {
+            return str_starts_with($content, self::UTF8_BOM) ? substr($content, strlen(self::UTF8_BOM)) : $content;
         }
 
-        return false;
+        return mb_convert_encoding($content, self::UTF8, self::WINDOWS_1252);
     }
 
     private static function headerLine(string $text): string

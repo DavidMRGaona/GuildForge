@@ -51,6 +51,11 @@ final class CellText
         };
     }
 
+    public function ofText(string $text): string
+    {
+        return $this->trim($text);
+    }
+
     private function trim(string $text): string
     {
         return preg_replace('/^[\s\p{Z}\x{FEFF}\x{200B}]+|[\s\p{Z}\x{FEFF}\x{200B}]+$/u', '', $text) ?? trim($text);
