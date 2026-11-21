@@ -172,6 +172,53 @@ final class OpenSpoutSpreadsheetReaderTest extends TestCase
         $this->assertFailure(SpreadsheetReadFailure::TooLarge, $path, new SpreadsheetLimitsDTO(maxBytes: 20_000));
     }
 
+    public function test_it_counts_the_bytes_really_uncompressed_not_the_declared_ones(): void
+    {
+        $path = $this->workbook(['xl/worksheets/sheet1.xml' => str_repeat(' ', 4 * 1024 * 1024)]);
+        $this->understateUncompressedSizes($path);
+
+        try {
+            $this->reader->read($path, new SpreadsheetLimitsDTO(maxBytes: 20_000));
+            $this->fail('A workbook that lies about its sizes must not be read');
+        } catch (SpreadsheetReadException $exception) {
+            $this->assertContains($exception->reason, [SpreadsheetReadFailure::TooLarge, SpreadsheetReadFailure::Unreadable]);
+        }
+    }
+
+    public function test_a_csv_record_with_more_fields_than_any_spreadsheet_is_refused_before_reading(): void
+    {
+        $this->assertFailure(SpreadsheetReadFailure::TooManyColumns, $this->temporaryFile('Nombre'.str_repeat(';', 20_000)."\nAna\n"));
+    }
+
+    public function test_an_xlsx_cell_beyond_the_last_spreadsheet_column_is_refused_before_reading(): void
+    {
+        $this->assertFailure(SpreadsheetReadFailure::TooManyColumns, $this->workbook([
+            'xl/worksheets/sheet1.xml' => $this->sheetXml('<row r="1"><c r="A1" t="inlineStr"><is><t>Nombre</t></is></c><c r="ZZZZ1"/></row>'),
+        ]));
+    }
+
+    public function test_an_xlsx_row_with_more_cells_than_any_spreadsheet_is_refused_before_reading(): void
+    {
+        $this->assertFailure(SpreadsheetReadFailure::TooManyColumns, $this->workbook([
+            'xl/worksheets/sheet1.xml' => $this->sheetXml('<row r="1">'.str_repeat('<c/>', 16_385).'</row>'),
+        ]));
+    }
+
+    public function test_it_stops_when_far_away_empty_cells_add_up_beyond_the_cell_budget(): void
+    {
+        $rows = '<row r="1"><c r="A1" t="inlineStr"><is><t>Nombre</t></is></c></row>';
+
+        for ($row = 2; $row <= 400; $row++) {
+            $rows .= '<row r="'.$row.'"><c r="XFD'.$row.'"/></row>';
+        }
+
+        $this->assertFailure(
+            SpreadsheetReadFailure::TooLarge,
+            $this->workbook(['xl/worksheets/sheet1.xml' => $this->sheetXml($rows)]),
+            new SpreadsheetLimitsDTO(maxBytes: 200_000),
+        );
+    }
+
     public function test_it_stops_at_the_row_limit(): void
     {
         $exception = $this->assertFailure(SpreadsheetReadFailure::TooManyRows, self::FIXTURES.'members-utf8-bom.csv', new SpreadsheetLimitsDTO(maxRows: 2));
@@ -215,6 +262,52 @@ final class OpenSpoutSpreadsheetReaderTest extends TestCase
     private function rowNumbers(SpreadsheetDTO $sheet): array
     {
         return array_map(static fn ($row): int => $row->number, $sheet->rows);
+    }
+
+    /**
+     * A workbook built over a real one (members.xlsx), with the given entries replaced.
+     *
+     * @param  array<string, string>  $entries
+     */
+    private function workbook(array $entries): string
+    {
+        $path = $this->temporaryFile((string) file_get_contents(self::FIXTURES.'members.xlsx'));
+        $zip = new ZipArchive;
+        $zip->open($path);
+
+        foreach ($entries as $name => $contents) {
+            $zip->addFromString($name, $contents);
+        }
+
+        $zip->close();
+
+        return $path;
+    }
+
+    private function sheetXml(string $rows): string
+    {
+        return '<?xml version="1.0" encoding="UTF-8"?>'
+            .'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'
+            .$rows.'</sheetData></worksheet>';
+    }
+
+    /**
+     * Rewrites every uncompressed size in the archive's headers to 1 byte, as a crafted ZIP bomb would.
+     */
+    private function understateUncompressedSizes(string $path): void
+    {
+        $bytes = (string) file_get_contents($path);
+
+        foreach (["PK\x03\x04" => 22, "PK\x01\x02" => 24] as $signature => $offset) {
+            $position = 0;
+
+            while (($position = strpos($bytes, $signature, $position)) !== false) {
+                $bytes = substr_replace($bytes, pack('V', 1), $position + $offset, 4);
+                $position += 4;
+            }
+        }
+
+        file_put_contents($path, $bytes);
     }
 
     private function temporaryFile(string $contents): string

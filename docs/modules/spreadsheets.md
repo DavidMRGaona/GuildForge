@@ -72,9 +72,16 @@ Only the first sheet of an `.xlsx` is read; the others are ignored.
 |-------|---------|--------|
 | `maxRows` | `1000` | Rows with data below the header |
 | `maxColumns` | `50` | Width of the header and of every row, up to its last cell with text |
-| `maxBytes` | 5 MB | Size of the file. An `.xlsx` may also take at most 100 times that once uncompressed (`OpenSpoutSpreadsheetReader::MAX_XLSX_EXPANSION`), against ZIP bombs |
+| `maxBytes` | 5 MB | Size of the file. An `.xlsx` may also take at most 30 times that once uncompressed (`XlsxPreflight::MAX_EXPANSION`), against ZIP bombs |
 
 Rows are streamed: reaching a limit stops reading at once, without loading the rest of the file. A CSV is read whole once to tell its encoding, which `maxBytes` bounds.
+
+openspout builds each row whole, and fills in every empty cell up to the row's last cell, before the reader sees it. So, before opening the file, the reader also refuses:
+
+- an `.xlsx` whose entries inflate past that multiple, counting the bytes really inflated (an archive can declare smaller sizes than it holds), as `too_large`;
+- a CSV record or an `.xlsx` row reaching past column 16384 (`XlsxPreflight::MAX_SHEET_COLUMNS`, the last one Excel and LibreOffice have, or `maxColumns` if larger), with its empty fields, as `too_many_columns`;
+
+and, while reading, stops as `too_large` once openspout has built more cells, empty ones included, than `maxBytes` (at least 100000, `OpenSpoutSpreadsheetReader::MIN_CELL_BUDGET`): empty cells far to the right of every row would otherwise cost time without limit.
 
 ### Failures
 
@@ -86,8 +93,8 @@ Rows are streamed: reaching a limit stops reading at once, without loading the r
 | `unreadable` | Missing, not a file, damaged, or a Windows-1252 byte that does not exist |
 | `empty` | No header, or no row with data below it |
 | `too_many_rows` | More than `maxRows` data rows |
-| `too_many_columns` | A header or row wider than `maxColumns` |
-| `too_large` | Over `maxBytes`, or an `.xlsx` that expands too much |
+| `too_many_columns` | A header or row wider than `maxColumns`, or a record past the last spreadsheet column |
+| `too_large` | Over `maxBytes`, an `.xlsx` that expands too much, or more cells than the budget |
 | `duplicate_headers` | Two headers equal ignoring case, accents and spacing (`Teléfono` and `TELEFONO`) |
 
 Neither the message nor a previous exception carries the file's content: log the `reason`, never the rows. `SpreadsheetReadErrorMessage::for($exception)` gives the person a translated message (`lang/*/spreadsheets.php`) with the limit (`2 MB`, `1000`) or the column number.

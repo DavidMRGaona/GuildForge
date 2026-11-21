@@ -36,6 +36,43 @@ final readonly class CsvDialect
         return new self($encoding, self::delimiterOf(self::headerLine($text)));
     }
 
+    /**
+     * Whether some record has more fields than the cap, empty ones included, counted before openspout
+     * builds the row. Quoted fields may hold separators and line breaks; «""» toggles twice.
+     */
+    public function hasRecordWiderThan(string $content, int $cap): bool
+    {
+        $length = strlen($content);
+        $stops = $this->delimiter."\"\r\n";
+        $position = 0;
+        $fields = 1;
+        $quoted = false;
+
+        while ($position < $length) {
+            $position += strcspn($content, $quoted ? '"' : $stops, $position);
+
+            if ($position >= $length) {
+                break;
+            }
+
+            $character = $content[$position];
+
+            if ($character === '"') {
+                $quoted = ! $quoted;
+            } elseif ($character === $this->delimiter) {
+                if (++$fields > $cap) {
+                    return true;
+                }
+            } else {
+                $fields = 1;
+            }
+
+            $position++;
+        }
+
+        return false;
+    }
+
     private static function headerLine(string $text): string
     {
         return preg_match('/^.*[^\s;,"].*$/m', $text, $match) === 1 ? $match[0] : '';

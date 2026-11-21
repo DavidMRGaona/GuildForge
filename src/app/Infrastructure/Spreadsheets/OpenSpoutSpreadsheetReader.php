@@ -18,7 +18,6 @@ use OpenSpout\Reader\CSV\Options as CsvOptions;
 use OpenSpout\Reader\CSV\Reader as CsvReader;
 use OpenSpout\Reader\XLSX\Options as XlsxOptions;
 use OpenSpout\Reader\XLSX\Reader as XlsxReader;
-use ZipArchive;
 
 /**
  * SpreadsheetReaderInterface over openspout. Rows are streamed: reaching a limit stops at once.
@@ -26,8 +25,11 @@ use ZipArchive;
  */
 final readonly class OpenSpoutSpreadsheetReader implements SpreadsheetReaderInterface
 {
-    /** An .xlsx may take at most this many times its size once uncompressed (a ZIP bomb guard). */
-    public const int MAX_XLSX_EXPANSION = 100;
+    /**
+     * Cells openspout may build in one read, empty ones included (at least this many, else maxBytes):
+     * far-away empty cells are filled in by openspout and would otherwise cost time without limit.
+     */
+    public const int MIN_CELL_BUDGET = 100_000;
 
     private const string ZIP_SIGNATURE = "PK\x03\x04";
 
@@ -41,6 +43,7 @@ final readonly class OpenSpoutSpreadsheetReader implements SpreadsheetReaderInte
 
     public function __construct(
         private CellText $cellText = new CellText,
+        private XlsxPreflight $preflight = new XlsxPreflight,
     ) {}
 
     public function read(string $path, SpreadsheetLimitsDTO $limits = new SpreadsheetLimitsDTO): SpreadsheetDTO
@@ -55,10 +58,11 @@ final readonly class OpenSpoutSpreadsheetReader implements SpreadsheetReaderInte
             throw new SpreadsheetReadException(SpreadsheetReadFailure::TooLarge, limit: $limits->maxBytes);
         }
 
-        [$format, $reader] = $this->readerFor($path, $limits);
-
         try {
+            [$format, $reader] = $this->readerFor($path, $limits);
             $reader->open($path);
+        } catch (SpreadsheetReadException $exception) {
+            throw $exception;
         } catch (Exception) {
             throw new SpreadsheetReadException(SpreadsheetReadFailure::Unreadable);
         }
@@ -99,7 +103,7 @@ final readonly class OpenSpoutSpreadsheetReader implements SpreadsheetReaderInte
         }
 
         if (str_starts_with($signature, self::ZIP_SIGNATURE) || str_starts_with($signature, self::EMPTY_ZIP_SIGNATURE)) {
-            $this->assertWorkbook($path, $limits);
+            $this->preflight->check($path, $limits);
 
             $options = new XlsxOptions;
             $options->SHOULD_FORMAT_DATES = false;
@@ -125,6 +129,11 @@ final readonly class OpenSpoutSpreadsheetReader implements SpreadsheetReaderInte
         }
 
         $dialect = CsvDialect::detect($content);
+
+        if ($dialect->hasRecordWiderThan($content, max(XlsxPreflight::MAX_SHEET_COLUMNS, $limits->maxColumns))) {
+            throw new SpreadsheetReadException(SpreadsheetReadFailure::TooManyColumns, limit: $limits->maxColumns);
+        }
+
         unset($content);
 
         $options = new CsvOptions;
@@ -134,39 +143,6 @@ final readonly class OpenSpoutSpreadsheetReader implements SpreadsheetReaderInte
         $options->SHOULD_PRESERVE_EMPTY_ROWS = true;
 
         return [SpreadsheetFormat::Csv, new CsvReader($options)];
-    }
-
-    private function assertWorkbook(string $path, SpreadsheetLimitsDTO $limits): void
-    {
-        $zip = new ZipArchive;
-
-        if ($zip->open($path, ZipArchive::RDONLY) !== true) {
-            throw new SpreadsheetReadException(SpreadsheetReadFailure::Unreadable);
-        }
-
-        try {
-            if ($zip->locateName('[Content_Types].xml') === false || $zip->locateName('xl/workbook.xml') === false) {
-                throw new SpreadsheetReadException(SpreadsheetReadFailure::UnsupportedType);
-            }
-
-            $expanded = 0;
-
-            for ($index = 0; $index < $zip->numFiles; $index++) {
-                $entry = $zip->statIndex($index);
-
-                if ($entry === false) {
-                    throw new SpreadsheetReadException(SpreadsheetReadFailure::Unreadable);
-                }
-
-                $expanded += $entry['size'];
-            }
-
-            if ($expanded > $limits->maxBytes * self::MAX_XLSX_EXPANSION) {
-                throw new SpreadsheetReadException(SpreadsheetReadFailure::TooLarge, limit: $limits->maxBytes);
-            }
-        } finally {
-            $zip->close();
-        }
     }
 
     /**
@@ -192,8 +168,15 @@ final readonly class OpenSpoutSpreadsheetReader implements SpreadsheetReaderInte
     {
         $headers = null;
         $collected = [];
+        $cellBudget = max(self::MIN_CELL_BUDGET, $limits->maxBytes);
 
         foreach ($rows as $number => $cells) {
+            $cellBudget -= count($cells);
+
+            if ($cellBudget < 0) {
+                throw new SpreadsheetReadException(SpreadsheetReadFailure::TooLarge, limit: $limits->maxBytes);
+            }
+
             $width = $this->widthOf($cells);
 
             if ($width === 0) {
