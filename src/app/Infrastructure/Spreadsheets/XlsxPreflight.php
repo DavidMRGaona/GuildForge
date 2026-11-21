@@ -178,6 +178,11 @@ final class XlsxPreflight
                 return;
             }
 
+            // External targets (URLs) are never opened.
+            if ($xml->getAttribute('TargetMode') === 'External') {
+                return;
+            }
+
             $target = $this->resolve((string) $xml->getAttribute('Target'));
 
             if ($target !== null && in_array($target, $names, true)) {
@@ -189,28 +194,25 @@ final class XlsxPreflight
     }
 
     /**
-     * A relation target as an entry name: absolute from the archive root, else relative to xl/.
+     * A relation target as the entry name openspout opens, taken literally as it does: under xl/
+     * unless it already starts with /xl/, without resolving «.», «..» or doubled slashes. A name
+     * with any of them (no spreadsheet program writes one) could make this check and openspout
+     * read different entries, so it is unreadable.
      */
     private function resolve(string $target): ?string
     {
-        $path = str_starts_with($target, '/') ? $target : 'xl/'.$target;
-        $segments = [];
-
-        foreach (explode('/', $path) as $segment) {
-            if ($segment === '' || $segment === '.') {
-                continue;
-            }
-
-            if ($segment === '..') {
-                array_pop($segments);
-
-                continue;
-            }
-
-            $segments[] = $segment;
+        if ($target === '') {
+            return null;
         }
 
-        return $segments === [] ? null : implode('/', $segments);
+        $name = str_starts_with($target, '/xl/') ? substr($target, 1) : 'xl/'.$target;
+        $segments = explode('/', $name);
+
+        if (in_array('', $segments, true) || in_array('.', $segments, true) || in_array('..', $segments, true)) {
+            throw new SpreadsheetReadException(SpreadsheetReadFailure::Unreadable);
+        }
+
+        return $name;
     }
 
     private function scan(string $uri, SpreadsheetLimitsDTO $limits, int $maxColumns, int $maxElements): void

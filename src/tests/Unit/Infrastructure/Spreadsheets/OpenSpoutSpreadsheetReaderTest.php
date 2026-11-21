@@ -314,6 +314,27 @@ final class OpenSpoutSpreadsheetReaderTest extends TestCase
         ]));
     }
 
+    public function test_sheet_targets_are_resolved_as_openspout_resolves_them(): void
+    {
+        $rels = $this->entryOf(self::FIXTURES.'members.xlsx', 'xl/_rels/workbook.xml.rels');
+        $wide = $this->sheetXml('<row r="1"><c r="A1" t="inlineStr"><is><t>Nombre</t></is></c><c r="XFE1"/></row><row r="2"><c r="A2" t="inlineStr"><is><t>Ana</t></is></c></row>');
+
+        // openspout takes the name literally: "../datos/hoja.bin" is the entry "xl/../datos/hoja.bin".
+        foreach (['../datos/hoja.bin' => 'xl/../datos/hoja.bin', '/datos/hoja.bin' => 'xl//datos/hoja.bin', './datos/hoja.bin' => 'xl/./datos/hoja.bin'] as $target => $entry) {
+            $this->assertFailure(SpreadsheetReadFailure::Unreadable, $this->workbook([
+                'xl/_rels/workbook.xml.rels' => str_replace('worksheets/sheet1.xml', $target, $rels),
+                $entry => $wide,
+                'datos/hoja.bin' => $this->sheetXml('<row r="1"><c r="A1" t="inlineStr"><is><t>Nombre</t></is></c></row>'),
+            ]));
+        }
+
+        // An absolute target inside xl/ is the usual entry.
+        $this->assertFailure(SpreadsheetReadFailure::TooManyColumns, $this->workbook([
+            'xl/_rels/workbook.xml.rels' => str_replace('worksheets/sheet1.xml', '/xl/datos/hoja.bin', $rels),
+            'xl/datos/hoja.bin' => $wide,
+        ]));
+    }
+
     public function test_a_row_number_beyond_the_last_spreadsheet_row_is_refused_before_reading(): void
     {
         $this->assertFailure(SpreadsheetReadFailure::TooManyRows, $this->workbook([
