@@ -10,6 +10,9 @@ namespace App\Infrastructure\Seo;
  */
 final readonly class CloudinaryImageUrlBuilder
 {
+    /** Where every image URL it builds lives; the content security policy allows images from it (core#776) */
+    public const string HOST = 'res.cloudinary.com';
+
     public const int OG_WIDTH = 1200;
 
     public const int OG_HEIGHT = 630;
@@ -162,7 +165,8 @@ final readonly class CloudinaryImageUrlBuilder
         $path = implode('/', array_map(rawurlencode(...), explode('/', $fileId)));
 
         return sprintf(
-            'https://res.cloudinary.com/%s/%s/upload/%s%s',
+            'https://%s/%s/%s/upload/%s%s',
+            self::HOST,
             $this->cloudName,
             $resourceType,
             $transformations !== null ? $transformations.'/' : '',
@@ -177,7 +181,8 @@ final readonly class CloudinaryImageUrlBuilder
         }
 
         return sprintf(
-            'https://res.cloudinary.com/%s/image/upload/%s/%s',
+            'https://%s/%s/image/upload/%s/%s',
+            self::HOST,
             $this->cloudName,
             $transformations,
             $this->normalizePublicId($publicId),

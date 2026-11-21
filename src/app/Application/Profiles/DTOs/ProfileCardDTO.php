@@ -26,6 +26,7 @@ final readonly class ProfileCardDTO
      * @param  string|null  $bannerUrl  https image URL, BANNER_WIDTH × BANNER_HEIGHT; null without banner
      * @param  string|null  $memberSince  when the account was created, ISO 8601 with the display zone's offset
      * @param  list<ResolvedProfileStatDTO>  $stats  at most ResolvedProfileDTO::CARD_STATS, in the owner's order
+     * @param  list<ProfileBadgeDTO>  $badges  the featured badges (core#776), at most ProfileBadgesInterface::MAX_PER_ACCOUNT
      */
     public function __construct(
         public string $handle,
@@ -37,12 +38,13 @@ final readonly class ProfileCardDTO
         public bool $showsMembership,
         public bool $isOwner,
         public array $stats,
+        public array $badges = [],
     ) {}
 
     /**
      * The JSON of `GET /miembros/{handle}/tarjeta` (docs/modules/profile-sections.md → Profile card).
      *
-     * @return array{handle: string, publicName: string|null, url: string, avatarUrl: string|null, bannerUrl: string|null, memberSince: string|null, showsMembership: bool, isOwner: bool, stats: list<array{key: string, label: string, value: int, url: string|null}>}
+     * @return array{handle: string, publicName: string|null, url: string, avatarUrl: string|null, bannerUrl: string|null, memberSince: string|null, showsMembership: bool, isOwner: bool, stats: list<array{key: string, label: string, value: int, url: string|null}>, badges: list<array{key: string, label: string, description: string, icon: string, colour: string, imageUrl: string|null, url: string|null}>}
      */
     public function toArray(): array
     {
@@ -56,6 +58,7 @@ final readonly class ProfileCardDTO
             'showsMembership' => $this->showsMembership,
             'isOwner' => $this->isOwner,
             'stats' => array_map(static fn (ResolvedProfileStatDTO $stat): array => $stat->toArray(), $this->stats),
+            'badges' => array_map(static fn (ProfileBadgeDTO $badge): array => $badge->toArray(), $this->badges),
         ];
     }
 }

@@ -594,6 +594,9 @@ export default {
             notFound: 'No se encontraron inscripciones',
         },
     },
+    profileBadges: {
+        list: 'Insignias destacadas',
+    },
     publicProfile: {
         noPublicName: 'Sin nombre público',
         membershipBadge: 'Socio',

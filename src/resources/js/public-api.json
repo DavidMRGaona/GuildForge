@@ -25,6 +25,7 @@
         "@/components/ui/ConfirmDialog.vue": "resources/js/components/ui/ConfirmDialog.vue",
         "@/components/ui/EmptyState.vue": "resources/js/components/ui/EmptyState.vue",
         "@/components/ui/LoadingSpinner.vue": "resources/js/components/ui/LoadingSpinner.vue",
+        "@/components/ui/ProfileBadges.vue": "resources/js/components/ui/ProfileBadges.vue",
         "@/composables/useAuth": "resources/js/composables/useAuth.ts",
         "@/composables/useCalendarLocale": "resources/js/composables/useCalendarLocale.ts",
         "@/composables/useFlashMessages": "resources/js/composables/useFlashMessages.ts",

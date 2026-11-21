@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Application\Profiles\Services\ProfileBadgesInterface;
+use App\Application\Profiles\Services\ProfileBadgeSourceRegistryInterface;
 use App\Application\Profiles\Services\ProfileCardServiceInterface;
 use App\Application\Profiles\Services\ProfileEditorInterface;
 use App\Application\Profiles\Services\ProfileLayoutOptionsInterface;
@@ -15,16 +17,20 @@ use App\Application\Profiles\Services\PublicProfileServiceInterface;
 use App\Application\Profiles\Services\UserProfileServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Profiles\Observers\UserProfileObserver;
+use App\Infrastructure\Profiles\ProfileBadgeCollector;
+use App\Infrastructure\Profiles\ProfileBadgeSourceRegistry;
 use App\Infrastructure\Profiles\ProfileEditor;
 use App\Infrastructure\Profiles\ProfileLayoutOptions;
 use App\Infrastructure\Profiles\ProfileRenderer;
 use App\Infrastructure\Profiles\ProfileSectionRegistry;
 use App\Infrastructure\Profiles\ProfileStatRegistry;
 use App\Infrastructure\Profiles\Sections\AboutProfileSection;
+use App\Infrastructure\Profiles\Services\ProfileBadges;
 use App\Infrastructure\Profiles\Services\ProfileCardService;
 use App\Infrastructure\Profiles\Services\PublicProfileService;
 use App\Infrastructure\Profiles\Services\UserProfileService;
 use App\Infrastructure\Profiles\StoredProfiles;
+use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -52,6 +58,12 @@ final class ProfilesServiceProvider extends ServiceProvider
             return $registry;
         });
         $this->app->singleton(ProfileStatRegistryInterface::class, static fn ($app): ProfileStatRegistry => new ProfileStatRegistry($app));
+        // Featured badges (core#776): sources kept as classes, built and asked once per request or job
+        $this->app->singleton(ProfileBadgeSourceRegistryInterface::class, static fn ($app): ProfileBadgeSourceRegistry => new ProfileBadgeSourceRegistry(
+            static fn (): Cache => $app->make(Cache::class),
+        ));
+        $this->app->scoped(ProfileBadgeCollector::class);
+        $this->app->bind(ProfileBadgesInterface::class, ProfileBadges::class);
         $this->app->scoped(StoredProfiles::class);
         // One renderer per request or job draws both the page and the card (core#744), so what it
         // built and read is shared; each interface asks for it, so replacing one leaves the other

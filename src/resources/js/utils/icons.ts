@@ -4,6 +4,7 @@ import type { ProfileTabIcon as ProfileTabIconType } from '@/types/profile';
 import type { NotificationType } from '@/composables/useNotifications';
 import {
     AtSign,
+    Award,
     Ban,
     Bell,
     BookOpen,
@@ -11,6 +12,7 @@ import {
     Calendar,
     CalendarCheck,
     CalendarDays,
+    Castle,
     ChartBar,
     CircleAlert,
     CircleCheck,
@@ -18,12 +20,19 @@ import {
     ClipboardCheck,
     ClipboardList,
     Clock,
+    Compass,
     CreditCard,
+    Crown,
     Dices,
+    Feather,
     FileText,
     Flag,
+    Flame,
+    Gem,
+    HandHeart,
     Handshake,
     Heart,
+    Hourglass,
     IdCard,
     Image,
     Images,
@@ -32,19 +41,28 @@ import {
     Mail,
     Map,
     MapPin,
+    Medal,
     Megaphone,
     MessageCircle,
     MessageSquare,
     Monitor,
+    Mountain,
     Newspaper,
     Puzzle,
     Quote,
+    Rocket,
+    ScrollText,
     Settings,
     Settings2,
+    Shield,
     ShieldCheck,
     Sparkles,
+    Sprout,
     SquarePen,
+    Star,
+    Sword,
     Swords,
+    Target,
     ThumbsUp,
     Ticket,
     TriangleAlert,
@@ -53,6 +71,8 @@ import {
     UserPlus,
     Users,
     Vote,
+    WandSparkles,
+    Zap,
 } from '@lucide/vue';
 
 export const activityIconMap: Record<ActivityIcon, Component> = {
@@ -189,5 +209,55 @@ export function resolveSiteNotificationIcon(icon: string | null): Component {
         (icon !== null && Object.hasOwn(siteNotificationIconMap, icon)
             ? siteNotificationIconMap[icon]
             : undefined) ?? Bell
+    );
+}
+
+/**
+ * Icons a module may give a profile badge (core#776). A closed list, like the bell's: the server
+ * keeps the same names in `ProfileBadgeIcons::NAMES` and a test checks both lists match.
+ */
+export const profileBadgeIconMap: Record<string, Component> = {
+    award: Award,
+    'book-open': BookOpen,
+    'calendar-check': CalendarCheck,
+    castle: Castle,
+    compass: Compass,
+    crown: Crown,
+    dices: Dices,
+    feather: Feather,
+    flag: Flag,
+    flame: Flame,
+    gem: Gem,
+    'hand-heart': HandHeart,
+    handshake: Handshake,
+    heart: Heart,
+    hourglass: Hourglass,
+    map: Map,
+    'map-pin': MapPin,
+    medal: Medal,
+    'message-square': MessageSquare,
+    mountain: Mountain,
+    puzzle: Puzzle,
+    rocket: Rocket,
+    'scroll-text': ScrollText,
+    shield: Shield,
+    sparkles: Sparkles,
+    sprout: Sprout,
+    star: Star,
+    sword: Sword,
+    swords: Swords,
+    target: Target,
+    ticket: Ticket,
+    trophy: Trophy,
+    users: Users,
+    vote: Vote,
+    'wand-sparkles': WandSparkles,
+    zap: Zap,
+};
+
+/** Resolve the icon of a profile badge, falling back to an award. */
+export function resolveProfileBadgeIcon(icon: string): Component {
+    return (
+        (Object.hasOwn(profileBadgeIconMap, icon) ? profileBadgeIconMap[icon] : undefined) ?? Award
     );
 }

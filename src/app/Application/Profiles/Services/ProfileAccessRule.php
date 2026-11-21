@@ -38,6 +38,45 @@ final readonly class ProfileAccessRule
 
     public function canView(PublicProfileDTO $profile, ?Authenticatable $viewer): bool
     {
+        $checks = [];
+        $logged = false;
+
+        return $this->decide($profile, $viewer, $checks, $logged);
+    }
+
+    /**
+     * The profiles of a page the viewer may see (core#776), decided exactly as canView() would for
+     * each one, but asking about the viewer (email, membership) at most once for all of them. A check
+     * that throws hides every profile that needs it and is logged once.
+     *
+     * @param  list<PublicProfileDTO>  $profiles
+     * @return list<string> the account ids of the visible ones, in the same order
+     */
+    public function visibleAmong(array $profiles, ?Authenticatable $viewer): array
+    {
+        $checks = [];
+        $logged = false;
+        $visible = [];
+
+        foreach ($profiles as $profile) {
+            if ($this->decide($profile, $viewer, $checks, $logged)) {
+                $visible[] = $profile->userId;
+            }
+        }
+
+        return $visible;
+    }
+
+    public function isOwner(PublicProfileDTO $profile, ?Authenticatable $viewer): bool
+    {
+        return $viewer instanceof Authenticatable && (string) $viewer->getAuthIdentifier() === $profile->userId;
+    }
+
+    /**
+     * @param  array<string, bool|Throwable>  $checks  what was already asked about the viewer: the answer, or what it threw
+     */
+    private function decide(PublicProfileDTO $profile, ?Authenticatable $viewer, array &$checks, bool &$logged): bool
+    {
         if ($profile->deactivated || $profile->anonymized) {
             return false;
         }
@@ -53,31 +92,56 @@ final readonly class ProfileAccessRule
         try {
             return match ($profile->visibility) {
                 ProfileVisibility::Public => true,
-                ProfileVisibility::Members => $this->isMember($viewer),
+                ProfileVisibility::Members => $this->isMember($viewer, $checks),
                 // Stricter than `members`, never looser: a member who must still verify sees neither
-                ProfileVisibility::Association => $this->isMember($viewer) && $this->membership->isAssociationMember($viewer),
+                ProfileVisibility::Association => $this->isMember($viewer, $checks)
+                    && $this->asked($checks, 'membership', fn (): bool => $this->membership->isAssociationMember($viewer)),
                 ProfileVisibility::Hidden => false,
             };
         } catch (Throwable $exception) {
-            $this->log->warning('Public profile access check failed; hidden.', [
-                'user_id' => $profile->userId,
-                'exception' => $exception::class,
-            ]);
+            if (! $logged) {
+                $logged = true;
+                $this->log->warning('Public profile access check failed; hidden.', [
+                    'user_id' => $profile->userId,
+                    'exception' => $exception::class,
+                ]);
+            }
 
             return false;
         }
     }
 
-    public function isOwner(PublicProfileDTO $profile, ?Authenticatable $viewer): bool
+    /**
+     * @param  array<string, bool|Throwable>  $checks
+     *
+     * @phpstan-assert-if-true Authenticatable $viewer
+     */
+    private function isMember(?Authenticatable $viewer, array &$checks): bool
     {
-        return $viewer instanceof Authenticatable && (string) $viewer->getAuthIdentifier() === $profile->userId;
+        return $viewer instanceof Authenticatable
+            && ! $this->asked($checks, 'email', fn (): bool => $this->emails->mustVerify($viewer));
     }
 
     /**
-     * @phpstan-assert-if-true Authenticatable $viewer
+     * The answer of a check about the viewer, asked only the first time; one that threw throws again.
+     *
+     * @param  array<string, bool|Throwable>  $checks
+     * @param  callable(): bool  $check
      */
-    private function isMember(?Authenticatable $viewer): bool
+    private function asked(array &$checks, string $name, callable $check): bool
     {
-        return $viewer instanceof Authenticatable && ! $this->emails->mustVerify($viewer);
+        if (! array_key_exists($name, $checks)) {
+            try {
+                $checks[$name] = $check();
+            } catch (Throwable $exception) {
+                $checks[$name] = $exception;
+            }
+        }
+
+        if ($checks[$name] instanceof Throwable) {
+            throw $checks[$name];
+        }
+
+        return $checks[$name];
     }
 }

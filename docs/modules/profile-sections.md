@@ -1,6 +1,6 @@
 # Profile sections
 
-Every account has a public profile at `/miembros/<handle>`. The core draws its header (public name, avatar, banner, «Socio» badge, member since) and its own «Sobre mí» section; the modules add the rest: a list of the person's latest forum posts, the tables they run, how many messages they wrote. A module offers **sections** (a list, a summary or a text, drawn by a Vue component) and **stats** (a number with an optional link); the owner chooses, in the profile editor, which ones show and in what order. No module depends on another, and none of them decides who may see the profile: the core does, before anything is drawn.
+Every account has a public profile at `/miembros/<handle>`. The core draws its header (public name, avatar, banner, «Socio» badge, member since) and its own «Sobre mí» section; the modules add the rest: a list of the person's latest forum posts, the tables they run, how many messages they wrote. A module offers **sections** (a list, a summary or a text, drawn by a Vue component) and **stats** (a number with an optional link); the owner chooses, in the profile editor, which ones show and in what order. A module may also give **featured badges** (up to three under the name, core ≥ the release with #776): which ones is the module's choice (the achievements module lets the owner star them in its own section), not the profile editor's. No module depends on another, and none of them decides who may see the profile: the core does, before anything is drawn.
 
 Requires core ≥ the release with #742; set `requires.core` to it.
 
@@ -13,9 +13,10 @@ Requires core ≥ the release with #742; set `requires.core` to it.
 5. [The owner's layout](#the-owners-layout)
 6. [How the core draws a profile](#how-the-core-draws-a-profile)
 7. [Profile card](#profile-card)
-8. [Failing closed](#failing-closed)
-9. [The core's section](#the-cores-section)
-10. [Testing](#testing)
+8. [Badges](#badges)
+9. [Failing closed](#failing-closed)
+10. [The core's section](#the-cores-section)
+11. [Testing](#testing)
 
 ## Offering a section
 
@@ -248,7 +249,8 @@ Saving (`PUT /miembros/{handle}`) accepts only the keys offered at that moment: 
         "bannerPublicId": null,
         "memberSince": "2024-06-03T12:00:00+02:00",
         "showsMembership": true,
-        "isOwner": false
+        "isOwner": false,
+        "badges": [{ "key": "achievements.first-game", "label": "Primera partida", "description": "Jugó su primera partida.", "icon": "dices", "colour": "amber", "imageUrl": null, "url": "/logros" }]
     },
     "stats": [{ "key": "forum.messages", "label": "Mensajes", "value": 394, "url": "/foro/buscar?autor=ana-garcia" }],
     "sections": {
@@ -258,7 +260,7 @@ Saving (`PUT /miembros/{handle}`) accepts only the keys offered at that moment: 
 }
 ```
 
-   - `header.publicName` is the account's public name (`display_name`), read by the renderer, never taken from the caller; `header.memberSince` is when the account was created, an ISO instant with the display zone's offset (`TimezoneServiceInterface::iso()`); `showsMembership` is true only when the owner chose to show the badge and holds the association role (a failing check hides it); `isOwner` says whether the viewer is the owner. The account name and the email never travel.
+   - `header.publicName` is the account's public name (`display_name`), read by the renderer, never taken from the caller; `header.memberSince` is when the account was created, an ISO instant with the display zone's offset (`TimezoneServiceInterface::iso()`); `showsMembership` is true only when the owner chose to show the badge and holds the association role (a failing check hides it); `isOwner` says whether the viewer is the owner; `badges` are the owner's featured [badges](#badges), drawn under the name. The account name and the email never travel.
    - `stats` and each region's `sections` are in the owner's order and hold only what can be drawn; empty props go out as `{}`.
 
 3. **Draw.** Each section with `ProfileSection.vue` from the public frontend API; it draws the card and the title (an `<h2>` labelling the `<section>`) and the owner's component inside:
@@ -303,7 +305,8 @@ Route `profiles.card`. A visible profile answers `200` with this JSON (`ProfileC
     "memberSince": "2024-06-03T12:00:00+02:00",
     "showsMembership": true,
     "isOwner": false,
-    "stats": [{ "key": "forum.messages", "label": "Mensajes", "value": 394, "url": "/foro/buscar?autor=ana-garcia" }]
+    "stats": [{ "key": "forum.messages", "label": "Mensajes", "value": 394, "url": "/foro/buscar?autor=ana-garcia" }],
+    "badges": [{ "key": "achievements.first-game", "label": "Primera partida", "description": "Jugó su primera partida.", "icon": "dices", "colour": "amber", "imageUrl": null, "url": "/logros" }]
 }
 ```
 
@@ -318,6 +321,7 @@ Route `profiles.card`. A visible profile answers `200` with this JSON (`ProfileC
 | `showsMembership` | Draw the «Socio» badge: true only when the owner chose to show it and holds the association role. |
 | `isOwner` | The person asking is the owner (hide «Ignorar», offer «Editar perfil»…). |
 | `stats` | At most four `{key, label, value, url}`, in the owner's order; `url` is a path or an `https` address of the site (`LinkTargetRule`), or `null`. |
+| `badges` | At most three featured [badges](#badges) (`ProfileBadge`), in the owner's order; draw them with `ProfileBadges.vue`. |
 
 Nothing else travels: never the account id, the account name, the email, the roles or the bio.
 
@@ -355,10 +359,132 @@ return [
 
 - `ProfileCardServiceInterface` (`App\Application\Profiles\Services`), an interface of its own so a module's test doubles of it keep working when the core's other profile services grow; its only method is `card(string $userId, ?Authenticatable $viewer): ?ProfileCardDTO`. The id is read without regard to case. The viewer is the person who will see the card (the request's user, or `null` for a guest), never the author: the access rule decides for them.
 - `null` when the viewer may not see the profile, when the account has no profile (an id that is not a UUID, unknown, deactivated, anonymized, no profile row) or when anything fails (logged as a warning with the account id and the exception's class only). It never throws; an id that is not a UUID is not even looked up.
-- `ProfileCardDTO` holds the fields of the JSON above as properties (`$card->stats` is a list of `ResolvedProfileStatDTO`); `toArray()` is that JSON.
+- `ProfileCardDTO` holds the fields of the JSON above as properties (`$card->stats` is a list of `ResolvedProfileStatDTO`, `$card->badges` of `ProfileBadgeDTO`); `toArray()` is that JSON.
 - Ask it only for people the page actually shows as such (an author whose name the viewer sees), never for a hidden NPC author: `card()` decides who may see the profile, not whether showing that this account wrote something is allowed.
 - Each call reads the profile and counts up to four stats: for a list, ask when a card opens (the endpoint) rather than for every author at once.
 - It asks for the request's (or job's) profile rows and renderer on each call, so it can be injected anywhere, a singleton included.
+
+## Badges
+
+A profile shows up to three **featured badges** under the name, on its card and, through the batched call below, next to its owner wherever a module shows authors (the forum's post headers). Requires core ≥ the release with #776. Any module may give them through a **badge source**, and the source decides which badges are featured (the achievements module: the ones the owner starred in its section, else the rarest); the core's profile editor has no say in them. No module knows another: the forum draws whatever badges the core gives it, without knowing where they come from.
+
+### Giving badges: `ProfileBadgeSourceInterface`
+
+Implement `App\Application\Profiles\Contracts\ProfileBadgeSourceInterface` and return it from `registerProfileBadgeSources()`:
+
+```php
+use App\Application\Profiles\Contracts\ProfileBadgeSourceInterface;
+use App\Application\Profiles\DTOs\ProfileBadgeDTO;
+use App\Domain\Profiles\ProfileBadgeColour;
+
+final readonly class FeaturedAchievementBadges implements ProfileBadgeSourceInterface
+{
+    public function __construct(private FeaturedAchievementsQuery $featured) {}
+
+    public function badgesFor(array $userIds): array
+    {
+        $badges = [];
+
+        // One query for every account of the page, never one per account
+        foreach ($this->featured->forUsers($userIds) as $row) {
+            $badges[$row->user_id][] = new ProfileBadgeDTO(
+                key: 'achievements.'.$row->slug,
+                label: $row->name,
+                description: $row->description,
+                icon: $row->icon,                          // one of ProfileBadgeIcons::NAMES
+                colour: ProfileBadgeColour::from($row->colour),
+                imageUrl: $row->image_url,                 // https://res.cloudinary.com/…, or null
+                url: route('achievements.show', $row->slug, absolute: false),
+            );
+        }
+
+        return $badges;
+    }
+}
+
+// In the module's service provider
+public function registerProfileBadgeSources(): array
+{
+    return [FeaturedAchievementBadges::class];
+}
+```
+
+- **Batched.** `badgesFor(list<string> $userIds): array<string, list<ProfileBadgeDTO>>` gets every account of a page at once (in lower case, each once) and answers all of them with one query. An account with no badge may be left out; accounts it was not asked about are ignored.
+- **The core decided already.** The core asks a source only about accounts whose profile the person viewing may see (`ProfileAccessRule`), and the source is never told who is viewing: a badge is part of the profile, not of a page with its own permissions. So a badge never says anything the owner keeps private elsewhere (a badge «Ganó el torneo X» of a tournament the viewer could not see is not a featured badge).
+- **At most three per account** (`ProfileBadgesInterface::MAX_PER_ACCOUNT`), in the owner's order. Sources are asked in the order they were registered and the first three badges drawable win; a source that gives more than three is cut, with a warning.
+- **Built per request.** The registry keeps classes, never instances; the source is built from the container once per request or job.
+
+`ProfileBadgeDTO` (`App\Application\Profiles\DTOs`), checked by the core before anybody sees it:
+
+| Field | Rule (a badge that breaks it is left out, with a warning) |
+|---|---|
+| `key` | `<module>.<badge>` of the source's own module, with the rules of a section key (`ProfileKey`); unique among one account's badges (a repeated key is left out). |
+| `label` | The badge's name, translated: its accessible name. Plain text: control characters and invisible format characters (bidirectional and zero-width marks, Unicode `Cf`) are dropped, blanks collapse to one space, cut to 60 characters (`LABEL_MAX_LENGTH`). Empty after that: left out. On the badge itself it is cut with an ellipsis on narrow screens; the tooltip shows it whole. |
+| `description` | What it was given for, translated; may be empty. Same cleaning, cut to 200 characters (`DESCRIPTION_MAX_LENGTH`). |
+| `icon` | One of `App\Application\Profiles\ProfileBadgeIcons::NAMES` (Lucide names): `award`, `book-open`, `calendar-check`, `castle`, `compass`, `crown`, `dices`, `feather`, `flag`, `flame`, `gem`, `hand-heart`, `handshake`, `heart`, `hourglass`, `map`, `map-pin`, `medal`, `message-square`, `mountain`, `puzzle`, `rocket`, `scroll-text`, `shield`, `sparkles`, `sprout`, `star`, `sword`, `swords`, `target`, `ticket`, `trophy`, `users`, `vote`, `wand-sparkles`, `zap`. Check yours in tests with `ProfileBadgeIcons::isKnown()`. |
+| `colour` | `App\Domain\Profiles\ProfileBadgeColour`: `slate`, `red`, `orange`, `amber`, `green`, `teal`, `sky`, `blue`, `violet`, `pink`. Each is a 700 shade with white text in the light scheme and a 300 shade with dark text in the dark one: at least 4.5:1 in both. |
+| `imageUrl` | Optional, an `https` address of Cloudinary (`res.cloudinary.com`, `CloudinaryImageUrlBuilder::HOST`, the only image host the site's content security policy allows; any other host, a port, a path or `http` leaves the badge out). Drawn in a circle instead of the icon, at 24 × 24 px: give a square crop of 48 × 48 for dense screens. |
+| `url` | Optional, where the badge links to: an absolute `https` address or a path of the site (`LinkTargetRule`). |
+
+### Showing authors' badges: `ProfileBadgesInterface::forAuthors()`
+
+A module that shows authors (a forum thread, a list of comments) asks the core once per page:
+
+```php
+use App\Application\Profiles\DTOs\ProfileBadgeDTO;
+use App\Application\Profiles\Services\ProfileBadgesInterface;
+
+// ProfileBadgesInterface $badges, injected anywhere (it asks for the request's rows on each call)
+$byAuthor = $this->badges->forAuthors($authorIds, $request->user());
+
+$posts = array_map(fn ($post): array => [
+    // ...
+    'authorBadges' => array_map(
+        static fn (ProfileBadgeDTO $badge): array => $badge->toArray(),
+        $byAuthor[strtolower($post->authorId)] ?? [],
+    ),
+], $page);
+```
+
+- `forAuthors(list<string> $userIds, ?Authenticatable $viewer): array<string, list<ProfileBadgeDTO>>`: account id in lower case => badges, in the order of the ids; an account without badges is left out. Repeated ids and anything that is not an account id are ignored.
+- **One call per page**: the profile rows and the accounts are read with one query each, the access rule asks about the viewer once, and each source is asked once. With no source registered (no module gives badges) it reads nothing.
+- **Only what the viewer may see**: nothing for a profile that is hidden from them, deactivated, anonymized, without a profile row or without a public name (except for its owner).
+- Never for an author the page does not show as such (a hidden NPC author, an anonymous post): the call decides who may see the profile, not whether showing that this account wrote something is allowed.
+- It never throws: any failure gives no badges (a warning with the exception's class only).
+
+The profile page (`header.badges`) and the card (`badges`) already carry the owner's badges: do not ask for them again there.
+
+### Drawing them: `ProfileBadges.vue`
+
+Public frontend API (`@/components/ui/ProfileBadges.vue`), types in `@/types/profileSections` (`ProfileBadge`, `ProfileBadgeColour`, `ProfileBadgeSize`):
+
+```vue
+<script setup lang="ts">
+import ProfileBadges from '@/components/ui/ProfileBadges.vue';
+import type { ProfileBadge } from '@/types/profileSections';
+
+defineProps<{ authorName: string; authorBadges: ProfileBadge[] }>();
+</script>
+
+<template>
+    <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span class="font-semibold">{{ authorName }}</span>
+        <ProfileBadges :badges="authorBadges" size="sm" />
+    </div>
+</template>
+```
+
+| Prop | Meaning |
+|---|---|
+| `badges` | `ProfileBadge[]`, as the server sent them. Draws nothing for an empty list. |
+| `size` | `'md'` (default): icon or image and label, 32 px high, for the profile and the card. `'sm'`: 24 px icons alone, for a post header; the label is still the accessible name and shows in the tooltip. |
+
+- A list (`<ul>`, labelled «Insignias destacadas») that wraps on narrow screens.
+- With `imageUrl` the image (in a circle), otherwise the icon on the badge's colour; an icon the browser does not know is drawn as `award`. In `md` a long label is cut with an ellipsis (`max-w-48`).
+- **Accessible.** Every badge is a focusable control: a link when it has `url`, else a button. Its label is its name (visible in `md`, `sr-only` or the image's `alt` in `sm`) and its description is its `aria-describedby` (a `hidden` element, read once). A tooltip with the whole label and the description shows on hover, on keyboard focus and when a button is tapped; it closes with Escape, a tap elsewhere, or when the pointer or focus leaves, and the pointer may move onto it.
+- **Touch and links.** A badge with `url` opens it when tapped, so on a touch screen its tooltip is not shown: put what the description says on the page it opens.
+- **Never clipped.** The tooltip is drawn in `<body>` with fixed coordinates (below the badge, above it when there is no room, always inside the window), so a host with `overflow-hidden` (a post card) does not cut it.
+- Links to the site go through Inertia; any other address is a plain link.
 
 ## Failing closed
 
@@ -378,8 +504,12 @@ A section or stat never breaks the profile around it:
 | `isAvailable()`, `props()` or `stat()` throws, props are not keyed by name or cannot be encoded as JSON, a negative count, or a link `LinkTargetRule` refuses | Not drawn, warning |
 | The Vue component fails to load or render | `ProfileSection.vue` drops it, title included (`onErrorCaptured`, like `SiteBlock.vue`) |
 | The profile row or the account cannot be read, or the membership check throws | The header is drawn without what failed (no badge), the layout takes the defaults, warning |
+| A badge source cannot be built, is not a `ProfileBadgeSourceInterface` or throws | It gives no badges; the other sources still give theirs, warning |
+| A source answers an account with something that is not a list, or gives something that is not a `ProfileBadgeDTO` | That account's answer (or that item) is left out, warning |
+| A badge breaks a rule of `ProfileBadgeDTO` (key, label, icon, image, link) or repeats a key | That badge is left out, warning |
+| A source gives more than three badges for an account | Only the first three, warning |
 
-Under php-fpm every web request builds the registries and the renderer again; a queue worker keeps the registries (singletons, holding only classes and what was read from them) for its whole life and gets a fresh renderer, with freshly built sections and stats, for each job. Either way warnings are kept apart for a day in the cache, not in memory (`App\Infrastructure\Support\DailyWarnings`, prefix `profiles:warned:`, the same mechanism as site blocks): the registries' per class and reason (a duplicated key, per key), the renderer's per key and reason. Warnings carry the class, the module, the key and the reason; props, counts and exception messages are never logged, and an exception is named only by its class.
+Under php-fpm every web request builds the registries and the renderer again; a queue worker keeps the registries (singletons, holding only classes and what was read from them) for its whole life and gets a fresh renderer, with freshly built sections and stats, for each job. Either way warnings are kept apart for a day in the cache, not in memory (`App\Infrastructure\Support\DailyWarnings`, prefix `profiles:warned:`, the same mechanism as site blocks): the registries' per class and reason (a duplicated key, per key), the renderer's per key and reason, the badges' per source class and reason. Warnings carry the class, the module, the key and the reason; props, counts and exception messages are never logged, and an exception is named only by its class.
 
 ## The core's section
 
@@ -400,3 +530,13 @@ $this->assertSame(['forum.latest_posts'], array_map(fn ($section) => $section->k
 
 - Test the checklist, not only the happy path: a guest, a signed-in account and a moderator see what each sees on the module's own pages; a hidden category, an NPC author or a private sign-up never shows or counts; nothing to show throws `NothingToDrawException` (or returns `null` for a stat).
 - Vue specs mount the module's component with the props `props()` returns; `ProfileSection.vue` itself is covered by the core.
+- Badge sources: register the source and ask as a page would; check the badges, that a source answers every account with one query, and that every icon is known.
+
+```php
+$this->app->make(ProfileBadgeSourceRegistryInterface::class)->register(FeaturedAchievementBadges::class, 'achievements');
+
+$badges = $this->app->make(ProfileBadgesInterface::class)->forAuthors([$ana->id, $berta->id], $viewer);
+
+$this->assertSame(['achievements.first-game'], array_map(fn (ProfileBadgeDTO $badge) => $badge->key, $badges[$ana->id]));
+$this->assertTrue(ProfileBadgeIcons::isKnown($badges[$ana->id][0]->icon));
+```

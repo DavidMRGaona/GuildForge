@@ -77,6 +77,7 @@ final readonly class ProfileCardService implements ProfileCardServiceInterface
                 showsMembership: $header->showsMembership,
                 isOwner: $header->isOwner,
                 stats: array_slice($summary->stats, 0, ResolvedProfileDTO::CARD_STATS),
+                badges: $header->badges,
             );
         } catch (Throwable $exception) {
             // Only the class: a message may carry what a person can see

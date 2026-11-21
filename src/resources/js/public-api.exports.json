@@ -46,6 +46,9 @@
     "@/components/ui/LoadingSpinner.vue": [
         "default"
     ],
+    "@/components/ui/ProfileBadges.vue": [
+        "default"
+    ],
     "@/composables/useAuth": [
         "useAuth"
     ],

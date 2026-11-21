@@ -18,6 +18,7 @@ const ENTRIES = [
     '@/components/ui/ConfirmDialog.vue',
     '@/components/ui/EmptyState.vue',
     '@/components/ui/LoadingSpinner.vue',
+    '@/components/ui/ProfileBadges.vue',
     '@/composables/useAuth',
     '@/composables/useCalendarLocale',
     '@/composables/useFlashMessages',

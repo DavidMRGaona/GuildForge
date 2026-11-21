@@ -36,6 +36,7 @@ function profile(overrides: Partial<ResolvedProfile> = {}): ResolvedProfile {
             bannerPublicId: null,
             memberSince: null,
             showsMembership: false,
+            badges: [],
             isOwner: true,
         },
         stats: [

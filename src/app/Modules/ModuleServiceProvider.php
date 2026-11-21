@@ -17,6 +17,7 @@ use App\Application\Modules\DTOs\PagePrefixDTO;
 use App\Application\Modules\DTOs\PermissionDTO;
 use App\Application\Modules\DTOs\SlotRegistrationDTO;
 use App\Application\Modules\Services\ModuleSettingsStoreInterface;
+use App\Application\Profiles\Contracts\ProfileBadgeSourceInterface;
 use App\Application\Profiles\Contracts\ProfileSectionInterface;
 use App\Application\Profiles\Contracts\ProfileStatInterface;
 use App\Application\Proposals\Contracts\EventProposalRequestInterface;
@@ -385,6 +386,19 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * @return array<class-string<ProfileStatInterface>>
      */
     public function registerProfileStats(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register the sources of featured badges this module gives public profiles (core#776). Badge
+     * keys start with the module name and a dot (`<module>.first-game`). The core asks each source
+     * once per page with every author whose profile the viewer may see, and draws at most three
+     * badges per account under the name, on the profile card and next to authors elsewhere.
+     *
+     * @return array<class-string<ProfileBadgeSourceInterface>>
+     */
+    public function registerProfileBadgeSources(): array
     {
         return [];
     }

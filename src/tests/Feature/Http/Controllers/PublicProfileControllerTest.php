@@ -10,6 +10,7 @@ use App\Application\Impersonation\Services\ImpersonationServiceInterface;
 use App\Application\Profiles\DTOs\ProfileHeaderDTO;
 use App\Application\Profiles\DTOs\ProfileOwnerDTO;
 use App\Application\Profiles\DTOs\ResolvedProfileDTO;
+use App\Application\Profiles\Services\ProfileBadgeSourceRegistryInterface;
 use App\Application\Profiles\Services\ProfileRendererInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\UserServiceInterface;
@@ -27,6 +28,7 @@ use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Response;
+use Tests\Support\Profiles\FakeProfileBadgeSource;
 use Tests\TestCase;
 
 /**
@@ -54,6 +56,19 @@ final class PublicProfileControllerTest extends TestCase
         return parent::call($method, $uri, $parameters, $cookies, $files, $server, $content);
     }
 
+    public function test_the_header_carries_the_owner_s_featured_badges(): void
+    {
+        $this->owner(ProfileVisibility::Public);
+        $this->app->instance('test-badge-source', new FakeProfileBadgeSource);
+        $this->app->make(ProfileBadgeSourceRegistryInterface::class)->register('test-badge-source', 'achievements');
+
+        $this->get('/miembros/ana-prueba')->assertOk()->assertInertia(fn (Assert $page): Assert => $page
+            ->where('profile.header.badges.0.key', 'achievements.first')
+            ->where('profile.header.badges.0.label', 'Primera partida')
+            ->where('profile.header.badges.0.icon', 'trophy')
+            ->where('profile.header.badges.0.colour', 'amber'));
+    }
+
     public function test_a_public_profile_shows_its_header_to_a_guest(): void
     {
         $owner = $this->owner(ProfileVisibility::Public, ['avatar_public_id' => 'avatars/ana.jpg']);
@@ -70,6 +85,7 @@ final class PublicProfileControllerTest extends TestCase
                 ->where('profile.header.bannerPublicId', null)
                 ->where('profile.header.showsMembership', false)
                 ->where('profile.header.isOwner', false)
+                ->where('profile.header.badges', [])
                 ->has('profile.stats')
                 ->has('profile.sections.main')
                 ->has('profile.sections.aside')
