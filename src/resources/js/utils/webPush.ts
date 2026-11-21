@@ -7,6 +7,12 @@ import { csrfHeaders } from '@/utils/csrf';
 
 export const WEB_PUSH_SUBSCRIPTION_URL = '/avisos/push/suscripcion';
 
+/** One device of the account, removed from the «Avisos» tab (core#804). */
+export const WEB_PUSH_DEVICE_URL = '/avisos/push/dispositivos/';
+
+/** A test notice to this browser (core#804). */
+export const WEB_PUSH_TEST_URL = '/avisos/push/prueba';
+
 /**
  * Set, per account, once the site was told about this browser in this session (sessionStorage):
  * another account signing in on the same tab is never taken for the one already told.
@@ -23,6 +29,23 @@ export interface WebPushEnvironment {
     permission: () => NotificationPermission | 'unsupported';
     fetch: typeof globalThis.fetch;
     session: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null;
+    /** An iPhone or iPad where the site is not on the home screen: Safari offers push only there. */
+    needsHomeScreen?: () => boolean;
+}
+
+/**
+ * Whether this is an iPhone or iPad (iPadOS says it is a Mac, with a touch screen) where the site
+ * runs in the browser rather than from the home screen.
+ */
+export function isAppleMobileOutsideHomeScreen(
+    userAgent: string,
+    maxTouchPoints: number,
+    standalone: boolean
+): boolean {
+    const appleMobile =
+        /iPhone|iPad|iPod/.test(userAgent) || (/Macintosh/.test(userAgent) && maxTouchPoints > 1);
+
+    return appleMobile && !standalone;
 }
 
 function browserEnvironment(): WebPushEnvironment {
@@ -45,7 +68,50 @@ function browserEnvironment(): WebPushEnvironment {
         permission: () => ('Notification' in window ? Notification.permission : 'unsupported'),
         fetch: (input, init) => window.fetch(input, init),
         session,
+        needsHomeScreen: () =>
+            typeof navigator !== 'undefined' &&
+            typeof window !== 'undefined' &&
+            isAppleMobileOutsideHomeScreen(
+                navigator.userAgent,
+                navigator.maxTouchPoints,
+                window.matchMedia?.('(display-mode: standalone)').matches === true ||
+                    (navigator as Navigator & { standalone?: boolean }).standalone === true
+            ),
     };
+}
+
+/**
+ * Where this browser stands with push (core#804), for the «Avisos» tab:
+ * - `unsupported`: it cannot receive push notifications;
+ * - `home-screen`: an iPhone or iPad that receives them once the site is on the home screen;
+ * - `denied`: the person blocked notifications for the site, only the browser can undo it;
+ * - `available`: it can, asking for permission when the person clicks;
+ * - `subscribed`: it already receives the account's notifications.
+ */
+export type ThisDevicePushState =
+    'unsupported' | 'home-screen' | 'denied' | 'available' | 'subscribed';
+
+export async function thisDevicePushState(
+    env: WebPushEnvironment = browserEnvironment()
+): Promise<ThisDevicePushState> {
+    if (env.needsHomeScreen?.() === true) {
+        return 'home-screen';
+    }
+
+    const permission = env.permission();
+    if (env.serviceWorker === undefined || permission === 'unsupported') {
+        return 'unsupported';
+    }
+
+    if (permission === 'denied') {
+        return 'denied';
+    }
+
+    if (permission === 'granted' && (await currentSubscription(await pushManager(env))) !== null) {
+        return 'subscribed';
+    }
+
+    return 'available';
 }
 
 /**
@@ -93,6 +159,27 @@ async function send(
                 ...csrfHeaders(),
             },
             body: JSON.stringify(body),
+        });
+
+        return response.status;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * A request about a device of the account, without a body; the status, or null when it never arrived.
+ */
+async function request(
+    env: WebPushEnvironment,
+    method: 'POST' | 'DELETE',
+    url: string
+): Promise<number | null> {
+    try {
+        const response = await env.fetch(url, {
+            method,
+            credentials: 'same-origin',
+            headers: { Accept: 'application/json', ...csrfHeaders() },
         });
 
         return response.status;
@@ -238,6 +325,58 @@ export async function syncThisDevice(
         forgetRemembered(env, userId);
         await subscription.unsubscribe().catch(() => false);
     }
+}
+
+/**
+ * Removes one device of the account (core#804); for this browser, it also drops the browser's
+ * own subscription. Whether the site removed it.
+ */
+export async function removeDevice(
+    deviceId: string,
+    userId: string,
+    isThisDevice: boolean,
+    env: WebPushEnvironment = browserEnvironment()
+): Promise<boolean> {
+    const status = await request(env, 'DELETE', WEB_PUSH_DEVICE_URL + encodeURIComponent(deviceId));
+
+    if (isThisDevice && (isSuccess(status) || status === 404)) {
+        forgetRemembered(env, userId);
+        const subscription = await currentSubscription(await pushManager(env));
+        await subscription?.unsubscribe().catch(() => false);
+    }
+
+    return isSuccess(status);
+}
+
+/**
+ * The outcome of a test notice (core#804): sent to the push service, this browser no longer
+ * receives notices (the site forgot it), or it could not be sent now.
+ */
+export type TestNoticeOutcome = 'sent' | 'gone' | 'unavailable';
+
+/**
+ * Sends a test notice to this browser. When the push service dropped it, the browser drops its
+ * subscription too, so a click on «Recibir avisos» starts afresh.
+ */
+export async function sendTestNotice(
+    userId: string,
+    env: WebPushEnvironment = browserEnvironment()
+): Promise<TestNoticeOutcome> {
+    const status = await request(env, 'POST', WEB_PUSH_TEST_URL);
+
+    if (isSuccess(status)) {
+        return 'sent';
+    }
+
+    if (status === 410 || status === 404) {
+        forgetRemembered(env, userId);
+        const subscription = await currentSubscription(await pushManager(env));
+        await subscription?.unsubscribe().catch(() => false);
+
+        return 'gone';
+    }
+
+    return 'unavailable';
 }
 
 /**

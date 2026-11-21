@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
     fallbackNotification,
     findWindowAt,
+    isTestPush,
+    testNotification,
     hasFocusedWindow,
     noticeIdFrom,
     noticeNotification,
@@ -9,6 +11,12 @@ import {
 } from '../notifications';
 
 const ORIGIN = 'https://example.test';
+
+const TEST_TEXTS = {
+    testTitle: 'Aviso de prueba',
+    testBody: 'Los avisos llegan a este dispositivo.',
+    testPath: '/perfil?tab=mail',
+};
 
 describe('fallbackNotification', () => {
     it('says there is a new notice and opens the list of notices', () => {
@@ -18,6 +26,7 @@ describe('fallbackNotification', () => {
                 fallbackBody: 'Asociación de ejemplo',
                 fallbackPath: '/avisos',
                 icon: '/icon.png',
+                ...TEST_TEXTS,
             })
         ).toEqual({
             title: 'Tienes un aviso nuevo',
@@ -31,9 +40,42 @@ describe('fallbackNotification', () => {
             fallbackBody: '',
             fallbackPath: '/avisos',
             icon: '',
+            ...TEST_TEXTS,
         });
 
         expect(options).not.toHaveProperty('icon');
+    });
+});
+
+describe('isTestPush', () => {
+    it('recognises the test message of the «Avisos» tab and nothing else', () => {
+        expect(isTestPush({ test: true })).toBe(true);
+
+        for (const payload of [null, { test: 'true' }, { test: false }, { id: 'x' }, 'test']) {
+            expect(isTestPush(payload)).toBe(false);
+        }
+    });
+});
+
+describe('testNotification', () => {
+    it('shows the fixed test text and leads to the «Avisos» tab', () => {
+        expect(
+            testNotification({
+                fallbackTitle: 'Tienes un aviso nuevo',
+                fallbackBody: 'Asociación de ejemplo',
+                fallbackPath: '/avisos',
+                icon: '/icon.png',
+                ...TEST_TEXTS,
+            })
+        ).toEqual({
+            title: 'Aviso de prueba',
+            options: {
+                body: 'Los avisos llegan a este dispositivo.',
+                icon: '/icon.png',
+                tag: 'push-test',
+                data: { url: '/perfil?tab=mail' },
+            },
+        });
     });
 });
 
@@ -130,6 +172,7 @@ describe('noticeNotification', () => {
         fallbackBody: 'Asociación de ejemplo',
         fallbackPath: '/avisos',
         icon: '/icon.png',
+        ...TEST_TEXTS,
     };
     const id = '0193a6b2-7c1d-7e3f-8a9b-0c1d2e3f4a5b';
 

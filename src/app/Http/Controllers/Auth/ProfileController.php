@@ -21,6 +21,9 @@ use App\Application\Services\AuthServiceInterface;
 use App\Application\Services\TimezoneServiceInterface;
 use App\Application\TwoFactor\Services\TwoFactorDisableRule;
 use App\Application\TwoFactor\Services\TwoFactorServiceInterface;
+use App\Application\WebPush\DTOs\WebPushSubscriptionDTO;
+use App\Application\WebPush\Services\WebPushConfigurationInterface;
+use App\Application\WebPush\Services\WebPushSubscriptionServiceInterface;
 use App\Domain\Mail\ValueObjects\MailPause;
 use App\Domain\Mail\ValueObjects\MutedMailSubject;
 use App\Domain\Proposals\Enums\ProposalType;
@@ -59,6 +62,8 @@ final class ProfileController extends Controller
         private readonly OwnProfileBanner $ownBanner,
         private readonly TwoFactorServiceInterface $twoFactor,
         private readonly TwoFactorDisableRule $twoFactorDisable,
+        private readonly WebPushConfigurationInterface $webPush,
+        private readonly WebPushSubscriptionServiceInterface $webPushSubscriptions,
     ) {}
 
     public function show(Request $request): Response
@@ -121,10 +126,34 @@ final class ProfileController extends Controller
                 ], $this->mailSubjectMutes->mutedFor($user)),
                 // When the daily digest goes out (core#333), display zone
                 'digestTime' => $this->mailDigests->time(),
+                // Browsers of the account that receive push notifications (core#804), none while push is off
+                'pushDevices' => $this->pushDevicesFor($user, $request),
             ];
         }
 
         return Inertia::render('Profile/Show', $props);
+    }
+
+    /**
+     * @return list<array{id: string, browser: string, platform: string, current: bool, createdAt: ?string, lastUsedAt: ?string}>
+     */
+    private function pushDevicesFor(UserModel $user, Request $request): array
+    {
+        if (! $this->webPush->enabled()) {
+            return [];
+        }
+
+        // The browser of this session is the one it subscribed or refreshed last
+        $current = $request->session()->get(WebPushSubscriptionServiceInterface::SESSION_KEY);
+
+        return array_map(fn (WebPushSubscriptionDTO $device): array => [
+            'id' => $device->id,
+            'browser' => $device->browser,
+            'platform' => $device->platform,
+            'current' => $device->id === $current,
+            'createdAt' => $this->timezone->iso($device->createdAt),
+            'lastUsedAt' => $this->timezone->iso($device->lastUsedAt),
+        ], $this->webPushSubscriptions->forUser((string) $user->id));
     }
 
     /**

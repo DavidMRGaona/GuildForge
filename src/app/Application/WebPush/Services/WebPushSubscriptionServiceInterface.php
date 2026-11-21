@@ -33,8 +33,8 @@ interface WebPushSubscriptionServiceInterface
     /** Forgets the account's subscription with that endpoint; false when it has none. */
     public function unsubscribe(string $userId, #[\SensitiveParameter] string $endpoint): bool;
 
-    /** Forgets one subscription, only when it belongs to the account. */
-    public function forgetForUser(string $userId, string $subscriptionId): void;
+    /** Forgets one subscription, only when it belongs to the account; whether there was one. */
+    public function forgetForUser(string $userId, string $subscriptionId): bool;
 
     /** Forgets one subscription, whoever it belongs to (the push service dropped it). */
     public function forget(string $subscriptionId): void;

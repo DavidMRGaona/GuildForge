@@ -75,7 +75,7 @@ const resend = () => {
             </Link>
         </p>
 
-        <BaseButton variant="ghost" class="w-full" @click="logout">
+        <BaseButton variant="ghost" class="w-full" @click="logout()">
             {{ t('auth.verifyEmail.logout') }}
         </BaseButton>
     </div>

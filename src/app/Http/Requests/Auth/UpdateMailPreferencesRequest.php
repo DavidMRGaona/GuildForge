@@ -14,7 +14,8 @@ use Illuminate\Foundation\Http\FormRequest;
  * daily digest, is decided by MailPreferenceServiceInterface::update(), never by the client.
  * Each choice is the switch (a boolean) or one of the three deliveries (core#333). The site
  * switches of the notification centre (core#491) come in `site`, one boolean per category, and
- * are decided by SiteNotificationPreferenceServiceInterface::update().
+ * are decided by SiteNotificationPreferenceServiceInterface::update(); the push switches
+ * (core#804) come in `push`, decided by WebPushPreferenceServiceInterface::update().
  */
 final class UpdateMailPreferencesRequest extends FormRequest
 {
@@ -32,14 +33,20 @@ final class UpdateMailPreferencesRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'preferences' => ['required_without:site', 'array', 'min:1', 'max:200'],
+            'preferences' => ['required_without_all:site,push', 'array', 'min:1', 'max:200'],
             'preferences.*' => [static function (string $attribute, mixed $value, Closure $fail): void {
                 if (! is_bool($value) && (! is_string($value) || ! MailDelivery::tryFrom($value) instanceof MailDelivery)) {
                     $fail(__('validation.boolean', ['attribute' => $attribute]));
                 }
             }],
-            'site' => ['required_without:preferences', 'array', 'min:1', 'max:200'],
+            'site' => ['required_without_all:preferences,push', 'array', 'min:1', 'max:200'],
             'site.*' => [static function (string $attribute, mixed $value, Closure $fail): void {
+                if (! is_bool($value)) {
+                    $fail(__('validation.boolean', ['attribute' => $attribute]));
+                }
+            }],
+            'push' => ['required_without_all:preferences,site', 'array', 'min:1', 'max:200'],
+            'push.*' => [static function (string $attribute, mixed $value, Closure $fail): void {
                 if (! is_bool($value)) {
                     $fail(__('validation.boolean', ['attribute' => $attribute]));
                 }
@@ -68,5 +75,14 @@ final class UpdateMailPreferencesRequest extends FormRequest
     {
         /** @var array<string, bool> */
         return $this->validated('site', []);
+    }
+
+    /**
+     * @return array<string, bool>
+     */
+    public function pushSwitches(): array
+    {
+        /** @var array<string, bool> */
+        return $this->validated('push', []);
     }
 }

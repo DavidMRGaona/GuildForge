@@ -6,6 +6,43 @@ import { forgetThisDevice } from '@/utils/webPush';
 /** How long signing out waits for this browser's push subscription to be forgotten. */
 const LOGOUT_PUSH_TIMEOUT_MS = 2000;
 
+/** The core's sign-out route. */
+const LOGOUT_PATH = '/cerrar-sesion';
+
+/**
+ * Options of `logout()` (core#804).
+ */
+export interface LogoutOptions {
+    /**
+     * Where to send the sign-out request instead of `/cerrar-sesion`: a route of this site that
+     * signs out and then leads somewhere else (a module's own). Anything on another site, or not
+     * an address at all, is ignored and the core's route is used.
+     */
+    url?: string;
+}
+
+/**
+ * The path of a sign-out route of this site, or the core's for anything else: another origin,
+ * another scheme, `//host` or `/\host` (both resolve to another origin), and a path that
+ * normalises to `//host` (`/.//host`).
+ */
+function signOutPath(url: string | undefined, origin: string): string {
+    if (url === undefined || url === '') {
+        return LOGOUT_PATH;
+    }
+
+    try {
+        const resolved = new URL(url, origin);
+        // `/.//host` resolves to this origin with the path `//host`, which a request reads as
+        // another site: a path must start with a single slash
+        return resolved.origin === origin && !resolved.pathname.startsWith('//')
+            ? `${resolved.pathname}${resolved.search}`
+            : LOGOUT_PATH;
+    } catch {
+        return LOGOUT_PATH;
+    }
+}
+
 function forgetThisDeviceWithin(userId: string, milliseconds: number): Promise<void> {
     return Promise.race([
         forgetThisDevice(userId),
@@ -51,7 +88,12 @@ interface AuthComposable {
      * @param roles Array of role names
      */
     hasAnyRole: (roles: string[]) => boolean;
-    logout: () => void;
+    /**
+     * Signs out. This browser stops getting the account's push notifications first (at most two
+     * seconds), then the sign-out request goes to `options.url` (a route of this site) or to
+     * `/cerrar-sesion`.
+     */
+    logout: (options?: LogoutOptions) => void;
 }
 
 interface AuthProps {
@@ -132,7 +174,7 @@ export function useAuth(): AuthComposable {
         return roles.some((r) => userRoles.includes(r));
     };
 
-    const logout = (): void => {
+    const logout = (options?: LogoutOptions): void => {
         // This browser stops getting the account's push notifications first (core#803); the
         // server forgets it on sign-out too, so a slow or failed request never holds this up
         const userId = user.value?.id ?? null;
@@ -140,7 +182,10 @@ export function useAuth(): AuthComposable {
             page.props.webPush && userId !== null
                 ? forgetThisDeviceWithin(userId, LOGOUT_PUSH_TIMEOUT_MS)
                 : Promise.resolve();
-        void forget.then(() => router.post('/cerrar-sesion'));
+        // `@click="logout"` hands in the click event: only a plain string `url` counts
+        const url = typeof options?.url === 'string' ? options.url : undefined;
+        const path = signOutPath(url, window.location.origin);
+        void forget.then(() => router.post(path));
     };
 
     return {

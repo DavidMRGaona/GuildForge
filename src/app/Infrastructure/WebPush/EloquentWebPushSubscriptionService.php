@@ -73,9 +73,9 @@ final readonly class EloquentWebPushSubscriptionService implements WebPushSubscr
             ->delete() > 0;
     }
 
-    public function forgetForUser(string $userId, string $subscriptionId): void
+    public function forgetForUser(string $userId, string $subscriptionId): bool
     {
-        WebPushSubscriptionModel::query()->where('user_id', $userId)->whereKey($subscriptionId)->delete();
+        return WebPushSubscriptionModel::query()->where('user_id', $userId)->whereKey($subscriptionId)->delete() > 0;
     }
 
     public function forget(string $subscriptionId): void

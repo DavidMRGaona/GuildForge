@@ -50,6 +50,7 @@ use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SiteNotificationsController;
 use App\Http\Controllers\WebApp\ServiceWorkerController;
 use App\Http\Controllers\WebApp\WebAppManifestController;
+use App\Http\Controllers\WebPush\WebPushDeviceController;
 use App\Http\Controllers\WebPush\WebPushNoticeController;
 use App\Http\Controllers\WebPush\WebPushSubscriptionController;
 use App\Http\Middleware\EnsureWebPushIsEnabled;
@@ -349,7 +350,14 @@ Route::middleware('auth')->group(function (): void {
                 ->name('web-push.refresh');
             Route::delete('/avisos/push/suscripcion', [WebPushSubscriptionController::class, 'destroy'])
                 ->name('web-push.unsubscribe');
+            // The account's devices from the «Avisos» tab (core#804)
+            Route::delete('/avisos/push/dispositivos/{subscription}', [WebPushDeviceController::class, 'destroy'])
+                ->whereUuid('subscription')
+                ->name('web-push.devices.destroy');
         });
+        Route::post('/avisos/push/prueba', [WebPushDeviceController::class, 'test'])
+            ->middleware(ThrottleWhereListed::class.':web-push-test')
+            ->name('web-push.test');
         Route::get('/avisos/{notification}/push', WebPushNoticeController::class)
             ->whereUuid('notification')
             ->middleware('throttle:120,1,web-push-notice')

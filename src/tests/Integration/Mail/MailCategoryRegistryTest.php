@@ -203,6 +203,46 @@ final class MailCategoryRegistryTest extends TestCase
         ), 'example');
     }
 
+    public function test_a_push_suggestion_needs_site_notices(): void
+    {
+        $registry = new MailCategoryRegistry(rejectsInvalidCategories: true);
+
+        $this->expectException(InvalidMailCategoryException::class);
+        $registry->register(MailCategoryDTO::optional(
+            key: 'example.first',
+            section: 'example::mail.section',
+            label: 'Label',
+            description: 'Description',
+            pushSuggested: true,
+        ), 'example');
+    }
+
+    public function test_a_category_with_site_notices_may_suggest_push_without_turning_it_on(): void
+    {
+        $registry = new MailCategoryRegistry(rejectsInvalidCategories: true);
+        $registry->registerMany([
+            MailCategoryDTO::optional(
+                key: 'example.first',
+                section: 'example::mail.section',
+                label: 'Label',
+                description: 'Description',
+                site: true,
+                pushSuggested: true,
+            ),
+            MailCategoryDTO::mandatory(
+                key: 'example.second',
+                section: 'example::mail.section',
+                label: 'Label',
+                description: 'Description',
+                reason: 'Reason',
+                site: true,
+            ),
+        ], 'example');
+
+        $this->assertTrue($registry->find('example.first')?->pushSuggested);
+        $this->assertFalse($registry->find('example.second')?->pushSuggested);
+    }
+
     public function test_outside_local_and_testing_an_invalid_category_is_skipped_with_a_warning(): void
     {
         $log = Log::spy();

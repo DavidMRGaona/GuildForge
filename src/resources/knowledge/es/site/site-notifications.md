@@ -6,7 +6,7 @@ category: account
 audience: site
 order: 41
 keywords: [avisos, notificaciones, campana, sin leer, avisos nuevos, número de la campana, el número no se va, marcar como leído, respuestas, menciones, me gusta, avisos en la web, contador, no me llegan avisos, demasiados avisos, novedades, eventos nuevos, artículos nuevos, galerías nuevas]
-related: [core.account.mail-preferences]
+related: [core.account.mail-preferences, core.site.push-notifications]
 ---
 Además de los correos, {{site_name}} te avisa dentro de la web de lo que pasa mientras navegas: una respuesta en un tema que sigues, una mención, una plaza libre… Los avisos se ven en la campana de la cabecera, junto a tu nombre.
 
@@ -45,6 +45,8 @@ Los avisos siguen los mismos tipos que los correos. En **Ajustes de la cuenta**,
 - **Por correo**: los correos de ese tipo.
 
 Puedes dejar uno y quitar el otro. Algunos tipos, como los «me gusta», solo avisan en la web. Los obligatorios, con candado, también se avisan siempre en la web.
+
+Si el sitio lo permite, hay un tercer interruptor, **En tus dispositivos**, para recibir el aviso como notificación del móvil o del ordenador. Lo cuenta la guía «Avisos en tus dispositivos».
 
 Si silencias algo concreto desde un correo (**No recibir más avisos de «…»**), dejas de recibir también sus avisos en la web. Pausar los correos, en cambio, no pausa los avisos de la campana.
 

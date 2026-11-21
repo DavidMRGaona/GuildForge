@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Application\Mail\Services\MailPreferenceServiceInterface;
 use App\Application\SiteNotifications\Services\SiteNotificationPreferenceServiceInterface;
+use App\Application\WebPush\Services\WebPushPreferenceServiceInterface;
 use App\Domain\Mail\Exceptions\MailPreferenceNotEditableException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\UpdateMailPreferencesRequest;
@@ -16,7 +17,8 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Saves which optional mail the signed-in person receives (the «Avisos» tab of the profile), and
- * which notices they see in the notification centre (core#491). Both or nothing.
+ * which notices they see in the notification centre (core#491) and receive as push notifications
+ * (core#804). All or nothing.
  * Like any signed-in route, it stays closed to accounts that must still verify their email.
  */
 final class MailPreferencesController extends Controller
@@ -24,6 +26,7 @@ final class MailPreferencesController extends Controller
     public function __construct(
         private readonly MailPreferenceServiceInterface $preferences,
         private readonly SiteNotificationPreferenceServiceInterface $sitePreferences,
+        private readonly WebPushPreferenceServiceInterface $pushPreferences,
     ) {}
 
     public function update(UpdateMailPreferencesRequest $request): RedirectResponse
@@ -38,6 +41,8 @@ final class MailPreferencesController extends Controller
                 $this->preferences->update($user, $request->preferences());
                 $field = 'site';
                 $this->sitePreferences->update($user, $request->siteSwitches());
+                $field = 'push';
+                $this->pushPreferences->update($user, $request->pushSwitches());
             });
         } catch (MailPreferenceNotEditableException $e) {
             throw ValidationException::withMessages([

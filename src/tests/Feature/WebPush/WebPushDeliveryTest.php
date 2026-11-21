@@ -8,11 +8,13 @@ use App\Application\Impersonation\Services\ImpersonationContextInterface;
 use App\Application\Mail\DTOs\MailCategoryDTO;
 use App\Application\Mail\DTOs\MailSubjectDTO;
 use App\Application\Mail\Services\MailCategoryRegistryInterface;
+use App\Application\Mail\Services\MailSubjectMuteServiceInterface;
 use App\Application\SiteNotifications\Contracts\HasSiteNotification;
 use App\Application\SiteNotifications\DTOs\SiteNotificationDTO;
 use App\Application\SiteNotifications\Services\SiteNotificationPreferenceServiceInterface;
 use App\Application\WebPush\Services\WebPushNotifierInterface;
 use App\Application\WebPush\Services\WebPushPreferenceInterface;
+use App\Application\WebPush\Services\WebPushPreferenceServiceInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\WebPush\Jobs\SendWebPushJob;
 use ArrayObject;
@@ -106,12 +108,37 @@ final class WebPushDeliveryTest extends TestCase
 
     public function test_until_people_choose_nothing_is_pushed(): void
     {
-        // The default preference (NoWebPushPreferences) until core#804 lets people choose
         $this->enableWebPush();
         $user = UserModel::factory()->create();
         $this->subscribe($user);
 
         $user->notify($this->notification());
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_a_category_the_person_turned_on_is_pushed(): void
+    {
+        $this->enableWebPush();
+        $user = UserModel::factory()->create();
+        $this->subscribe($user);
+        $this->app->make(WebPushPreferenceServiceInterface::class)->update($user, ['example.replies' => true]);
+
+        $user->notify($this->notification());
+
+        Queue::assertPushed(SendWebPushJob::class, 1);
+    }
+
+    public function test_a_muted_subject_is_not_pushed_either(): void
+    {
+        $this->enableWebPush();
+        $user = UserModel::factory()->create();
+        $this->subscribe($user);
+        $this->app->make(WebPushPreferenceServiceInterface::class)->update($user, ['example.replies' => true]);
+        $subject = new MailSubjectDTO('forum.topic', 't1', 'La tumba');
+        $this->app->make(MailSubjectMuteServiceInterface::class)->mute($user, $subject);
+
+        $user->notify($this->notification(subject: $subject));
 
         Queue::assertNothingPushed();
     }

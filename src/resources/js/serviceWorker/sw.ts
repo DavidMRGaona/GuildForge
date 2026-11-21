@@ -12,9 +12,11 @@ import {
     fallbackNotification,
     findWindowAt,
     hasFocusedWindow,
+    isTestPush,
     noticeIdFrom,
     noticeNotification,
     notificationTargetUrl,
+    testNotification,
     type NotificationRequest,
 } from './notifications';
 import { readSettings } from './settings';
@@ -74,13 +76,22 @@ async function noticeRequest(id: string | null): Promise<NotificationRequest> {
 }
 
 async function showPush(data: PushMessageData | null): Promise<void> {
+    const payload = payloadOf(data);
+
+    // The test of the «Avisos» tab (core#804) shows even in the tab that asked for it
+    if (isTestPush(payload)) {
+        const { title, options } = testNotification(settings);
+        await self.registration.showNotification(title, options);
+        return;
+    }
+
     // A visible, focused tab of the site already shows the notice in its bell
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     if (hasFocusedWindow(windows)) {
         return;
     }
 
-    const { title, options } = await noticeRequest(noticeIdFrom(payloadOf(data)));
+    const { title, options } = await noticeRequest(noticeIdFrom(payload));
     await self.registration.showNotification(title, options);
 }
 

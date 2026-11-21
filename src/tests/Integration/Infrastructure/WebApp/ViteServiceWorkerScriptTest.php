@@ -50,6 +50,9 @@ final class ViteServiceWorkerScriptTest extends TestCase
         $this->assertSame('Asociación de ejemplo', $settings['fallbackBody']);
         $this->assertSame('/avisos', $settings['fallbackPath']);
         $this->assertSame('/favicons/light/android-chrome-192x192.png', $settings['icon']);
+        $this->assertSame(__('web_app.service_worker.test_title'), $settings['testTitle']);
+        $this->assertSame(__('web_app.service_worker.test_body'), $settings['testBody']);
+        $this->assertSame('/perfil?tab=mail', $settings['testPath']);
     }
 
     public function test_settings_cannot_close_the_script_tag_or_the_statement(): void

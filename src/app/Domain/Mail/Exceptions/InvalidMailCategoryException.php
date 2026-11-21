@@ -40,6 +40,11 @@ final class InvalidMailCategoryException extends DomainException
         return new self(sprintf('The mail category "%s" offers a daily digest, which needs mail.', $key));
     }
 
+    public static function pushWithoutSite(string $key): self
+    {
+        return new self(sprintf('The mail category "%s" suggests push notifications, which need site notices.', $key));
+    }
+
     public static function mandatoryWithoutReason(string $key): self
     {
         return new self(sprintf('The mandatory mail category "%s" needs the reason it is always sent.', $key));
