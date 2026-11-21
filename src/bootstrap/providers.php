@@ -19,6 +19,7 @@ use App\Providers\RealtimeServiceProvider;
 use App\Providers\SearchServiceProvider;
 use App\Providers\SiteBlocksServiceProvider;
 use App\Providers\SiteNotificationsServiceProvider;
+use App\Providers\SpreadsheetsServiceProvider;
 use App\Providers\TwoFactorServiceProvider;
 use App\Providers\WebAppServiceProvider;
 use App\Providers\WebPushServiceProvider;
@@ -41,6 +42,7 @@ return [
     SearchServiceProvider::class,
     SiteBlocksServiceProvider::class,
     SiteNotificationsServiceProvider::class,
+    SpreadsheetsServiceProvider::class,
     TwoFactorServiceProvider::class,
     WebAppServiceProvider::class,
     WebPushServiceProvider::class,

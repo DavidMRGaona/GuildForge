@@ -51,6 +51,8 @@ Putting a module's entries in the public calendar and in each person's personal 
 
 Drawing QR codes (SVG or PNG) for pages of the site is covered in [QR codes](./qr-codes.md).
 
+Reading uploaded `.csv` and `.xlsx` files into rows of text (for imports) and writing `.xlsx` templates to download is covered in [Spreadsheets](./spreadsheets.md): `SpreadsheetReaderInterface` with the module's limits, `SpreadsheetWriterInterface` for the template; never openspout or league/csv directly.
+
 Letting the pages frame players of other services (a video, a post) is covered in [Content Security Policy](./content-security-policy.md): register the exact https origins for `frame-src`; without any, it stays `'self'`.
 
 Mirroring accounts and roles in another system is covered in [Account and role events](./account-events.md): the domain events the core dispatches when an account is anonymized, deactivated or restored, and when roles or role permissions change.
