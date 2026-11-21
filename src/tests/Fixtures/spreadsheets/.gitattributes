@@ -1,0 +1,2 @@
+# Spreadsheet fixtures are kept byte for byte: CRLF line endings, BOM and Windows-1252 are what is tested.
+* -text
