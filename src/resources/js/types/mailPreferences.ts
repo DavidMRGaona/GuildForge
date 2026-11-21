@@ -38,7 +38,7 @@ export interface PushDevice {
     current: boolean;
     /** ISO 8601 in the display zone. */
     createdAt: string | null;
-    /** Last notice sent to it, ISO 8601 in the display zone; null before the first. */
+    /** Last use (subscribed, refreshed by a page of the site or sent a notice), ISO 8601 in the display zone. */
     lastUsedAt: string | null;
 }
 

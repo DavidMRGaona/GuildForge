@@ -243,6 +243,20 @@ final class MailCategoryRegistryTest extends TestCase
         $this->assertFalse($registry->find('example.second')?->pushSuggested);
     }
 
+    public function test_a_mandatory_category_cannot_suggest_push_since_it_is_never_pushed(): void
+    {
+        $parameters = array_map(
+            static fn (\ReflectionParameter $parameter): string => $parameter->getName(),
+            (new \ReflectionMethod(MailCategoryDTO::class, 'mandatory'))->getParameters(),
+        );
+
+        $this->assertNotContains('pushSuggested', $parameters);
+        $this->assertContains('pushSuggested', array_map(
+            static fn (\ReflectionParameter $parameter): string => $parameter->getName(),
+            (new \ReflectionMethod(MailCategoryDTO::class, 'optional'))->getParameters(),
+        ));
+    }
+
     public function test_outside_local_and_testing_an_invalid_category_is_skipped_with_a_warning(): void
     {
         $log = Log::spy();

@@ -10,7 +10,7 @@ const router = vi.hoisted(() => ({ reload: vi.fn() }));
 const webPush = vi.hoisted(() => ({
     thisDevicePushState: vi.fn(),
     subscribeThisDevice: vi.fn(),
-    syncThisDevice: vi.fn(),
+    resyncThisDevice: vi.fn(),
     removeDevice: vi.fn(),
     sendTestNotice: vi.fn(),
 }));
@@ -110,7 +110,7 @@ describe('PushDevicesBlock', () => {
         const phone = wrapper.find('[data-device="device-phone"]');
         expect(phone.text()).toContain('Chrome en Android');
         expect(phone.text()).toContain('Este dispositivo');
-        expect(phone.text()).toContain('Último aviso el 22 de noviembre de 2026');
+        expect(phone.text()).toContain('Último uso el 22 de noviembre de 2026');
 
         const laptop = wrapper.find('[data-device="device-laptop"]');
         expect(laptop.text()).toContain('Firefox en Linux');
@@ -145,18 +145,52 @@ describe('PushDevicesBlock', () => {
         expect(wrapper.find('[role="status"]').text()).toContain('Aviso de prueba enviado');
     });
 
+    it('keeps the live region in the page before there is anything to announce', async () => {
+        const wrapper = await mountBlock([PHONE]);
+
+        expect(wrapper.find('[role="status"]').exists()).toBe(true);
+        expect(wrapper.find('[role="status"]').text()).toBe('');
+    });
+
     it('offers no test while this browser is not one of the devices', async () => {
         const wrapper = await mountBlock([LAPTOP]);
 
         expect(wrapper.find('[data-action="test"]').exists()).toBe(false);
     });
 
-    it('tells the site about a subscription it has not marked yet, then reloads to mark it', async () => {
+    it('tells the site again about a subscription it has not marked, then reloads to mark it', async () => {
+        // Even when this tab already told it in this session: the sign-out of the panel or an
+        // expired session forgets the session's browser on the site, not the tab's mark
         webPush.thisDevicePushState.mockResolvedValue('subscribed');
         await mountBlock([{ ...PHONE, current: false }]);
 
-        expect(webPush.syncThisDevice).toHaveBeenCalledWith('key', 'user-a');
+        expect(webPush.resyncThisDevice).toHaveBeenCalledWith('key', 'user-a');
         expect(router.reload).toHaveBeenCalledWith({ only: ['mailPreferences'] });
+    });
+
+    it('offers the button again when the site no longer knew this subscription', async () => {
+        webPush.thisDevicePushState
+            .mockResolvedValueOnce('subscribed')
+            .mockResolvedValue('available');
+        const wrapper = await mountBlock([]);
+
+        expect(webPush.resyncThisDevice).toHaveBeenCalled();
+        expect(wrapper.find('[data-action="enable"]').exists()).toBe(true);
+    });
+
+    it('works the state out again after removing a device that may have been this browser', async () => {
+        // Subscribed when the page opens; the site no longer knew it once the device is removed
+        webPush.thisDevicePushState
+            .mockResolvedValueOnce('subscribed')
+            .mockResolvedValue('available');
+        webPush.removeDevice.mockResolvedValue(true);
+        const wrapper = await mountBlock([PHONE, LAPTOP]);
+
+        await wrapper.find('[data-device="device-laptop"] [data-action="remove"]').trigger('click');
+        await flushPromises();
+
+        expect(webPush.resyncThisDevice).toHaveBeenCalledWith('key', 'user-a');
+        expect(wrapper.find('[data-action="enable"]').exists()).toBe(true);
     });
 
     it('asks the tab to turn on the suggested ones', async () => {

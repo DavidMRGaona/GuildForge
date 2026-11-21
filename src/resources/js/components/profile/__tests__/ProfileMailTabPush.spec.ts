@@ -24,7 +24,7 @@ vi.mock('@inertiajs/vue3', () => ({
 vi.mock('@/utils/webPush', () => ({
     thisDevicePushState: vi.fn().mockResolvedValue('available'),
     subscribeThisDevice: vi.fn(),
-    syncThisDevice: vi.fn(),
+    resyncThisDevice: vi.fn(),
     removeDevice: vi.fn(),
     sendTestNotice: vi.fn(),
 }));
@@ -149,6 +149,17 @@ describe('ProfileMailTab — push notifications (core#804)', () => {
         expect(
             wrapper.find('[data-category="forum.likes"] [data-testid="push-suggested"]').exists()
         ).toBe(false);
+    });
+
+    it('reads «Sugerido» out with the push switch', () => {
+        const wrapper = mountTab();
+
+        const describedBy =
+            pushSwitch(wrapper, 'forum.replies').attributes('aria-describedby') ?? '';
+        const badge = wrapper.find(
+            '[data-category="forum.replies"] [data-testid="push-suggested"]'
+        );
+        expect(describedBy.split(' ')).toContain(badge.attributes('id'));
     });
 
     it('locks the push switch while the bell does not get the category', async () => {

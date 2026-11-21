@@ -987,7 +987,7 @@ export default {
                         current: 'Este dispositivo',
                         name: '{browser} en {platform}',
                         added: 'Activado el {date}',
-                        lastUsed: 'Último aviso el {date}',
+                        lastUsed: 'Último uso el {date}',
                         remove: 'Quitar',
                         removeLabel: 'Dejar de recibir avisos en {device}',
                         removeError: 'No se ha podido quitar el dispositivo. Inténtalo de nuevo.',

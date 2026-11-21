@@ -27,6 +27,7 @@ use App\Domain\Modules\Events\ModuleUpdated;
 use App\Domain\Updates\Events\ModuleUpdateCompleted;
 use App\Infrastructure\Knowledge\Capabilities\EmailVerificationRequiredCapability;
 use App\Infrastructure\Knowledge\Capabilities\PersonalCalendarCapability;
+use App\Infrastructure\Knowledge\Capabilities\WebPushCapability;
 use App\Infrastructure\Knowledge\Catalog\KnowledgeCatalogSynchronizer;
 use App\Infrastructure\Knowledge\Catalog\KnowledgeSourceLocator;
 use App\Infrastructure\Knowledge\Lint\KnowledgeLinter;
@@ -138,7 +139,7 @@ class KnowledgeServiceProvider extends ServiceProvider
         KnowledgeGuideModel::disableSearchSyncing();
 
         $this->app->make(KnowledgeCapabilityRegistryInterface::class)
-            ->registerMany([EmailVerificationRequiredCapability::class, PersonalCalendarCapability::class]);
+            ->registerMany([EmailVerificationRequiredCapability::class, PersonalCalendarCapability::class, WebPushCapability::class]);
 
         foreach ([ModuleEnabled::class, ModuleDisabled::class, ModuleUpdated::class, ModuleUninstalled::class, ModuleUpdateCompleted::class] as $event) {
             Event::listen($event, SyncKnowledgeOnModuleChange::class);

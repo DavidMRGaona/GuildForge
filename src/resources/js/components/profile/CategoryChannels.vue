@@ -54,12 +54,14 @@ const mailed = computed(() => isMailed(props.category));
 const siteErrorId = computed(() => `${props.baseId}-site-error`);
 const pushLabelId = computed(() => `${props.baseId}-push`);
 const pushHintId = computed(() => `${props.baseId}-push-hint`);
+const pushSuggestedId = computed(() => `${props.baseId}-push-suggested`);
 const pushErrorId = computed(() => `${props.baseId}-push-error`);
 // Pushed only what the bell gets: with the web switch off, the push switch waits for it
 const pushWaitsForSite = computed(() => props.push !== null && !props.site);
 const pushDescribedBy = computed(() =>
     [
         `${props.baseId}-description`,
+        props.category.pushSuggested === true ? pushSuggestedId.value : null,
         pushWaitsForSite.value ? pushHintId.value : null,
         props.pushError ? pushErrorId.value : null,
     ]
@@ -150,6 +152,7 @@ const siteDescribedBy = computed(() =>
             />
             <span
                 v-if="category.pushSuggested"
+                :id="pushSuggestedId"
                 class="rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary dark:bg-primary-900/30"
                 data-testid="push-suggested"
             >

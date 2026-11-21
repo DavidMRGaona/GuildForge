@@ -27,7 +27,7 @@ People turn push on per category and per browser. Nothing is pushed until they d
 In **Ajustes de la cuenta**, tab **Avisos** (core#804), only while push is on:
 
 - **Avisos en tus dispositivos**: the button **Recibir avisos en este dispositivo**, which is the only thing that asks the browser for permission. When the browser cannot, it says why instead: no support, notifications blocked for the site (and how to allow them), or, on iPhone and iPad, the step to add the site to the home screen first.
-- The account's devices (browser, system, last notice), the current one marked, each with **Quitar**.
+- The account's devices (browser, system, last use: subscribed, refreshed by a page of the site or sent a notice), the current one marked, each with **Quitar**.
 - **Mandar un aviso de prueba**, to the current device only, sent at once (3 a minute, 10 an hour per account). It shows a fixed text, even with the site's tab in front, and creates no notice in the bell.
 - One more switch per optional category with site notices, **En tus dispositivos**, off for everyone until the person turns it on, and for all their devices at once. It follows the web switch: a notice the bell does not get is never pushed, and neither is a muted subject. Mandatory categories are never pushed. A category may be marked **Sugerido** (`pushSuggested`); **Activar las sugeridas** turns those on in the form, to be saved with the rest.
 

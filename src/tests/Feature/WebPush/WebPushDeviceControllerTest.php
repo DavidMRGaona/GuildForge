@@ -63,6 +63,22 @@ final class WebPushDeviceControllerTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->where('mailPreferences.pushDevices', []));
     }
 
+    public function test_no_device_is_listed_while_impersonating(): void
+    {
+        $this->enableWebPush();
+        $admin = UserModel::factory()->admin()->create();
+        $target = UserModel::factory()->create();
+        $this->subscribe($target);
+        $this->actingAs($admin);
+        $this->app->make(ImpersonationServiceInterface::class)->start($admin, $target, ImpersonationMode::ReadOnly);
+
+        $this->get('/perfil?tab=mail')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('webPush', null)
+                ->where('mailPreferences.pushDevices', []));
+    }
+
     public function test_a_device_of_the_account_is_removed(): void
     {
         $this->enableWebPush();

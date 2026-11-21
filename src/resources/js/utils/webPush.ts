@@ -31,7 +31,12 @@ export interface WebPushEnvironment {
     session: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null;
     /** An iPhone or iPad where the site is not on the home screen: Safari offers push only there. */
     needsHomeScreen?: () => boolean;
+    /** How long to wait for the service worker before giving up (it may never register). */
+    readyTimeoutMs?: number;
 }
+
+/** How long `serviceWorker.ready` may take: it never settles when no worker is registered. */
+const READY_TIMEOUT_MS = 5000;
 
 /**
  * Whether this is an iPhone or iPad (iPadOS says it is a Mac, with a touch screen) where the site
@@ -134,10 +139,18 @@ async function pushManager(env: WebPushEnvironment): Promise<PushManager | null>
         return null;
     }
 
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), env.readyTimeoutMs ?? READY_TIMEOUT_MS);
+    });
+
     try {
-        return (await env.serviceWorker.ready).pushManager;
+        const registration = await Promise.race([env.serviceWorker.ready, timeout]);
+        return registration?.pushManager ?? null;
     } catch {
         return null;
+    } finally {
+        clearTimeout(timer);
     }
 }
 
@@ -325,6 +338,21 @@ export async function syncThisDevice(
         forgetRemembered(env, userId);
         await subscription.unsubscribe().catch(() => false);
     }
+}
+
+/**
+ * Tells the site about this browser's subscription now, even when this browser tab already did in
+ * this session (core#804): the mark outlives a sign-out from the panel or an expired session, while
+ * the site's own record of the session's browser does not. The device is then marked as this one
+ * again, or dropped from the browser when the site no longer knows it for this account.
+ */
+export async function resyncThisDevice(
+    publicKey: string,
+    userId: string,
+    env: WebPushEnvironment = browserEnvironment()
+): Promise<void> {
+    forgetRemembered(env, userId);
+    await syncThisDevice(publicKey, userId, env);
 }
 
 /**

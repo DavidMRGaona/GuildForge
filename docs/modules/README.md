@@ -990,7 +990,7 @@ logout({ url: `/partidas/invitaciones/${token}/salir` });
 
 - `url` must be a route of this site (a path, or an absolute address of the same origin). Anything else (another site, `//host`, `javascript:`) is ignored and the core's `/cerrar-sesion` is used, so a value read from a link can never post the sign-out elsewhere.
 - The route must end the session like the core's does (`Auth::guard('web')->logout()`, invalidate the session and regenerate the token); the server also forgets this browser's push subscription on the `Logout` event, whatever route fires it.
-- On a button, call it with parentheses (`@click="logout()"`): `@click="logout"` passes the click event, which is ignored, so the core's route is used.
+- On a button, call it with parentheses (`@click="logout()"`). `@click="logout"` passes the click event as `options`, which `vue-tsc` rejects (`TS2322`); a module that still does it in plain JavaScript signs out through `/cerrar-sesion`, since only a string `url` counts.
 
 ### Frontend translations
 

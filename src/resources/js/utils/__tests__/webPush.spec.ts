@@ -4,6 +4,7 @@ import {
     forgetThisDevice,
     isAppleMobileOutsideHomeScreen,
     removeDevice,
+    resyncThisDevice,
     sendTestNotice,
     subscribedWithKey,
     subscribeThisDevice,
@@ -366,5 +367,46 @@ describe('sendTestNotice', () => {
 
         expect(await sendTestNotice('user-a', env)).toBe('unavailable');
         expect(subscription.unsubscribe).not.toHaveBeenCalled();
+    });
+});
+
+describe('resyncThisDevice', () => {
+    it('tells the site again even when this tab already did in this session', async () => {
+        const { env, fetch, storage } = environment({ existing: fakeSubscription(), status: 200 });
+        storage.set('webPush.synced:user-a', '1');
+
+        await resyncThisDevice(PUBLIC_KEY, 'user-a', env);
+
+        expect(methods(fetch)).toEqual(['PUT']);
+        expect(storage.get('webPush.synced:user-a')).toBe('1');
+    });
+
+    it('drops the subscription the site no longer knows for this account', async () => {
+        const subscription = fakeSubscription();
+        const { env, storage } = environment({ existing: subscription, status: 404 });
+        storage.set('webPush.synced:user-a', '1');
+
+        await resyncThisDevice(PUBLIC_KEY, 'user-a', env);
+
+        expect(subscription.unsubscribe).toHaveBeenCalled();
+        expect(storage.has('webPush.synced:user-a')).toBe(false);
+    });
+});
+
+describe('a service worker that never gets ready', () => {
+    it('gives up after a while instead of waiting forever', async () => {
+        vi.useFakeTimers();
+        try {
+            const { env } = environment();
+            env.serviceWorker = { ready: new Promise<ServiceWorkerRegistration>(() => undefined) };
+            env.readyTimeoutMs = 1000;
+
+            const state = thisDevicePushState(env);
+            await vi.advanceTimersByTimeAsync(1000);
+
+            await expect(state).resolves.toBe('available');
+        } finally {
+            vi.useRealTimers();
+        }
     });
 });

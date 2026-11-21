@@ -982,7 +982,7 @@ export default {
                         current: 'This device',
                         name: '{browser} on {platform}',
                         added: 'Turned on on {date}',
-                        lastUsed: 'Last notice on {date}',
+                        lastUsed: 'Last used on {date}',
                         remove: 'Remove',
                         removeLabel: 'Stop getting notices on {device}',
                         removeError: 'The device could not be removed. Try again.',

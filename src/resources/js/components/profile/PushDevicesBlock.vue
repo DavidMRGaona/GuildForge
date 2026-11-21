@@ -8,9 +8,9 @@ import HelpLink from '@/components/knowledge/HelpLink.vue';
 import type { PushDevice } from '@/types/mailPreferences';
 import {
     removeDevice,
+    resyncThisDevice,
     sendTestNotice,
     subscribeThisDevice,
-    syncThisDevice,
     thisDevicePushState,
     type TestNoticeOutcome,
     type ThisDevicePushState,
@@ -91,18 +91,25 @@ function reloadDevices(): void {
     router.reload({ only: ['mailPreferences'] });
 }
 
+/**
+ * Tells the site about this browser's subscription again, even when this tab already did: after a
+ * sign-out from the panel or an expired session the site no longer knows it as this session's
+ * browser. It is then marked as this device, or dropped from the browser when the site has
+ * forgotten it, and the state is worked out again.
+ */
+async function resync(): Promise<void> {
+    await resyncThisDevice(props.publicKey, props.userId);
+    state.value = await thisDevicePushState();
+}
+
 onMounted(async () => {
     state.value = await thisDevicePushState();
 
-    // Subscribed, but this session has not told the site yet (the page was built first): tell it
-    // now, then show this device marked. A browser the site does not know for this account is
-    // dropped by the sync, so the state is worked out again
+    // Subscribed, but none of the listed devices is this session's browser (the page was built
+    // before the sync, or the site no longer has it as this session's): settle it, then reload
     if (state.value === 'subscribed' && !hasCurrent.value) {
-        await syncThisDevice(props.publicKey, props.userId);
-        state.value = await thisDevicePushState();
-        if (state.value === 'subscribed') {
-            reloadDevices();
-        }
+        await resync();
+        reloadDevices();
     }
 });
 
@@ -145,6 +152,10 @@ async function remove(device: PushDevice): Promise<void> {
         }
         if (device.current) {
             state.value = await thisDevicePushState();
+        } else if (state.value === 'subscribed') {
+            // The removed device may have been this browser without being marked as it: the site
+            // answers that it no longer knows it, and the browser drops it
+            await resync();
         }
         reloadDevices();
     } finally {
@@ -344,8 +355,9 @@ const testMessage = computed(() => {
                 {{ t('auth.profile.mail.push.suggestedHint') }}
             </p>
         </div>
-        <p v-if="testMessage" role="status" class="text-sm text-base-secondary">
-            {{ testMessage }}
+        <!-- Always in the page, so a screen reader announces the text when it changes -->
+        <p role="status" class="text-sm text-base-secondary" data-testid="push-test-status">
+            {{ testMessage ?? '' }}
         </p>
     </section>
 </template>

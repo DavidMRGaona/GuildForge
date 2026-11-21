@@ -7,6 +7,8 @@ audience: site
 order: 42
 keywords: [notificaciones, notificaciones push, push, avisos en el móvil, avisos en el ordenador, notificaciones del navegador, permitir notificaciones, bloquear notificaciones, iphone, ipad, pantalla de inicio, añadir a la pantalla de inicio, dispositivos, quitar dispositivo, aviso de prueba, no me llegan las notificaciones, sugerido]
 related: [core.account.site-notifications, core.account.mail-preferences]
+conditions:
+  capabilities: [core.web_push]
 ---
 Los avisos de la campana pueden llegarte también como notificaciones del sistema, en el móvil o en el ordenador, aunque tengas la web cerrada. Solo te llegan los que tú elijas, y solo en los dispositivos donde los actives.
 
@@ -45,7 +47,7 @@ Las notificaciones normales no salen mientras miras la web: si tienes una pesta�
 
 ## Quitar un dispositivo
 
-En **Dispositivos que reciben avisos** ves cada navegador que los recibe, con el último aviso que le llegó. **Este dispositivo** es desde el que miras la página. Pulsa **Quitar** para que deje de recibirlos.
+En **Dispositivos que reciben avisos** ves cada navegador que los recibe, con su último uso: la última vez que le llegó un aviso o que abriste la web en él. **Este dispositivo** es desde el que miras la página. Pulsa **Quitar** para que deje de recibirlos.
 
 Un dispositivo también deja de recibirlos al cerrar sesión en él, y cuando lleva 90 días sin usarse.
 

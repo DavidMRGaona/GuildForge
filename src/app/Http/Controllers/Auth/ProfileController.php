@@ -8,6 +8,7 @@ use App\Application\Calendar\Services\CalendarFeedTokenServiceInterface;
 use App\Application\Calendar\Services\PersonalCalendarServiceInterface;
 use App\Application\DTOs\UpdateUserDTO;
 use App\Application\Factories\ResponseDTOFactoryInterface;
+use App\Application\Impersonation\Services\ImpersonationContextInterface;
 use App\Application\Mail\Services\MailDigestServiceInterface;
 use App\Application\Mail\Services\MailPauseServiceInterface;
 use App\Application\Mail\Services\MailPreferenceServiceInterface;
@@ -64,6 +65,7 @@ final class ProfileController extends Controller
         private readonly TwoFactorDisableRule $twoFactorDisable,
         private readonly WebPushConfigurationInterface $webPush,
         private readonly WebPushSubscriptionServiceInterface $webPushSubscriptions,
+        private readonly ImpersonationContextInterface $impersonation,
     ) {}
 
     public function show(Request $request): Response
@@ -139,7 +141,8 @@ final class ProfileController extends Controller
      */
     private function pushDevicesFor(UserModel $user, Request $request): array
     {
-        if (! $this->webPush->enabled()) {
+        // Like the shared prop `webPush`: nothing about the target's browsers while impersonating
+        if (! $this->webPush->enabled() || $this->impersonation->isActive()) {
             return [];
         }
 

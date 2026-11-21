@@ -93,9 +93,9 @@ final readonly class MailCategoryDTO
         ?string $icon = null,
         bool $site = false,
         bool $mail = true,
-        bool $pushSuggested = false,
     ): self {
-        return new self($key, $section, $label, $description, $reason, $audience, $icon, false, $mail, $site, $pushSuggested);
+        // Never pushed: the bell and the mail already carry it, so there is no push to suggest
+        return new self($key, $section, $label, $description, $reason, $audience, $icon, false, $mail, $site);
     }
 
     public function isMandatory(): bool
