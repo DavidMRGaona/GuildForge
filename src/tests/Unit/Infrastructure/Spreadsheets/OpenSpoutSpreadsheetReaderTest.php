@@ -223,10 +223,11 @@ final class OpenSpoutSpreadsheetReaderTest extends TestCase
 
     public function test_a_tag_too_long_for_a_regular_expression_hides_no_cell(): void
     {
-        $block = '<c'.str_repeat(' ', 12_000).'/>'.str_repeat('<c/>', 8_000);
+        // A regular expression gave up on each padded tag and missed the 49 cells after it: 16 500 cells, none seen.
+        $block = '<c'.str_repeat(' ', 12_000).'/>'.str_repeat('<c/>', 49);
 
         $this->assertFailure(SpreadsheetReadFailure::TooManyColumns, $this->workbook([
-            'xl/worksheets/sheet1.xml' => $this->sheetXml('<row r="1"><c r="A1" t="inlineStr"><is><t>Nombre</t></is></c>'.str_repeat($block, 3).'</row>'),
+            'xl/worksheets/sheet1.xml' => $this->sheetXml('<row r="1"><c r="A1" t="inlineStr"><is><t>Nombre</t></is></c>'.str_repeat($block, 330).'</row>'),
         ]));
     }
 
@@ -270,15 +271,26 @@ final class OpenSpoutSpreadsheetReaderTest extends TestCase
     {
         $root = $this->temporaryFolder();
         $reader = new OpenSpoutSpreadsheetReader(temporaryRoot: $root);
+        $openSpoutFilesBefore = $this->openSpoutTemporaryFiles();
 
-        $reader->read(self::FIXTURES.'members.xlsx');
+        // A large uniqueCount makes openspout cache the shared strings on disk, holding their text.
+        $sharedStrings = preg_replace('/uniqueCount="\d+"/', 'uniqueCount="1000000"', $this->entryOf(self::FIXTURES.'members.xlsx', 'xl/sharedStrings.xml'));
+        $reader->read($this->workbook(['xl/sharedStrings.xml' => (string) $sharedStrings]));
 
+        // The same, with open() failing once openspout has written its cache (a workbook without sheets):
+        // openspout's own close() then leaves the cache behind.
         try {
-            $reader->read($this->workbook(['xl/sharedStrings.xml' => '<sst><si><t>texto</si>']));
-        } catch (SpreadsheetReadException) {
+            $reader->read($this->workbook([
+                'xl/sharedStrings.xml' => (string) $sharedStrings,
+                'xl/workbook.xml' => '<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheets/></workbook>',
+            ]));
+            $this->fail('A workbook without sheets cannot be opened');
+        } catch (SpreadsheetReadException $exception) {
+            $this->assertSame(SpreadsheetReadFailure::Unreadable, $exception->reason);
         }
 
         $this->assertSame([], array_values(array_diff((array) scandir($root), ['.', '..'])));
+        $this->assertSame($openSpoutFilesBefore, $this->openSpoutTemporaryFiles(), 'openspout writes into the folder of the read, never the system one');
     }
 
     public function test_a_quote_inside_an_unquoted_csv_field_is_text_and_hides_no_separator(): void
@@ -295,9 +307,10 @@ final class OpenSpoutSpreadsheetReaderTest extends TestCase
     {
         $rels = $this->entryOf(self::FIXTURES.'members.xlsx', 'xl/_rels/workbook.xml.rels');
 
+        // Without an .xml extension or the usual folder, only the relations say openspout reads it.
         $this->assertFailure(SpreadsheetReadFailure::TooManyColumns, $this->workbook([
-            'xl/_rels/workbook.xml.rels' => str_replace('worksheets/sheet1.xml', 'datos/hoja.xml', $rels),
-            'xl/datos/hoja.xml' => $this->sheetXml('<row r="1"><c r="A1" t="inlineStr"><is><t>Nombre</t></is></c><c r="ZZZZ1"/></row>'),
+            'xl/_rels/workbook.xml.rels' => str_replace('worksheets/sheet1.xml', 'datos/hoja.bin', $rels),
+            'xl/datos/hoja.bin' => $this->sheetXml('<row r="1"><c r="A1" t="inlineStr"><is><t>Nombre</t></is></c><c r="XFE1"/></row><row r="2"><c r="A2" t="inlineStr"><is><t>Ana</t></is></c></row>'),
         ]));
     }
 
@@ -317,6 +330,32 @@ final class OpenSpoutSpreadsheetReaderTest extends TestCase
                 .'<row r="1048576"><c r="A1048576" t="inlineStr"><is><t>Ana</t></is></c></row>',
             )]),
         );
+    }
+
+    public function test_parts_openspout_does_not_parse_are_not_walked_element_by_element(): void
+    {
+        $this->assertBoundedFailure(
+            SpreadsheetReadFailure::Empty,
+            $this->workbook([
+                'customXml/item1.xml' => '<?xml version="1.0"?><x>'.str_repeat('<a/>', 30_000_000).'</x>',
+                'xl/worksheets/sheet1.xml' => $this->sheetXml('<row r="1"><c r="A1" t="inlineStr"><is><t>Nombre</t></is></c></row>'),
+            ]),
+            maxSeconds: 3.0,
+        );
+    }
+
+    public function test_a_sheet_with_more_elements_than_the_limits_can_need_is_refused(): void
+    {
+        $this->assertBoundedFailure(
+            SpreadsheetReadFailure::TooLarge,
+            $this->workbook(['xl/worksheets/sheet1.xml' => $this->sheetXml(str_repeat('<x/>', 200_000))]),
+            new SpreadsheetLimitsDTO(maxRows: 10, maxColumns: 10),
+        );
+    }
+
+    public function test_windows_1252_bytes_it_does_not_define_are_unreadable(): void
+    {
+        $this->assertFailure(SpreadsheetReadFailure::Unreadable, $this->temporaryFile("Nombre;Email\nJos\x81;jose@example.org\n"));
     }
 
     public function test_blank_csv_lines_count_against_the_budget(): void
@@ -374,11 +413,21 @@ final class OpenSpoutSpreadsheetReaderTest extends TestCase
     /**
      * The failure must come early: these files would otherwise cost minutes.
      */
-    private function assertBoundedFailure(SpreadsheetReadFailure $reason, string $path, ?SpreadsheetLimitsDTO $limits = null): void
+    private function assertBoundedFailure(SpreadsheetReadFailure $reason, string $path, ?SpreadsheetLimitsDTO $limits = null, float $maxSeconds = 10.0): void
     {
         $started = microtime(true);
         $this->assertFailure($reason, $path, $limits);
-        $this->assertLessThan(10.0, microtime(true) - $started, 'Reading must stop early');
+        $this->assertLessThan($maxSeconds, microtime(true) - $started, 'Reading must stop early');
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function openSpoutTemporaryFiles(): array
+    {
+        $files = glob(sys_get_temp_dir().'/{sharedstrings,xlsx}*', GLOB_BRACE);
+
+        return $files === false ? [] : $files;
     }
 
     private function assertFailure(SpreadsheetReadFailure $reason, string $path, ?SpreadsheetLimitsDTO $limits = null): SpreadsheetReadException

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Infrastructure\Spreadsheets;
 
+use App\Domain\Spreadsheets\Exceptions\SpreadsheetReadException;
 use App\Infrastructure\Spreadsheets\CsvDialect;
 use PHPUnit\Framework\TestCase;
 
@@ -40,5 +41,15 @@ final class CsvDialectTest extends TestCase
 
         $this->assertSame('Windows-1252', $dialect->encoding);
         $this->assertSame("José;Cuota (€)\n", $dialect->toUtf8("Jos\xE9;Cuota (\x80)\n"));
+    }
+
+    public function test_bytes_windows_1252_does_not_define_make_the_text_unreadable(): void
+    {
+        $content = "Jos\x81;Cuota\n";
+        $dialect = CsvDialect::detect($content);
+
+        $this->expectException(SpreadsheetReadException::class);
+
+        $dialect->toUtf8($content);
     }
 }

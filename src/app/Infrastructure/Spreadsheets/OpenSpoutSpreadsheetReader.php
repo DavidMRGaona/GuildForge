@@ -53,6 +53,14 @@ final readonly class OpenSpoutSpreadsheetReader implements SpreadsheetReaderInte
         private ?string $temporaryRoot = null,
     ) {}
 
+    /**
+     * Cells one read may build under these limits.
+     */
+    public static function cellBudget(SpreadsheetLimitsDTO $limits): int
+    {
+        return max(self::MIN_CELL_BUDGET, ($limits->maxRows + 1) * $limits->maxColumns * self::CELL_BUDGET_FACTOR);
+    }
+
     public function read(string $path, SpreadsheetLimitsDTO $limits = new SpreadsheetLimitsDTO): SpreadsheetDTO
     {
         $size = $this->sizeOf($path);
@@ -185,7 +193,7 @@ final readonly class OpenSpoutSpreadsheetReader implements SpreadsheetReaderInte
     {
         $headers = null;
         $collected = [];
-        $cellBudget = max(self::MIN_CELL_BUDGET, ($limits->maxRows + 1) * $limits->maxColumns * self::CELL_BUDGET_FACTOR);
+        $cellBudget = self::cellBudget($limits);
 
         foreach ($rows as $number => $cells) {
             // An empty row openspout fills in, or a blank CSV line, still costs a turn of the loop.

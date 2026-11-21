@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Spreadsheets;
 
 use App\Domain\Spreadsheets\Exceptions\SpreadsheetReadException;
+use App\Domain\Spreadsheets\SpreadsheetReadFailure;
 
 /**
  * Encoding and separator of a CSV text. Encoding: UTF-8 (with or without BOM) when the whole text
@@ -20,6 +21,8 @@ final readonly class CsvDialect
     public const string WINDOWS_1252 = 'Windows-1252';
 
     private const string UTF8_BOM = "\xEF\xBB\xBF";
+
+    private const string WINDOWS_1252_UNDEFINED = "\x81\x8D\x8F\x90\x9D";
 
     /** In order of preference. */
     private const array DELIMITERS = [';', ',', "\t"];
@@ -55,7 +58,9 @@ final readonly class CsvDialect
     }
 
     /**
-     * The text in UTF-8, without BOM or `sep=` line. Windows-1252 bytes it does not define become «?».
+     * The text in UTF-8, without BOM or `sep=` line.
+     *
+     * @throws SpreadsheetReadException unreadable, for bytes Windows-1252 does not define
      */
     public function toUtf8(string $content): string
     {
@@ -65,7 +70,16 @@ final readonly class CsvDialect
             $text = (string) preg_replace(self::SEPARATOR_LINE, '', $text, 1);
         }
 
-        return $this->encoding === self::UTF8 ? $text : mb_convert_encoding($text, self::UTF8, self::WINDOWS_1252);
+        if ($this->encoding === self::UTF8) {
+            return $text;
+        }
+
+        // Bytes Windows-1252 leaves undefined would become C1 control characters: not a text it can decode.
+        if (strpbrk($text, self::WINDOWS_1252_UNDEFINED) !== false) {
+            throw new SpreadsheetReadException(SpreadsheetReadFailure::Unreadable);
+        }
+
+        return mb_convert_encoding($text, self::UTF8, self::WINDOWS_1252);
     }
 
     private static function withoutBom(string $content): string

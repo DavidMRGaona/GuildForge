@@ -16,10 +16,12 @@ use ZipArchive;
  * the gaps up to its last cell, and every empty row up to the next row number:
  *
  * - every entry is inflated once and its real bytes counted (the sizes an archive declares can lie);
- * - every XML entry, and every sheet the workbook points to whatever its name, is read with
- *   XMLReader as openspout reads it (elements matched by local name, whatever their namespace):
- *   no row may reach past the last spreadsheet column, by a cell reference or by its number of
- *   cells, and no row number may pass the last spreadsheet row.
+ * - the entries openspout parses (every sheet the workbook points to, whatever its name, those in
+ *   xl/worksheets/ and the shared strings) are read with XMLReader as openspout reads them
+ *   (elements matched by local name, whatever their namespace): no row may reach past the last
+ *   spreadsheet column, by a cell reference or by its number of cells, no row number may pass the
+ *   last spreadsheet row, and no entry may hold more elements than the limits can need. Other
+ *   entries only count for the inflated bytes.
  *
  * Anything that cannot be scanned is unreadable: it fails closed.
  */
@@ -34,11 +36,20 @@ final class XlsxPreflight
     /** Rows of Excel and LibreOffice. */
     public const int MAX_SHEET_ROWS = 1048576;
 
+    /** Elements an entry read may hold, per cell the reader's budget allows. */
+    public const int ELEMENTS_PER_CELL = 16;
+
     private const int CHUNK_BYTES = 65536;
 
     private const string WORKBOOK = 'xl/workbook.xml';
 
     private const string WORKBOOK_RELATIONS = 'xl/_rels/workbook.xml.rels';
+
+    private const string WORKSHEETS_FOLDER = 'xl/worksheets/';
+
+    private const string SHARED_STRINGS = 'xl/sharedStrings.xml';
+
+    private const string SHARED_STRINGS_RELATION = '/sharedStrings';
 
     private const string RELATIONSHIPS_NAMESPACE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
 
@@ -63,9 +74,10 @@ final class XlsxPreflight
         }
 
         $maxColumns = max(self::MAX_SHEET_COLUMNS, $limits->maxColumns);
+        $maxElements = OpenSpoutSpreadsheetReader::cellBudget($limits) * self::ELEMENTS_PER_CELL;
 
         foreach ($this->entriesToScan($path, $names) as $name) {
-            $this->scan($this->uri($path, $name), $limits, $maxColumns);
+            $this->scan($this->uri($path, $name), $limits, $maxColumns, $maxElements);
         }
     }
 
@@ -110,16 +122,20 @@ final class XlsxPreflight
     }
 
     /**
-     * Every XML entry, plus the targets of the workbook's sheets, which may have any name.
+     * What openspout parses: the targets of the workbook's sheets and shared strings, which may have
+     * any name, everything in xl/worksheets/ and xl/sharedStrings.xml.
      *
      * @param  list<string>  $names
      * @return list<string>
      */
     private function entriesToScan(string $path, array $names): array
     {
-        $scan = array_filter($names, static fn (string $name): bool => str_ends_with(strtolower($name), '.xml'));
+        $scan = array_filter(
+            $names,
+            static fn (string $name): bool => str_starts_with($name, self::WORKSHEETS_FOLDER) || $name === self::SHARED_STRINGS,
+        );
 
-        foreach ($this->sheetTargets($path, $names) as $target) {
+        foreach ($this->relationTargets($path, $names) as $target) {
             $scan[] = $target;
         }
 
@@ -127,13 +143,13 @@ final class XlsxPreflight
     }
 
     /**
-     * The entries the workbook's <sheet r:id> point to through its relations, resolved as paths
-     * inside the archive. The id is read both by qualified name and by namespace.
+     * The entries the workbook's <sheet r:id> and its shared strings relation point to, resolved
+     * as paths inside the archive. The id is read both by qualified name and by namespace.
      *
      * @param  list<string>  $names
      * @return list<string>
      */
-    private function sheetTargets(string $path, array $names): array
+    private function relationTargets(string $path, array $names): array
     {
         if (! in_array(self::WORKBOOK_RELATIONS, $names, true)) {
             return [];
@@ -151,7 +167,14 @@ final class XlsxPreflight
         $targets = [];
 
         $this->each($this->uri($path, self::WORKBOOK_RELATIONS), function (XMLReader $xml) use ($ids, $names, &$targets): void {
-            if ($xml->localName !== 'Relationship' || ! in_array((string) $xml->getAttribute('Id'), $ids, true)) {
+            if ($xml->localName !== 'Relationship') {
+                return;
+            }
+
+            $isSheet = in_array((string) $xml->getAttribute('Id'), $ids, true);
+            $isSharedStrings = str_ends_with((string) $xml->getAttribute('Type'), self::SHARED_STRINGS_RELATION);
+
+            if (! $isSheet && ! $isSharedStrings) {
                 return;
             }
 
@@ -190,11 +213,16 @@ final class XlsxPreflight
         return $segments === [] ? null : implode('/', $segments);
     }
 
-    private function scan(string $uri, SpreadsheetLimitsDTO $limits, int $maxColumns): void
+    private function scan(string $uri, SpreadsheetLimitsDTO $limits, int $maxColumns, int $maxElements): void
     {
         $rowWidth = 0;
+        $elements = 0;
 
-        $this->each($uri, function (XMLReader $xml) use (&$rowWidth, $limits, $maxColumns): void {
+        $this->each($uri, function (XMLReader $xml) use (&$rowWidth, &$elements, $limits, $maxColumns, $maxElements): void {
+            if (++$elements > $maxElements) {
+                throw new SpreadsheetReadException(SpreadsheetReadFailure::TooLarge, limit: $limits->maxBytes);
+            }
+
             if ($xml->localName === 'row') {
                 $rowWidth = 0;
                 $number = $xml->getAttribute('r');

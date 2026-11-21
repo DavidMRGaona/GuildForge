@@ -64,7 +64,7 @@ Only the first sheet of an `.xlsx` is read; the others are ignored. In a workboo
 ### What the reader accepts
 
 - **Type by content, never by extension**: an Office Open XML workbook (a ZIP with `[Content_Types].xml` and `xl/workbook.xml`, so `.xlsx` and `.xlsm`) or a text. An `.xlsx` named `.csv` is read as `.xlsx`. Old `.xls` files, `.ods`, `.docx`, images, PDF and any text with control characters other than tab and line breaks are `unsupported_type`.
-- **CSV encoding**: UTF-8 with or without BOM when the whole text is valid UTF-8; otherwise the whole text is read as Windows-1252 (what Excel in Spanish exports). So a UTF-8 file with a single stray Latin-1 byte is read as Windows-1252 throughout, and its UTF-8 accents arrive garbled (`JosÃ©`): ask people to save it again as «CSV UTF-8». Bytes Windows-1252 does not define become `?`. UTF-16 («Texto Unicode» in Excel) holds NUL bytes, so it is `unsupported_type`.
+- **CSV encoding**: UTF-8 with or without BOM when the whole text is valid UTF-8; otherwise the whole text is read as Windows-1252 (what Excel in Spanish exports). So a UTF-8 file with a single stray Latin-1 byte is read as Windows-1252 throughout, and its UTF-8 accents arrive garbled (`JosÃ©`): ask people to save it again as «CSV UTF-8». A text with bytes Windows-1252 does not define (`0x81`, `0x8D`, `0x8F`, `0x90`, `0x9D`) cannot be decoded either way, so it is `unreadable`. UTF-16 («Texto Unicode» in Excel) holds NUL bytes, so it is `unsupported_type`.
 - **CSV separator**: the one Excel's first line `sep=;` names (that line is left out and is not a row); otherwise `;`, `,` or a tab, the first in that order that splits the header into several fields and each of the next nine records into as many; otherwise the one giving the header most fields; otherwise `,`. So `Nombre;Dirección (calle, número, piso)` is read with `;`.
 - **CSV quotes** (RFC 4180, split by the core, not by openspout): a field is quoted only when it starts with `"`; inside, `""` is one quote, and separators and line breaks are text; a quote in the middle of an unquoted field is text.
 - **CSV line ends**: CRLF, LF or CR alone. A final end-of-file mark (`\x1A`, left by old programs) is ignored.
@@ -83,9 +83,9 @@ Rows are streamed: reaching `maxRows` or `maxColumns` stops reading at that row,
 
 openspout builds each `.xlsx` row whole, filling in every empty cell up to the row's last one, and every empty row up to the next row number, before the reader sees it. So the reader also bounds what can be built:
 
-- **Before opening an `.xlsx`**, it inflates every entry of the archive once, counting the bytes really inflated (an archive can declare smaller sizes than it holds), and reads every XML entry, plus every sheet the workbook points to whatever its name, as openspout reads them. It refuses entries that inflate past 30 times `maxBytes` (`too_large`), a row reaching past column 16384 (the last one Excel and LibreOffice have, or `maxColumns` if larger) by a cell reference or by its number of cells (`too_many_columns`), and a row number past 1048576, the last spreadsheet row (`too_many_rows`). Anything it cannot read this way is `unreadable`.
+- **Before opening an `.xlsx`**, it inflates every entry of the archive once, counting the bytes really inflated (an archive can declare smaller sizes than it holds), and refuses entries that inflate past 30 times `maxBytes` (`too_large`). Then it reads, as openspout reads them, the parts openspout parses: every sheet the workbook points to whatever its name, everything in `xl/worksheets/` and the shared strings. It refuses a row reaching past column 16384 (the last one Excel and LibreOffice have, or `maxColumns` if larger) by a cell reference or by its number of cells (`too_many_columns`), a row number past 1048576, the last spreadsheet row (`too_many_rows`), and a part with more elements than 16 per cell of the budget below (`too_large`). Anything it cannot read this way is `unreadable`. Other parts only count for the inflated bytes.
 - **While splitting a CSV**, a record with more fields than that same column cap is `too_many_columns`, before it grows further.
-- **While reading either**, the cells built, empty ones included and at least one per row (blank rows and blank CSV lines too), may not pass 4 × (`maxRows` + 1) × `maxColumns`, and never less than 10000 (200200 with the defaults). Past it, reading stops as `too_many_columns` when the row that crossed it is wider than `maxColumns`, otherwise as `too_many_rows`.
+- **While reading either**, the cells built, empty ones included and at least one per row (blank rows and blank CSV lines too), may not pass 4 × (`maxRows` + 1) × `maxColumns`, and never less than 10000 (200200 with the defaults). Past it, reading stops as `too_many_columns` when the row that crossed it is wider than `maxColumns`, otherwise as `too_many_rows`. So a single cell far down, say in row 1048576, gives `too_many_rows` even when the file has few rows with data: the empty rows before it count.
 
 Each read and write works in a temporary folder of its own (shared strings caches, the parts of a workbook being written), deleted when it ends, also when it fails.
 
@@ -96,11 +96,11 @@ Each read and write works in a temporary folder of its own (shared strings cache
 | Reason | When |
 |--------|------|
 | `unsupported_type` | Not a CSV text or an Office Open XML workbook |
-| `unreadable` | Missing, not a file, damaged, or any part of a workbook that cannot be read |
+| `unreadable` | Missing, not a file, damaged, any part of a workbook that cannot be read, or a CSV with bytes Windows-1252 does not define |
 | `empty` | No header, or no row with data below it |
 | `too_many_rows` | More than `maxRows` data rows, a row number past the last spreadsheet row, or too many blank rows for the cell budget |
 | `too_many_columns` | A header or row wider than `maxColumns`, a row past the last spreadsheet column, or rows of empty cells too wide for the cell budget |
-| `too_large` | Over `maxBytes`, or an `.xlsx` that inflates past 30 times it |
+| `too_large` | Over `maxBytes`, an `.xlsx` that inflates past 30 times it, or a sheet or the shared strings with more elements than the limits can need |
 | `duplicate_headers` | Two headers equal ignoring case, accents and spacing (`Teléfono` and `TELEFONO`) |
 
 Neither the message nor a previous exception carries the file's content: log the `reason`, never the rows. `$exception->userMessage()` gives the person a translated message (`lang/*/spreadsheets.php`) with the limit (`2 MB`, `1000`) or the column number.
