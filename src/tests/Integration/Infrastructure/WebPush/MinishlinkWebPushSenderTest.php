@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\WebPush;
 
+use App\Application\WebPush\DTOs\VapidKeysDTO;
 use App\Application\WebPush\DTOs\WebPushSubscriptionDTO;
 use App\Application\WebPush\Services\WebPushConfigurationInterface;
 use App\Domain\WebPush\WebPushDeliveryOutcome;
+use App\Domain\WebPush\WebPushEndpointRule;
 use App\Infrastructure\WebPush\MinishlinkWebPushSender;
 use ArrayObject;
 use DateTimeImmutable;
@@ -102,6 +104,47 @@ final class MinishlinkWebPushSenderTest extends TestCase
 
         $this->assertSame(WebPushDeliveryOutcome::Unusable, $this->sender(new Response(201))->send($subscription, '{"id":"abc"}'));
         $this->assertCount(0, $this->history);
+    }
+
+    public function test_unusable_vapid_keys_fail_without_sending_or_blaming_the_browser(): void
+    {
+        // Keys that slipped past the configuration's checks: the site's problem, not the browser's
+        $configuration = new class implements WebPushConfigurationInterface
+        {
+            public function enabled(): bool
+            {
+                return true;
+            }
+
+            public function publicKey(): string
+            {
+                return 'BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+            }
+
+            public function vapid(): VapidKeysDTO
+            {
+                return new VapidKeysDTO('mailto:avisos@example.test', 'BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', 'AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE');
+            }
+
+            public function isIncomplete(): bool
+            {
+                return false;
+            }
+
+            public function endpointRule(): WebPushEndpointRule
+            {
+                return new WebPushEndpointRule;
+            }
+        };
+        $log = Log::spy();
+        $stack = HandlerStack::create(new MockHandler([new Response(201)]));
+        $history = $this->history;
+        $stack->push(Middleware::history($history));
+        $sender = new MinishlinkWebPushSender($configuration, new Client(['handler' => $stack]));
+
+        $this->assertSame(WebPushDeliveryOutcome::Failed, $sender->send($this->subscription(), '{"id":"abc"}'));
+        $this->assertCount(0, $this->history);
+        $log->shouldHaveReceived('warning')->once()->withArgs(static fn (string $message): bool => str_contains($message, 'VAPID'));
     }
 
     public function test_failures_are_logged_without_the_endpoint_or_the_keys(): void

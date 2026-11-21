@@ -43,6 +43,15 @@ final readonly class MinishlinkWebPushSender implements WebPushSenderInterface
             return WebPushDeliveryOutcome::Failed;
         }
 
+        // The browser's own keys, checked apart: only they make a subscription unusable for good
+        if (! $this->browserKeysUsable($subscription)) {
+            Log::warning('A push subscription has keys that cannot encrypt a message; it is forgotten', [
+                'service' => WebPushEndpointRule::serviceOf($subscription->endpoint),
+            ]);
+
+            return WebPushDeliveryOutcome::Unusable;
+        }
+
         try {
             $report = $this->webPush($vapid)->sendOneNotification(
                 new Subscription($subscription->endpoint, $subscription->p256dh, $subscription->auth, ContentEncoding::aes128gcm),
@@ -53,13 +62,14 @@ final readonly class MinishlinkWebPushSender implements WebPushSenderInterface
             // Out of reach. The exception may name the endpoint: neither it nor its message are logged
             $status = null;
             $report = null;
-        } catch (Throwable) {
-            // Before any request: the browser's keys cannot encrypt a message, now or ever
-            Log::warning('A push subscription has keys that cannot encrypt a message; it is forgotten', [
-                'service' => WebPushEndpointRule::serviceOf($subscription->endpoint),
+        } catch (Throwable $exception) {
+            // The site's side (VAPID keys, signing, a missing extension): every browser would fail
+            // alike, so no subscription is blamed or deleted
+            Log::warning('A push message could not be signed or encrypted; check the VAPID keys and the PHP extensions', [
+                'exception' => $exception::class,
             ]);
 
-            return WebPushDeliveryOutcome::Unusable;
+            return WebPushDeliveryOutcome::Failed;
         }
 
         if ($report instanceof MessageSentReport && $report->isSuccess()) {
@@ -80,6 +90,25 @@ final readonly class MinishlinkWebPushSender implements WebPushSenderInterface
         }
 
         return $outcome;
+    }
+
+    private function browserKeysUsable(WebPushSubscriptionDTO $subscription): bool
+    {
+        $point = $this->decode($subscription->p256dh);
+        $secret = $this->decode($subscription->auth);
+
+        return $point !== null && $secret !== null && strlen($secret) === 16 && P256Key::isPublicPoint($point);
+    }
+
+    private function decode(#[\SensitiveParameter] string $value): ?string
+    {
+        if (preg_match('/^[A-Za-z0-9_-]+=*\z/', $value) !== 1) {
+            return null;
+        }
+
+        $bytes = base64_decode(strtr(rtrim($value, '='), '-_', '+/'), true);
+
+        return $bytes === false ? null : $bytes;
     }
 
     private function webPush(VapidKeysDTO $vapid): WebPush

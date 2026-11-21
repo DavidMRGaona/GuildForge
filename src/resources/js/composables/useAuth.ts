@@ -6,9 +6,9 @@ import { forgetThisDevice } from '@/utils/webPush';
 /** How long signing out waits for this browser's push subscription to be forgotten. */
 const LOGOUT_PUSH_TIMEOUT_MS = 2000;
 
-function forgetThisDeviceWithin(milliseconds: number): Promise<void> {
+function forgetThisDeviceWithin(userId: string, milliseconds: number): Promise<void> {
     return Promise.race([
-        forgetThisDevice(),
+        forgetThisDevice(userId),
         new Promise<void>((resolve) => setTimeout(resolve, milliseconds)),
     ]);
 }
@@ -135,9 +135,11 @@ export function useAuth(): AuthComposable {
     const logout = (): void => {
         // This browser stops getting the account's push notifications first (core#803); the
         // server forgets it on sign-out too, so a slow or failed request never holds this up
-        const forget = page.props.webPush
-            ? forgetThisDeviceWithin(LOGOUT_PUSH_TIMEOUT_MS)
-            : Promise.resolve();
+        const userId = user.value?.id ?? null;
+        const forget =
+            page.props.webPush && userId !== null
+                ? forgetThisDeviceWithin(userId, LOGOUT_PUSH_TIMEOUT_MS)
+                : Promise.resolve();
         void forget.then(() => router.post('/cerrar-sesion'));
     };
 

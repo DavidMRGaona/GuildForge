@@ -116,7 +116,7 @@ describe('subscribeThisDevice', () => {
     it('subscribes with the site key and hands the subscription to the site', async () => {
         const { env, fetch, subscribe } = environment({ status: 201 });
 
-        await expect(subscribeThisDevice(PUBLIC_KEY, env)).resolves.toBe(true);
+        await expect(subscribeThisDevice(PUBLIC_KEY, 'user-a', env)).resolves.toBe(true);
 
         expect(subscribe).toHaveBeenCalledWith({
             userVisibleOnly: true,
@@ -137,7 +137,7 @@ describe('subscribeThisDevice', () => {
         const old = fakeSubscription(OLD_KEY);
         const { env, fetch } = environment({ existing: old, status: 201 });
 
-        await expect(subscribeThisDevice(PUBLIC_KEY, env)).resolves.toBe(true);
+        await expect(subscribeThisDevice(PUBLIC_KEY, 'user-a', env)).resolves.toBe(true);
 
         expect(methods(fetch)).toEqual(['DELETE', 'POST']);
         expect(old.unsubscribe).toHaveBeenCalled();
@@ -146,14 +146,14 @@ describe('subscribeThisDevice', () => {
     it('fails quietly in a browser without push', async () => {
         const { env, fetch } = environment({ supported: false });
 
-        await expect(subscribeThisDevice(PUBLIC_KEY, env)).resolves.toBe(false);
+        await expect(subscribeThisDevice(PUBLIC_KEY, 'user-a', env)).resolves.toBe(false);
         expect(fetch).not.toHaveBeenCalled();
     });
 
     it('drops the browser subscription when the site refuses it', async () => {
         const { env, created } = environment({ status: 422 });
 
-        await expect(subscribeThisDevice(PUBLIC_KEY, env)).resolves.toBe(false);
+        await expect(subscribeThisDevice(PUBLIC_KEY, 'user-a', env)).resolves.toBe(false);
         expect(created.unsubscribe).toHaveBeenCalled();
     });
 });
@@ -162,8 +162,8 @@ describe('syncThisDevice', () => {
     it('refreshes the account own subscription once per session, never creating one', async () => {
         const { env, fetch } = environment({ existing: fakeSubscription() });
 
-        await syncThisDevice(PUBLIC_KEY, env);
-        await syncThisDevice(PUBLIC_KEY, env);
+        await syncThisDevice(PUBLIC_KEY, 'user-a', env);
+        await syncThisDevice(PUBLIC_KEY, 'user-a', env);
 
         expect(fetch).toHaveBeenCalledTimes(1);
         expect(fetch).toHaveBeenCalledWith(
@@ -175,33 +175,47 @@ describe('syncThisDevice', () => {
         );
     });
 
+    it('checks again when another account signs in on the same tab', async () => {
+        // The first account's session ended; the next one must not be taken for it
+        const subscription = fakeSubscription();
+        const { env, fetch, storage } = environment({ existing: subscription });
+        await syncThisDevice(PUBLIC_KEY, 'user-a', env);
+        fetch.mockResolvedValue({ ok: false, status: 404 });
+
+        await syncThisDevice(PUBLIC_KEY, 'user-b', env);
+
+        expect(methods(fetch)).toEqual(['PUT', 'PUT']);
+        expect(subscription.unsubscribe).toHaveBeenCalled();
+        expect(storage.has('webPush.synced:user-b')).toBe(false);
+    });
+
     it('drops from the browser a subscription the site does not know for this account', async () => {
         // Another account subscribed this browser on a shared computer: it is not taken over
         const someoneElses = fakeSubscription();
         const { env, fetch, storage } = environment({ existing: someoneElses, status: 404 });
 
-        await syncThisDevice(PUBLIC_KEY, env);
+        await syncThisDevice(PUBLIC_KEY, 'user-a', env);
 
         expect(methods(fetch)).toEqual(['PUT']);
         expect(someoneElses.unsubscribe).toHaveBeenCalled();
-        expect(storage.has('webPush.synced')).toBe(false);
+        expect(storage.has('webPush.synced:user-a')).toBe(false);
     });
 
     it('keeps the browser subscription when the site could not be reached', async () => {
         const subscription = fakeSubscription();
         const { env, storage } = environment({ existing: subscription, status: 503 });
 
-        await syncThisDevice(PUBLIC_KEY, env);
+        await syncThisDevice(PUBLIC_KEY, 'user-a', env);
 
         expect(subscription.unsubscribe).not.toHaveBeenCalled();
-        expect(storage.has('webPush.synced')).toBe(false);
+        expect(storage.has('webPush.synced:user-a')).toBe(false);
     });
 
     it('never sends a subscription made with other keys: it drops it', async () => {
         const old = fakeSubscription(OLD_KEY);
         const { env, fetch } = environment({ existing: old });
 
-        await syncThisDevice(PUBLIC_KEY, env);
+        await syncThisDevice(PUBLIC_KEY, 'user-a', env);
 
         expect(methods(fetch)).toEqual(['DELETE']);
         expect(old.unsubscribe).toHaveBeenCalled();
@@ -211,8 +225,8 @@ describe('syncThisDevice', () => {
         const without = environment({ existing: null });
         const denied = environment({ existing: fakeSubscription(), permission: 'denied' });
 
-        await syncThisDevice(PUBLIC_KEY, without.env);
-        await syncThisDevice(PUBLIC_KEY, denied.env);
+        await syncThisDevice(PUBLIC_KEY, 'user-a', without.env);
+        await syncThisDevice(PUBLIC_KEY, 'user-a', denied.env);
 
         expect(without.fetch).not.toHaveBeenCalled();
         expect(denied.fetch).not.toHaveBeenCalled();
@@ -223,9 +237,9 @@ describe('forgetThisDevice', () => {
     it('asks the site to forget this browser and drops its subscription', async () => {
         const subscription = fakeSubscription();
         const { env, fetch, storage } = environment({ existing: subscription, status: 204 });
-        storage.set('webPush.synced', '1');
+        storage.set('webPush.synced:user-a', '1');
 
-        await forgetThisDevice(env);
+        await forgetThisDevice('user-a', env);
 
         expect(fetch).toHaveBeenCalledWith(
             WEB_PUSH_SUBSCRIPTION_URL,
@@ -235,13 +249,13 @@ describe('forgetThisDevice', () => {
             })
         );
         expect(subscription.unsubscribe).toHaveBeenCalled();
-        expect(storage.has('webPush.synced')).toBe(false);
+        expect(storage.has('webPush.synced:user-a')).toBe(false);
     });
 
     it('never throws, so signing out always goes on', async () => {
         const { env } = environment({ existing: fakeSubscription() });
         (env.fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('offline'));
 
-        await expect(forgetThisDevice(env)).resolves.toBeUndefined();
+        await expect(forgetThisDevice('user-a', env)).resolves.toBeUndefined();
     });
 });

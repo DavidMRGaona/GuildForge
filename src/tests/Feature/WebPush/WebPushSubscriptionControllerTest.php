@@ -152,6 +152,25 @@ final class WebPushSubscriptionControllerTest extends TestCase
         $this->assertFalse($fresh->last_used_at?->isToday());
     }
 
+    public function test_refreshing_someone_elses_browser_answers_exactly_like_an_unknown_one(): void
+    {
+        $this->enableWebPush();
+        // As in production: with debug on, the body carries a trace of each request
+        config(['app.debug' => false]);
+        $this->subscribe(UserModel::factory()->create());
+        $this->actingAs(UserModel::factory()->create());
+
+        $foreign = $this->putJson(self::URL, ['endpoint' => self::ENDPOINT]);
+        $unknown = $this->putJson(self::URL, ['endpoint' => 'https://fcm.googleapis.com/fcm/send/nobody']);
+
+        $foreign->assertNotFound();
+        $this->assertSame($unknown->getStatusCode(), $foreign->getStatusCode());
+        $this->assertSame($unknown->getContent(), $foreign->getContent());
+        foreach (['Content-Type', 'Cache-Control', 'X-Robots-Tag', 'Content-Security-Policy'] as $header) {
+            $this->assertSame($unknown->headers->get($header), $foreign->headers->get($header), $header);
+        }
+    }
+
     public function test_refreshing_never_creates_a_subscription(): void
     {
         $this->enableWebPush();
@@ -188,6 +207,19 @@ final class WebPushSubscriptionControllerTest extends TestCase
         $this->postJson(self::URL, $this->payload())
             ->assertForbidden()
             ->assertJson(['error' => 'impersonating']);
+    }
+
+    public function test_nobody_refreshes_or_removes_a_browser_while_impersonating(): void
+    {
+        $this->enableWebPush();
+        $admin = UserModel::factory()->admin()->create();
+        $target = UserModel::factory()->create();
+        $this->subscribe($target);
+        $this->actingAs($admin);
+        $this->app->make(ImpersonationServiceInterface::class)->start($admin, $target, ImpersonationMode::Simulate);
+
+        $this->putJson(self::URL, ['endpoint' => self::ENDPOINT])->assertForbidden()->assertJson(['error' => 'impersonating']);
+        $this->deleteJson(self::URL, ['endpoint' => self::ENDPOINT])->assertForbidden()->assertJson(['error' => 'impersonating']);
     }
 
     /**

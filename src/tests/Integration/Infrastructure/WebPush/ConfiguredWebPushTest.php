@@ -47,6 +47,9 @@ final class ConfiguredWebPushTest extends TestCase
             'a plain http subject' => [['web-push.subject' => 'http://example.test']],
             'a public key of the wrong size' => [['web-push.public_key' => 'BIiq-ImwLDB8OcUrATp0p_oGpRJ2nrH7cU']],
             'a private key that is no base64url' => [['web-push.private_key' => '1CQ89SCFpoxtZzHmc88YgS-2gW0F9xn_arKDlcfY/+=']],
+            // The right sizes, but no key pair: push would fail on every message
+            'a public key off the P-256 curve' => [['web-push.public_key' => 'BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA']],
+            'a private key of another pair' => [['web-push.private_key' => 'AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE']],
         ];
     }
 

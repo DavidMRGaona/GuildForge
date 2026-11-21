@@ -9,8 +9,8 @@ use App\Application\WebPush\Services\WebPushConfigurationInterface;
 use App\Domain\WebPush\WebPushEndpointRule;
 
 /**
- * Push settings from `config/web-push.php` (core#803). The public key must decode to an
- * uncompressed P-256 point (65 bytes starting with 0x04), the private one to 32 bytes, and the
+ * Push settings from `config/web-push.php` (core#803). The keys must form one P-256 pair (the
+ * public one an uncompressed point on the curve, the private one its 32-byte scalar) and the
  * subject must be a `mailto:` or `https:` address, as push services require.
  */
 final readonly class ConfiguredWebPush implements WebPushConfigurationInterface
@@ -33,7 +33,7 @@ final readonly class ConfiguredWebPush implements WebPushConfigurationInterface
         $privateKey = $this->setting('private_key');
         $subject = $this->setting('subject');
 
-        if (! $this->isPublicKey($publicKey) || ! $this->isPrivateKey($privateKey) || ! $this->isSubject($subject)) {
+        if (! $this->isKeyPair($privateKey, $publicKey) || ! $this->isSubject($subject)) {
             return null;
         }
 
@@ -59,18 +59,16 @@ final readonly class ConfiguredWebPush implements WebPushConfigurationInterface
         return is_string($value) ? trim($value) : '';
     }
 
-    private function isPublicKey(string $key): bool
+    /**
+     * Two keys of one P-256 pair: the right sizes are not enough, a public key off the curve or one
+     * that does not match the private key would fail every message.
+     */
+    private function isKeyPair(#[\SensitiveParameter] string $privateKey, string $publicKey): bool
     {
-        $bytes = $this->decode($key);
+        $public = $this->decode($publicKey);
+        $private = $this->decode($privateKey);
 
-        return $bytes !== null && strlen($bytes) === 65 && $bytes[0] === "\x04";
-    }
-
-    private function isPrivateKey(string $key): bool
-    {
-        $bytes = $this->decode($key);
-
-        return $bytes !== null && strlen($bytes) === 32;
+        return $public !== null && $private !== null && P256Key::pairs($private, $public);
     }
 
     private function isSubject(string $subject): bool

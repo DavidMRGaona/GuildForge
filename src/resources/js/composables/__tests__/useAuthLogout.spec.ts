@@ -10,7 +10,7 @@ vi.mock('@inertiajs/vue3', () => ({
 }));
 
 vi.mock('@/utils/webPush', () => ({
-    forgetThisDevice: (): Promise<void> => forgetThisDevice() as Promise<void>,
+    forgetThisDevice: (userId: string): Promise<void> => forgetThisDevice(userId) as Promise<void>,
 }));
 
 const { useAuth } = await import('../useAuth');
@@ -27,7 +27,7 @@ describe('useAuth().logout', () => {
     });
 
     it('forgets this browser for push before signing out', async () => {
-        page.props = { webPush: { publicKey: 'key' } };
+        page.props = { webPush: { publicKey: 'key' }, auth: { user: { id: 'user-a' } } };
         const order: string[] = [];
         forgetThisDevice.mockImplementation(async () => void order.push('forget'));
         post.mockImplementation(() => void order.push('post'));
@@ -35,12 +35,13 @@ describe('useAuth().logout', () => {
         useAuth().logout();
         await vi.runAllTimersAsync();
 
+        expect(forgetThisDevice).toHaveBeenCalledWith('user-a');
         expect(order).toEqual(['forget', 'post']);
         expect(post).toHaveBeenCalledWith('/cerrar-sesion');
     });
 
     it('signs out anyway when forgetting the browser takes too long', async () => {
-        page.props = { webPush: { publicKey: 'key' } };
+        page.props = { webPush: { publicKey: 'key' }, auth: { user: { id: 'user-a' } } };
         forgetThisDevice.mockReturnValue(new Promise(() => undefined));
 
         useAuth().logout();

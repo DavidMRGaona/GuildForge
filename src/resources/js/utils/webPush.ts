@@ -7,8 +7,15 @@ import { csrfHeaders } from '@/utils/csrf';
 
 export const WEB_PUSH_SUBSCRIPTION_URL = '/avisos/push/suscripcion';
 
-/** Set once the site was told about this browser in this session (sessionStorage). */
-const SYNCED_KEY = 'webPush.synced';
+/**
+ * Set, per account, once the site was told about this browser in this session (sessionStorage):
+ * another account signing in on the same tab is never taken for the one already told.
+ */
+const SYNCED_PREFIX = 'webPush.synced:';
+
+function syncedKey(userId: string): string {
+    return SYNCED_PREFIX + userId;
+}
 
 /** What these functions need from the browser, so tests can stand in for it. */
 export interface WebPushEnvironment {
@@ -98,17 +105,17 @@ function isSuccess(status: number | null): boolean {
     return status !== null && status >= 200 && status < 300;
 }
 
-function remember(env: WebPushEnvironment): void {
+function remember(env: WebPushEnvironment, userId: string): void {
     try {
-        env.session?.setItem(SYNCED_KEY, '1');
+        env.session?.setItem(syncedKey(userId), '1');
     } catch {
         // Not remembered: the next page tells the site again
     }
 }
 
-function forgetRemembered(env: WebPushEnvironment): void {
+function forgetRemembered(env: WebPushEnvironment, userId: string): void {
     try {
-        env.session?.removeItem(SYNCED_KEY);
+        env.session?.removeItem(syncedKey(userId));
     } catch {
         // Nothing to forget
     }
@@ -143,8 +150,12 @@ export function subscribedWithKey(subscription: PushSubscription, publicKey: str
 /**
  * Drops a subscription from the site (when it is this account's) and from the browser.
  */
-async function drop(env: WebPushEnvironment, subscription: PushSubscription): Promise<void> {
-    forgetRemembered(env);
+async function drop(
+    env: WebPushEnvironment,
+    userId: string,
+    subscription: PushSubscription
+): Promise<void> {
+    forgetRemembered(env, userId);
 
     const endpoint = subscription.toJSON().endpoint;
     if (endpoint !== undefined) {
@@ -160,6 +171,7 @@ async function drop(env: WebPushEnvironment, subscription: PushSubscription): Pr
  */
 export async function subscribeThisDevice(
     publicKey: string,
+    userId: string,
     env: WebPushEnvironment = browserEnvironment()
 ): Promise<boolean> {
     const manager = await pushManager(env);
@@ -170,7 +182,7 @@ export async function subscribeThisDevice(
     // Made with keys the site no longer has: the browser would refuse the new one
     const existing = await currentSubscription(manager);
     if (existing !== null && !subscribedWithKey(existing, publicKey)) {
-        await drop(env, existing);
+        await drop(env, userId, existing);
     }
 
     let subscription: PushSubscription;
@@ -184,7 +196,7 @@ export async function subscribeThisDevice(
     }
 
     if (isSuccess(await send(env, 'POST', subscription.toJSON()))) {
-        remember(env);
+        remember(env, userId);
         return true;
     }
 
@@ -202,9 +214,10 @@ export async function subscribeThisDevice(
  */
 export async function syncThisDevice(
     publicKey: string,
+    userId: string,
     env: WebPushEnvironment = browserEnvironment()
 ): Promise<void> {
-    if (env.permission() !== 'granted' || env.session?.getItem(SYNCED_KEY) === '1') {
+    if (env.permission() !== 'granted' || env.session?.getItem(syncedKey(userId)) === '1') {
         return;
     }
 
@@ -214,15 +227,15 @@ export async function syncThisDevice(
     }
 
     if (!subscribedWithKey(subscription, publicKey)) {
-        await drop(env, subscription);
+        await drop(env, userId, subscription);
         return;
     }
 
     const status = await send(env, 'PUT', { endpoint: subscription.toJSON().endpoint });
     if (isSuccess(status)) {
-        remember(env);
+        remember(env, userId);
     } else if (status === 404) {
-        forgetRemembered(env);
+        forgetRemembered(env, userId);
         await subscription.unsubscribe().catch(() => false);
     }
 }
@@ -232,12 +245,13 @@ export async function syncThisDevice(
  * Never throws; the server forgets it on sign-out anyway.
  */
 export async function forgetThisDevice(
+    userId: string,
     env: WebPushEnvironment = browserEnvironment()
 ): Promise<void> {
-    forgetRemembered(env);
+    forgetRemembered(env, userId);
 
     const subscription = await currentSubscription(await pushManager(env));
     if (subscription !== null) {
-        await drop(env, subscription);
+        await drop(env, userId, subscription);
     }
 }

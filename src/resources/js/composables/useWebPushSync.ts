@@ -11,11 +11,16 @@ import type { WebPushSharedProps } from '@/types/webPush';
 export function useWebPushSync(): void {
     const page = usePage();
 
+    // Again whenever the account changes (another one signing in on this tab): each its own check
     watch(
-        () => (page.props.webPush as WebPushSharedProps | null | undefined)?.publicKey ?? null,
-        (publicKey) => {
-            if (publicKey !== null) {
-                void syncThisDevice(publicKey);
+        () =>
+            [
+                (page.props.webPush as WebPushSharedProps | null | undefined)?.publicKey ?? null,
+                (page.props.auth as { user?: { id: string } | null } | undefined)?.user?.id ?? null,
+            ] as const,
+        ([publicKey, userId]) => {
+            if (publicKey !== null && userId !== null) {
+                void syncThisDevice(publicKey, userId);
             }
         },
         { immediate: true }
