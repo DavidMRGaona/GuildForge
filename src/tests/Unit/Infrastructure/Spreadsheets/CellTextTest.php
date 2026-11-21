@@ -37,6 +37,10 @@ final class CellTextTest extends TestCase
         yield 'negative zero' => [new NumericCell(-0.0, null), '0'];
         yield 'date' => [new DateTimeCell(new DateTimeImmutable('2024-03-05 00:00:00'), null), '2024-03-05'];
         yield 'date and time' => [new DateTimeCell(new DateTimeImmutable('2024-03-05 09:07:00'), null), '2024-03-05 09:07:00'];
+        yield 'time only' => [new DateTimeCell(new DateTimeImmutable('1899-12-30 18:30:00'), null), '18:30:00'];
+        yield 'midnight only' => [new DateTimeCell(new DateTimeImmutable('1899-12-30 00:00:00'), null), '00:00:00'];
+        yield 'time only in a 1904 workbook' => [new DateTimeCell(new DateTimeImmutable('1904-01-01 06:00:00'), null), '06:00:00'];
+        yield 'first day of a 1904 workbook' => [new DateTimeCell(new DateTimeImmutable('1904-01-01 00:00:00'), null), '1904-01-01'];
         yield 'duration' => [new DateIntervalCell(new DateInterval('PT26H5M'), null), '26:05:00'];
         yield 'formula with its result' => [new FormulaCell('=1+1', null, 2), '2'];
         yield 'formula with a text result' => [new FormulaCell('="=a"', null, '=a'), '=a'];

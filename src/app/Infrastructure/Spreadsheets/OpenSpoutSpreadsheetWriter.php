@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Infrastructure\Spreadsheets;
 
 use App\Application\Spreadsheets\DTOs\SpreadsheetTemplateDTO;
-use App\Application\Spreadsheets\SpreadsheetWriterInterface;
+use App\Application\Spreadsheets\Services\SpreadsheetWriterInterface;
 use App\Domain\Spreadsheets\Exceptions\SpreadsheetWriteException;
-use Exception;
 use OpenSpout\Common\Entity\Cell;
 use OpenSpout\Common\Entity\Cell\EmptyCell;
 use OpenSpout\Common\Entity\Cell\NumericCell;
@@ -15,14 +14,23 @@ use OpenSpout\Common\Entity\Cell\StringCell;
 use OpenSpout\Common\Entity\Row;
 use OpenSpout\Common\Entity\Style\Style;
 use OpenSpout\Writer\XLSX\Entity\SheetView;
+use OpenSpout\Writer\XLSX\Options;
 use OpenSpout\Writer\XLSX\Writer;
+use Throwable;
 
 /**
  * SpreadsheetWriterInterface over openspout. Texts are always string cells: openspout's
  * Cell::fromValue() would turn a text starting with «=» into a formula.
  */
-final class OpenSpoutSpreadsheetWriter implements SpreadsheetWriterInterface
+final readonly class OpenSpoutSpreadsheetWriter implements SpreadsheetWriterInterface
 {
+    /**
+     * @param  string|null  $temporaryRoot  Where each call's temporary folder goes; the system's by default
+     */
+    public function __construct(
+        private ?string $temporaryRoot = null,
+    ) {}
+
     private const int MIN_COLUMN_WIDTH = 10;
 
     private const int MAX_COLUMN_WIDTH = 60;
@@ -32,19 +40,18 @@ final class OpenSpoutSpreadsheetWriter implements SpreadsheetWriterInterface
 
     public function write(SpreadsheetTemplateDTO $template): string
     {
-        $path = tempnam(sys_get_temp_dir(), 'gf-sheet-');
-
-        if ($path === false) {
-            throw SpreadsheetWriteException::failed();
-        }
+        $folder = null;
 
         try {
-            $this->writeTo($path, $template);
+            // openspout writes the workbook's parts in its temporary folder before zipping them.
+            $folder = TemporaryFolder::create($this->temporaryRoot);
+            $path = $folder->path.DIRECTORY_SEPARATOR.'template.xlsx';
+            $this->writeTo($path, $folder->path, $template);
             $bytes = file_get_contents($path);
-        } catch (Exception) {
+        } catch (Throwable) {
             throw SpreadsheetWriteException::failed();
         } finally {
-            @unlink($path);
+            $folder?->delete();
         }
 
         if ($bytes === false || $bytes === '') {
@@ -54,9 +61,11 @@ final class OpenSpoutSpreadsheetWriter implements SpreadsheetWriterInterface
         return $bytes;
     }
 
-    private function writeTo(string $path, SpreadsheetTemplateDTO $template): void
+    private function writeTo(string $path, string $temporaryFolder, SpreadsheetTemplateDTO $template): void
     {
-        $writer = new Writer;
+        $options = new Options;
+        $options->setTempFolder($temporaryFolder);
+        $writer = new Writer($options);
         $writer->openToFile($path);
 
         $sheet = $writer->getCurrentSheet();

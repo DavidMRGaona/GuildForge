@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature\Spreadsheets;
 
 use App\Application\Spreadsheets\DTOs\SpreadsheetTemplateDTO;
-use App\Application\Spreadsheets\SpreadsheetReaderInterface;
-use App\Application\Spreadsheets\SpreadsheetReadErrorMessage;
-use App\Application\Spreadsheets\SpreadsheetWriterInterface;
+use App\Application\Spreadsheets\Services\SpreadsheetReaderInterface;
+use App\Application\Spreadsheets\Services\SpreadsheetWriterInterface;
 use App\Domain\Spreadsheets\Exceptions\SpreadsheetReadException;
 use App\Domain\Spreadsheets\SpreadsheetReadFailure;
 use Tests\TestCase;
@@ -37,7 +36,7 @@ final class SpreadsheetContractTest extends TestCase
             app()->setLocale($locale);
 
             foreach (SpreadsheetReadFailure::cases() as $reason) {
-                $message = SpreadsheetReadErrorMessage::for(new SpreadsheetReadException($reason, limit: 10, column: 2));
+                $message = (new SpreadsheetReadException($reason, limit: 10, column: 2))->userMessage();
 
                 $this->assertStringNotContainsString('spreadsheets.', $message, $locale.' '.$reason->value);
                 $this->assertStringNotContainsString(':limit', $message, $locale.' '.$reason->value);
@@ -50,9 +49,9 @@ final class SpreadsheetContractTest extends TestCase
     {
         app()->setLocale('es');
 
-        $this->assertStringContainsString('1000', SpreadsheetReadErrorMessage::for(new SpreadsheetReadException(SpreadsheetReadFailure::TooManyRows, limit: 1000)));
-        $this->assertStringContainsString('2 MB', SpreadsheetReadErrorMessage::for(new SpreadsheetReadException(SpreadsheetReadFailure::TooLarge, limit: 2 * 1024 * 1024)));
-        $this->assertStringContainsString('500 KB', SpreadsheetReadErrorMessage::for(new SpreadsheetReadException(SpreadsheetReadFailure::TooLarge, limit: 500 * 1024)));
-        $this->assertStringContainsString('3', SpreadsheetReadErrorMessage::for(new SpreadsheetReadException(SpreadsheetReadFailure::DuplicateHeaders, column: 3)));
+        $this->assertStringContainsString('1000', (new SpreadsheetReadException(SpreadsheetReadFailure::TooManyRows, limit: 1000))->userMessage());
+        $this->assertStringContainsString('2 MB', (new SpreadsheetReadException(SpreadsheetReadFailure::TooLarge, limit: 2 * 1024 * 1024))->userMessage());
+        $this->assertStringContainsString('500 KB', (new SpreadsheetReadException(SpreadsheetReadFailure::TooLarge, limit: 500 * 1024))->userMessage());
+        $this->assertStringContainsString('3', (new SpreadsheetReadException(SpreadsheetReadFailure::DuplicateHeaders, column: 3))->userMessage());
     }
 }

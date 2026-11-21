@@ -22,6 +22,9 @@ final class OpenSpoutSpreadsheetReaderTest extends TestCase
     /** @var list<string> */
     private array $temporaryFiles = [];
 
+    /** @var list<string> */
+    private array $temporaryFolders = [];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -33,6 +36,10 @@ final class OpenSpoutSpreadsheetReaderTest extends TestCase
     {
         foreach ($this->temporaryFiles as $file) {
             @unlink($file);
+        }
+
+        foreach ($this->temporaryFolders as $folder) {
+            @rmdir($folder);
         }
 
         parent::tearDown();
@@ -53,7 +60,7 @@ final class OpenSpoutSpreadsheetReaderTest extends TestCase
         $this->assertSame('1234.5', $ana['Cuota']);
         $this->assertSame('17', $ana['Socio número']);
         $this->assertSame('1', $ana['Activo']);
-        $this->assertStringStartsNotWith('=', $ana['Total'], 'A formula is read as its value, never as the formula');
+        $this->assertSame('2469', $ana['Total'], 'A formula is read as its stored result, never as the formula');
 
         $luis = $sheet->rows[1]->values;
         $this->assertSame('Luis Gómez', $luis['Nombre']);
@@ -174,15 +181,10 @@ final class OpenSpoutSpreadsheetReaderTest extends TestCase
 
     public function test_it_counts_the_bytes_really_uncompressed_not_the_declared_ones(): void
     {
-        $path = $this->workbook(['xl/worksheets/sheet1.xml' => str_repeat(' ', 4 * 1024 * 1024)]);
+        $path = $this->workbook(['xl/worksheets/sheet1.xml' => $this->sheetXml(str_repeat(' ', 4 * 1024 * 1024))]);
         $this->understateUncompressedSizes($path);
 
-        try {
-            $this->reader->read($path, new SpreadsheetLimitsDTO(maxBytes: 20_000));
-            $this->fail('A workbook that lies about its sizes must not be read');
-        } catch (SpreadsheetReadException $exception) {
-            $this->assertContains($exception->reason, [SpreadsheetReadFailure::TooLarge, SpreadsheetReadFailure::Unreadable]);
-        }
+        $this->assertFailure(SpreadsheetReadFailure::TooLarge, $path, new SpreadsheetLimitsDTO(maxBytes: 20_000));
     }
 
     public function test_a_csv_record_with_more_fields_than_any_spreadsheet_is_refused_before_reading(): void
@@ -212,11 +214,71 @@ final class OpenSpoutSpreadsheetReaderTest extends TestCase
             $rows .= '<row r="'.$row.'"><c r="XFD'.$row.'"/></row>';
         }
 
-        $this->assertFailure(
-            SpreadsheetReadFailure::TooLarge,
+        $this->assertBoundedFailure(
+            SpreadsheetReadFailure::TooManyColumns,
             $this->workbook(['xl/worksheets/sheet1.xml' => $this->sheetXml($rows)]),
-            new SpreadsheetLimitsDTO(maxBytes: 200_000),
+            new SpreadsheetLimitsDTO(maxRows: 10),
         );
+    }
+
+    public function test_a_tag_too_long_for_a_regular_expression_hides_no_cell(): void
+    {
+        $block = '<c'.str_repeat(' ', 12_000).'/>'.str_repeat('<c/>', 8_000);
+
+        $this->assertFailure(SpreadsheetReadFailure::TooManyColumns, $this->workbook([
+            'xl/worksheets/sheet1.xml' => $this->sheetXml('<row r="1"><c r="A1" t="inlineStr"><is><t>Nombre</t></is></c>'.str_repeat($block, 3).'</row>'),
+        ]));
+    }
+
+    public function test_cell_references_written_as_character_references_are_read_as_openspout_reads_them(): void
+    {
+        $this->assertFailure(SpreadsheetReadFailure::TooManyColumns, $this->workbook([
+            'xl/worksheets/sheet1.xml' => $this->sheetXml('<row r="1"><c r="A1" t="inlineStr"><is><t>Nombre</t></is></c><c r="&#90;&#90;&#90;&#90;1"/></row>'),
+        ]));
+    }
+
+    public function test_a_broken_workbook_that_makes_openspout_fail_with_an_error_is_unreadable(): void
+    {
+        // Cells pointing to shared strings in a workbook without them make openspout hit an uninitialised property.
+        $this->assertFailure(SpreadsheetReadFailure::Unreadable, $this->workbook([], remove: ['xl/sharedStrings.xml']));
+    }
+
+    public function test_a_formula_without_a_stored_result_arrives_as_zero(): void
+    {
+        $sheet = $this->reader->read($this->workbook([
+            'xl/worksheets/sheet1.xml' => $this->sheetXml(
+                '<row r="1"><c r="A1" t="inlineStr"><is><t>Nombre</t></is></c><c r="B1" t="inlineStr"><is><t>Total</t></is></c></row>'
+                .'<row r="2"><c r="A2" t="inlineStr"><is><t>Ana</t></is></c><c r="B2"><f>1+1</f></c></row>',
+            ),
+        ]));
+
+        $this->assertSame('0', $sheet->rows[0]->value('Total'));
+    }
+
+    public function test_numeric_headers_are_found_by_their_text(): void
+    {
+        $sheet = $this->reader->read($this->temporaryFile('2023;2024
+1;2
+'));
+
+        $this->assertSame(['2023', '2024'], $sheet->headers);
+        $this->assertSame('2', $sheet->rows[0]->value('2024'));
+        $this->assertNull($sheet->rows[0]->value('2025'));
+    }
+
+    public function test_no_temporary_file_outlives_a_read_even_a_failed_one(): void
+    {
+        $root = $this->temporaryFolder();
+        $reader = new OpenSpoutSpreadsheetReader(temporaryRoot: $root);
+
+        $reader->read(self::FIXTURES.'members.xlsx');
+
+        try {
+            $reader->read($this->workbook(['xl/sharedStrings.xml' => '<sst><si><t>texto</si>']));
+        } catch (SpreadsheetReadException) {
+        }
+
+        $this->assertSame([], array_values(array_diff((array) scandir($root), ['.', '..'])));
     }
 
     public function test_a_quote_inside_an_unquoted_csv_field_is_text_and_hides_no_separator(): void
@@ -241,21 +303,48 @@ final class OpenSpoutSpreadsheetReaderTest extends TestCase
 
     public function test_a_row_number_beyond_the_last_spreadsheet_row_is_refused_before_reading(): void
     {
-        $this->assertFailure(SpreadsheetReadFailure::Unreadable, $this->workbook([
-            'xl/worksheets/sheet1.xml' => $this->sheetXml('<row r="1"><c r="A1" t="inlineStr"><is><t>Nombre</t></is></c></row><row r="2000000"/>'),
+        $this->assertFailure(SpreadsheetReadFailure::TooManyRows, $this->workbook([
+            'xl/worksheets/sheet1.xml' => $this->sheetXml('<row r="1"><c r="A1" t="inlineStr"><is><t>Nombre</t></is></c></row><row r="2147483647"/>'),
         ]));
     }
 
     public function test_empty_rows_filled_in_by_openspout_count_against_the_budget(): void
     {
-        $this->assertFailure(
-            SpreadsheetReadFailure::TooLarge,
+        $this->assertBoundedFailure(
+            SpreadsheetReadFailure::TooManyRows,
             $this->workbook(['xl/worksheets/sheet1.xml' => $this->sheetXml(
                 '<row r="1"><c r="A1" t="inlineStr"><is><t>Nombre</t></is></c></row>'
-                .'<row r="1000000"><c r="A1000000" t="inlineStr"><is><t>Ana</t></is></c></row>',
+                .'<row r="1048576"><c r="A1048576" t="inlineStr"><is><t>Ana</t></is></c></row>',
             )]),
-            new SpreadsheetLimitsDTO(maxBytes: 200_000),
         );
+    }
+
+    public function test_blank_csv_lines_count_against_the_budget(): void
+    {
+        $this->assertBoundedFailure(
+            SpreadsheetReadFailure::TooManyRows,
+            $this->temporaryFile('Nombre;Email
+'.str_repeat("\n", 5 * 1024 * 1024 - 20).'Ana;a'),
+        );
+    }
+
+    public function test_excel_csv_variants_are_read(): void
+    {
+        $withSeparatorLine = $this->reader->read($this->temporaryFile("sep=,\r\nNombre,Notas\r\nAna,\"a; b\"\r\n"));
+        $this->assertSame(['Nombre', 'Notas'], $withSeparatorLine->headers);
+        $this->assertSame(2, $withSeparatorLine->rows[0]->number, 'The sep= line is not a row, as in Excel');
+
+        $carriageReturns = $this->reader->read($this->temporaryFile("Nombre;Email\rAna;ana@example.org\rLuis;luis@example.org\r"));
+        $this->assertSame([2, 3], array_map(static fn ($row): int => $row->number, $carriageReturns->rows));
+
+        $endOfFileMark = $this->reader->read($this->temporaryFile("Nombre;Email\r\nAna;ana@example.org\r\n\x1A"));
+        $this->assertCount(1, $endOfFileMark->rows);
+
+        $multilineHeader = $this->reader->read($this->temporaryFile("\"Nombre\ncompleto\";Email;Notas\nAna;ana@example.org;x\n"));
+        $this->assertSame(["Nombre\ncompleto", 'Email', 'Notas'], $multilineHeader->headers);
+
+        $commasInHeader = $this->reader->read($this->temporaryFile("Nombre;Dirección (calle, número, piso)\nAna;Mayor, 3, 2º\n"));
+        $this->assertSame(['Nombre', 'Dirección (calle, número, piso)'], $commasInHeader->headers);
     }
 
     public function test_it_stops_at_the_row_limit(): void
@@ -280,6 +369,16 @@ final class OpenSpoutSpreadsheetReaderTest extends TestCase
         $exception = $this->assertFailure(SpreadsheetReadFailure::Unreadable, self::FIXTURES.'broken.xlsx');
 
         $this->assertNull($exception->getPrevious());
+    }
+
+    /**
+     * The failure must come early: these files would otherwise cost minutes.
+     */
+    private function assertBoundedFailure(SpreadsheetReadFailure $reason, string $path, ?SpreadsheetLimitsDTO $limits = null): void
+    {
+        $started = microtime(true);
+        $this->assertFailure($reason, $path, $limits);
+        $this->assertLessThan(10.0, microtime(true) - $started, 'Reading must stop early');
     }
 
     private function assertFailure(SpreadsheetReadFailure $reason, string $path, ?SpreadsheetLimitsDTO $limits = null): SpreadsheetReadException
@@ -307,12 +406,17 @@ final class OpenSpoutSpreadsheetReaderTest extends TestCase
      * A workbook built over a real one (members.xlsx), with the given entries replaced.
      *
      * @param  array<string, string>  $entries
+     * @param  list<string>  $remove
      */
-    private function workbook(array $entries): string
+    private function workbook(array $entries, array $remove = []): string
     {
         $path = $this->temporaryFile((string) file_get_contents(self::FIXTURES.'members.xlsx'));
         $zip = new ZipArchive;
         $zip->open($path);
+
+        foreach ($remove as $name) {
+            $zip->deleteName($name);
+        }
 
         foreach ($entries as $name => $contents) {
             $zip->addFromString($name, $contents);
@@ -357,6 +461,16 @@ final class OpenSpoutSpreadsheetReaderTest extends TestCase
         }
 
         file_put_contents($path, $bytes);
+    }
+
+    private function temporaryFolder(): string
+    {
+        $path = $this->temporaryFile('');
+        unlink($path);
+        mkdir($path);
+        $this->temporaryFolders[] = $path;
+
+        return $path;
     }
 
     private function temporaryFile(string $contents): string

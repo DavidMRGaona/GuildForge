@@ -77,6 +77,21 @@ final class OpenSpoutSpreadsheetWriterTest extends TestCase
         $this->assertStringContainsString('name="Hoja1"', $this->entry($bytes, 'xl/workbook.xml'));
     }
 
+    public function test_no_temporary_file_outlives_a_write(): void
+    {
+        $root = (string) tempnam(sys_get_temp_dir(), 'gf-sheet-test-');
+        unlink($root);
+        mkdir($root);
+
+        try {
+            (new OpenSpoutSpreadsheetWriter(temporaryRoot: $root))->write(new SpreadsheetTemplateDTO(headers: ['Nombre'], rows: [['Ana']]));
+
+            $this->assertSame(['.', '..'], scandir($root));
+        } finally {
+            @rmdir($root);
+        }
+    }
+
     private function entry(string $bytes, string $name): string
     {
         $zip = new ZipArchive;

@@ -8,14 +8,14 @@ use App\Application\Spreadsheets\DTOs\SpreadsheetDTO;
 use App\Application\Spreadsheets\DTOs\SpreadsheetLimitsDTO;
 use App\Application\Spreadsheets\DTOs\SpreadsheetRowDTO;
 use App\Application\Spreadsheets\Enums\SpreadsheetFormat;
+use App\Application\Spreadsheets\Services\SpreadsheetReaderInterface;
 use App\Application\Spreadsheets\SpreadsheetHeader;
-use App\Application\Spreadsheets\SpreadsheetReaderInterface;
 use App\Domain\Spreadsheets\Exceptions\SpreadsheetReadException;
 use App\Domain\Spreadsheets\SpreadsheetReadFailure;
-use Exception;
 use Generator;
 use OpenSpout\Reader\XLSX\Options as XlsxOptions;
 use OpenSpout\Reader\XLSX\Reader as XlsxReader;
+use Throwable;
 
 /**
  * SpreadsheetReaderInterface: .xlsx through openspout, .csv through CsvRecords. Rows are streamed:
@@ -25,11 +25,14 @@ use OpenSpout\Reader\XLSX\Reader as XlsxReader;
 final readonly class OpenSpoutSpreadsheetReader implements SpreadsheetReaderInterface
 {
     /**
-     * Cells built in one read, empty ones and empty rows included (at least this many, else
-     * maxBytes): openspout fills in far-away empty cells and rows, which would otherwise cost time
-     * without limit.
+     * Cells built in one read, empty ones included and at least one per row, empty rows too, as a
+     * multiple of what the limits allow ((maxRows + 1) × maxColumns): openspout fills in far-away
+     * empty cells and rows, which would otherwise cost time without limit.
      */
-    public const int MIN_CELL_BUDGET = 100_000;
+    public const int CELL_BUDGET_FACTOR = 4;
+
+    /** The budget never goes below this, so small limits still leave room for blank rows. */
+    public const int MIN_CELL_BUDGET = 10_000;
 
     private const string ZIP_SIGNATURE = "PK\x03\x04";
 
@@ -41,9 +44,13 @@ final readonly class OpenSpoutSpreadsheetReader implements SpreadsheetReaderInte
     /** Control characters a CSV text never holds (tab and line breaks are allowed). */
     private const string BINARY_PATTERN = '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/';
 
+    /** The end-of-file mark old programs leave after the last line. */
+    private const string END_OF_FILE_MARK = "\x1A";
+
     public function __construct(
         private CellText $cellText = new CellText,
         private XlsxPreflight $preflight = new XlsxPreflight,
+        private ?string $temporaryRoot = null,
     ) {}
 
     public function read(string $path, SpreadsheetLimitsDTO $limits = new SpreadsheetLimitsDTO): SpreadsheetDTO
@@ -59,6 +66,7 @@ final readonly class OpenSpoutSpreadsheetReader implements SpreadsheetReaderInte
         }
 
         $reader = null;
+        $temporaryFolder = null;
 
         try {
             $signature = file_get_contents($path, length: strlen(self::OLE_SIGNATURE));
@@ -69,7 +77,8 @@ final readonly class OpenSpoutSpreadsheetReader implements SpreadsheetReaderInte
 
             if (str_starts_with($signature, self::ZIP_SIGNATURE) || str_starts_with($signature, self::EMPTY_ZIP_SIGNATURE)) {
                 $this->preflight->check($path, $limits);
-                $reader = $this->xlsxReader();
+                $temporaryFolder = TemporaryFolder::create($this->temporaryRoot);
+                $reader = $this->xlsxReader($temporaryFolder->path);
                 $reader->open($path);
 
                 return $this->collect($this->xlsxRows($reader), SpreadsheetFormat::Xlsx, $limits);
@@ -82,10 +91,17 @@ final readonly class OpenSpoutSpreadsheetReader implements SpreadsheetReaderInte
             return $this->collect($this->csvRows($path, $limits), SpreadsheetFormat::Csv, $limits);
         } catch (SpreadsheetReadException $exception) {
             throw $exception;
-        } catch (Exception) {
+        } catch (Throwable) {
+            // Also errors: openspout may hit an uninitialised property on a malformed workbook.
             throw new SpreadsheetReadException(SpreadsheetReadFailure::Unreadable);
         } finally {
-            $reader?->close();
+            try {
+                $reader?->close();
+            } catch (Throwable) {
+                // Closing a reader that never opened may fail; the folder goes all the same.
+            }
+
+            $temporaryFolder?->delete();
         }
     }
 
@@ -100,12 +116,14 @@ final readonly class OpenSpoutSpreadsheetReader implements SpreadsheetReaderInte
         return $size;
     }
 
-    private function xlsxReader(): XlsxReader
+    private function xlsxReader(string $temporaryFolder): XlsxReader
     {
         $options = new XlsxOptions;
         $options->SHOULD_FORMAT_DATES = false;
         // Kept so the row numbers are the sheet's; blank rows are skipped when collecting.
         $options->SHOULD_PRESERVE_EMPTY_ROWS = true;
+        // Shared strings may be cached on disk: in a folder of this read alone, deleted afterwards.
+        $options->setTempFolder($temporaryFolder);
 
         return new XlsxReader($options);
     }
@@ -141,6 +159,10 @@ final readonly class OpenSpoutSpreadsheetReader implements SpreadsheetReaderInte
             throw new SpreadsheetReadException(SpreadsheetReadFailure::Unreadable);
         }
 
+        if (str_ends_with($content, self::END_OF_FILE_MARK)) {
+            $content = substr($content, 0, -1);
+        }
+
         if (preg_match(self::BINARY_PATTERN, $content) === 1) {
             throw new SpreadsheetReadException(SpreadsheetReadFailure::UnsupportedType);
         }
@@ -163,14 +185,17 @@ final readonly class OpenSpoutSpreadsheetReader implements SpreadsheetReaderInte
     {
         $headers = null;
         $collected = [];
-        $cellBudget = max(self::MIN_CELL_BUDGET, $limits->maxBytes);
+        $cellBudget = max(self::MIN_CELL_BUDGET, ($limits->maxRows + 1) * $limits->maxColumns * self::CELL_BUDGET_FACTOR);
 
         foreach ($rows as $number => $cells) {
-            // An empty row openspout fills in still costs a turn of the loop.
+            // An empty row openspout fills in, or a blank CSV line, still costs a turn of the loop.
             $cellBudget -= max(1, count($cells));
 
             if ($cellBudget < 0) {
-                throw new SpreadsheetReadException(SpreadsheetReadFailure::TooLarge, limit: $limits->maxBytes);
+                // Wide rows of empty cells spend it on columns; blank rows, on rows.
+                throw count($cells) > $limits->maxColumns
+                    ? new SpreadsheetReadException(SpreadsheetReadFailure::TooManyColumns, limit: $limits->maxColumns)
+                    : new SpreadsheetReadException(SpreadsheetReadFailure::TooManyRows, limit: $limits->maxRows);
             }
 
             $width = $this->widthOf($cells);

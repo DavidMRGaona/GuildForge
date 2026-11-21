@@ -15,9 +15,13 @@ final readonly class SpreadsheetTemplateDTO
 {
     private const int MAX_SHEET_NAME_LENGTH = 31;
 
+    /** Characters a spreadsheet cell holds at most (Excel and LibreOffice). */
+    public const int MAX_CELL_LENGTH = 32767;
+
     /**
      * @param  list<string>  $headers  Non-blank and different from each other (see SpreadsheetHeader)
-     * @param  list<list<string|int|float|null>>  $rows  No wider than the header; null leaves the cell empty
+     * @param  list<list<string|int|float|null>>  $rows  No wider than the header; null leaves the cell empty.
+     *                                                   Texts (headers too) in UTF-8, up to 32767 characters; finite numbers
      * @param  string  $sheetName  1 to 31 characters, without \ / ? * [ ] : and not starting or ending with '
      */
     public function __construct(
@@ -45,6 +49,8 @@ final readonly class SpreadsheetTemplateDTO
             if (! is_string($header) || trim($header) === '') {
                 throw new InvalidArgumentException('Spreadsheet template headers must be non-blank texts');
             }
+
+            $this->assertText($header);
 
             $key = SpreadsheetHeader::normalise($header);
 
@@ -74,12 +80,31 @@ final readonly class SpreadsheetTemplateDTO
                 if ($value !== null && ! is_string($value) && ! is_int($value) && ! is_float($value)) {
                     throw new InvalidArgumentException('Spreadsheet template values must be texts, numbers or null');
                 }
+
+                if (is_float($value) && ! is_finite($value)) {
+                    throw new InvalidArgumentException('Spreadsheet template numbers must be finite');
+                }
+
+                if (is_string($value)) {
+                    $this->assertText($value);
+                }
             }
+        }
+    }
+
+    private function assertText(string $text): void
+    {
+        if (! mb_check_encoding($text, 'UTF-8') || mb_strlen($text) > self::MAX_CELL_LENGTH) {
+            throw new InvalidArgumentException('Spreadsheet template texts must be UTF-8 and fit in a cell');
         }
     }
 
     private function assertSheetName(string $name): void
     {
+        if (! mb_check_encoding($name, 'UTF-8')) {
+            throw new InvalidArgumentException('Invalid spreadsheet sheet name');
+        }
+
         $length = mb_strlen($name);
 
         if ($length < 1

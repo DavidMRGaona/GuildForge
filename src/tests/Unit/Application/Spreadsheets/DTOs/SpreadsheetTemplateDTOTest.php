@@ -11,6 +11,13 @@ use PHPUnit\Framework\TestCase;
 
 final class SpreadsheetTemplateDTOTest extends TestCase
 {
+    public function test_a_text_may_fill_a_whole_cell(): void
+    {
+        $template = new SpreadsheetTemplateDTO(['Nombre'], [[str_repeat('á', 32_767)]]);
+
+        $this->assertSame(32_767, mb_strlen((string) $template->rows[0][0]));
+    }
+
     public function test_it_keeps_headers_rows_and_sheet_name(): void
     {
         $template = new SpreadsheetTemplateDTO(['Nombre', 'Cuota'], [['Ana', 25.5], ['Luis']], 'Socios');
@@ -33,6 +40,13 @@ final class SpreadsheetTemplateDTOTest extends TestCase
         yield 'row that is not a list' => [['Nombre'], [['nombre' => 'Ana']], 'Hoja1'];
         yield 'value that is not a scalar' => [['Nombre'], [[['Ana']]], 'Hoja1'];
         yield 'boolean value' => [['Activo'], [[true]], 'Hoja1'];
+        yield 'text longer than a cell' => [['Nombre'], [[str_repeat('a', 32_768)]], 'Hoja1'];
+        yield 'header longer than a cell' => [[str_repeat('a', 32_768)], [], 'Hoja1'];
+        yield 'not a number' => [['Cuota'], [[NAN]], 'Hoja1'];
+        yield 'infinite' => [['Cuota'], [[INF]], 'Hoja1'];
+        yield 'text not in UTF-8' => [['Nombre'], [["Jos\xE9"]], 'Hoja1'];
+        yield 'header not in UTF-8' => [["Tel\xE9fono"], [], 'Hoja1'];
+        yield 'sheet name not in UTF-8' => [['Nombre'], [], "Hoj\xE1"];
         yield 'empty sheet name' => [['Nombre'], [], ''];
         yield 'sheet name too long' => [['Nombre'], [], str_repeat('a', 32)];
         yield 'sheet name with a forbidden character' => [['Nombre'], [], 'Socios/2025'];

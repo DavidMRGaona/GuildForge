@@ -24,4 +24,31 @@ final class SpreadsheetReadException extends RuntimeException
     ) {
         parent::__construct('The spreadsheet could not be read: '.$reason->value);
     }
+
+    /**
+     * What to tell the person who uploaded the file, in the current locale, with the limit
+     * (`2 MB`, `1000`) or the column number.
+     */
+    public function userMessage(): string
+    {
+        $limit = $this->limit ?? 0;
+
+        return __('spreadsheets.errors.'.$this->reason->value, [
+            'limit' => $this->reason === SpreadsheetReadFailure::TooLarge ? $this->bytes($limit) : (string) $limit,
+            'column' => (string) ($this->column ?? 0),
+        ]);
+    }
+
+    private function bytes(int $bytes): string
+    {
+        $megabyte = 1024 * 1024;
+
+        if ($bytes >= $megabyte) {
+            $megabytes = round($bytes / $megabyte, 1);
+
+            return ($megabytes === floor($megabytes) ? (string) (int) $megabytes : (string) $megabytes).' MB';
+        }
+
+        return max(1, (int) round($bytes / 1024)).' KB';
+    }
 }

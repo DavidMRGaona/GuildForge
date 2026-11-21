@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Spreadsheets;
+namespace App\Application\Spreadsheets\Services;
 
 use App\Application\Spreadsheets\DTOs\SpreadsheetTemplateDTO;
 use App\Domain\Spreadsheets\Exceptions\SpreadsheetWriteException;

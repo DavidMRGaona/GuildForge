@@ -7,14 +7,21 @@ namespace App\Infrastructure\Spreadsheets;
 use App\Application\Spreadsheets\DTOs\SpreadsheetLimitsDTO;
 use App\Domain\Spreadsheets\Exceptions\SpreadsheetReadException;
 use App\Domain\Spreadsheets\SpreadsheetReadFailure;
+use Throwable;
+use XMLReader;
 use ZipArchive;
 
 /**
- * Checks an .xlsx before openspout opens it, since openspout builds a whole row in memory and fills
- * the gaps up to its last cell reference: every entry is inflated once and its real bytes counted
- * (the sizes the archive declares can lie), and in every entry, whatever its name (the workbook's
- * relations may point a sheet anywhere), no row may reach past the last column a spreadsheet has,
- * through a cell reference or through cells without one, nor carry a row number past its last row.
+ * Checks an .xlsx before openspout opens it, since openspout builds a whole row in memory, filling
+ * the gaps up to its last cell, and every empty row up to the next row number:
+ *
+ * - every entry is inflated once and its real bytes counted (the sizes an archive declares can lie);
+ * - every XML entry, and every sheet the workbook points to whatever its name, is read with
+ *   XMLReader as openspout reads it (elements matched by local name, whatever their namespace):
+ *   no row may reach past the last spreadsheet column, by a cell reference or by its number of
+ *   cells, and no row number may pass the last spreadsheet row.
+ *
+ * Anything that cannot be scanned is unreadable: it fails closed.
  */
 final class XlsxPreflight
 {
@@ -29,14 +36,13 @@ final class XlsxPreflight
 
     private const int CHUNK_BYTES = 65536;
 
-    /** A single tag longer than this is no worksheet. */
-    private const int MAX_TAG_BYTES = 1048576;
+    private const string WORKBOOK = 'xl/workbook.xml';
 
-    /** `<row …>` and `<c …>` start tags, with or without a prefix; quoted values may hold `>`. */
-    private const string TAG_PATTERN = '/<(?:[A-Za-z_][\w.-]*:)?(row|c)(?=[\s\/>])((?:[^>"\']|"[^"]*"|\'[^\']*\')*)>/';
+    private const string WORKBOOK_RELATIONS = 'xl/_rels/workbook.xml.rels';
 
-    /** The `r` of a cell (`B7`) or of a row (`7`). */
-    private const string REFERENCE_PATTERN = '/(?:^|\s)r\s*=\s*(["\'])([A-Za-z]*)(\d+)\1/';
+    private const string RELATIONSHIPS_NAMESPACE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+
+    private const string CELL_REFERENCE = '/^([A-Za-z]{1,8})(\d{1,9})$/';
 
     public function check(string $path, SpreadsheetLimitsDTO $limits): void
     {
@@ -47,109 +53,192 @@ final class XlsxPreflight
         }
 
         try {
-            if ($zip->locateName('[Content_Types].xml') === false || $zip->locateName('xl/workbook.xml') === false) {
+            if ($zip->locateName('[Content_Types].xml') === false || $zip->locateName(self::WORKBOOK) === false) {
                 throw new SpreadsheetReadException(SpreadsheetReadFailure::UnsupportedType);
             }
 
-            $budget = $limits->maxBytes * self::MAX_EXPANSION;
-            $maxColumns = max(self::MAX_SHEET_COLUMNS, $limits->maxColumns);
-
-            for ($index = 0; $index < $zip->numFiles; $index++) {
-                $name = $zip->getNameIndex($index);
-
-                if ($name === false) {
-                    throw new SpreadsheetReadException(SpreadsheetReadFailure::Unreadable);
-                }
-
-                $budget -= $this->inflate($zip, $name, $budget, $limits, $maxColumns);
-            }
+            $names = $this->inflateAll($zip, $limits);
         } finally {
             $zip->close();
         }
+
+        $maxColumns = max(self::MAX_SHEET_COLUMNS, $limits->maxColumns);
+
+        foreach ($this->entriesToScan($path, $names) as $name) {
+            $this->scan($this->uri($path, $name), $limits, $maxColumns);
+        }
     }
 
     /**
-     * @return int The bytes the entry really takes
+     * @return list<string> Every entry name
      */
-    private function inflate(ZipArchive $zip, string $name, int $budget, SpreadsheetLimitsDTO $limits, int $maxColumns): int
+    private function inflateAll(ZipArchive $zip, SpreadsheetLimitsDTO $limits): array
     {
-        $stream = $zip->getStream($name);
+        $budget = $limits->maxBytes * self::MAX_EXPANSION;
+        $names = [];
 
-        if ($stream === false) {
-            throw new SpreadsheetReadException(SpreadsheetReadFailure::Unreadable);
-        }
+        for ($index = 0; $index < $zip->numFiles; $index++) {
+            $name = $zip->getNameIndex($index);
+            $stream = $name === false ? false : $zip->getStream($name);
 
-        $inflated = 0;
-        $pending = '';
-        $rowWidth = 0;
-
-        try {
-            while (! feof($stream)) {
-                $chunk = fread($stream, self::CHUNK_BYTES);
-
-                if ($chunk === false) {
-                    throw new SpreadsheetReadException(SpreadsheetReadFailure::Unreadable);
-                }
-
-                $inflated += strlen($chunk);
-
-                if ($inflated > $budget) {
-                    throw new SpreadsheetReadException(SpreadsheetReadFailure::TooLarge, limit: $limits->maxBytes);
-                }
-
-                $pending = $this->scan($pending.$chunk, $rowWidth, $limits, $maxColumns, final: false);
-            }
-
-            $this->scan($pending, $rowWidth, $limits, $maxColumns, final: true);
-        } finally {
-            fclose($stream);
-        }
-
-        return $inflated;
-    }
-
-    /**
-     * Follows the width of the current row through the complete tags of the buffer.
-     *
-     * @return string The tail after the last «<», which may hold a tag cut by the chunk ('' when final)
-     */
-    private function scan(string $buffer, int &$rowWidth, SpreadsheetLimitsDTO $limits, int $maxColumns, bool $final): string
-    {
-        $cut = $final ? false : strrpos($buffer, '<');
-        $complete = $cut === false ? $buffer : substr($buffer, 0, $cut);
-        $tail = $cut === false ? '' : substr($buffer, $cut);
-
-        if (strlen($tail) > self::MAX_TAG_BYTES) {
-            throw new SpreadsheetReadException(SpreadsheetReadFailure::Unreadable);
-        }
-
-        preg_match_all(self::TAG_PATTERN, $complete, $tags, PREG_SET_ORDER);
-
-        foreach ($tags as $tag) {
-            $hasReference = preg_match(self::REFERENCE_PATTERN, $tag[2], $reference) === 1;
-
-            // openspout fills in every row up to the number it reads; the budget bounds the rest.
-            if ($hasReference && (strlen($reference[3]) > 7 || (int) $reference[3] > self::MAX_SHEET_ROWS)) {
+            if ($name === false || $stream === false) {
                 throw new SpreadsheetReadException(SpreadsheetReadFailure::Unreadable);
             }
 
-            if ($tag[1] === 'row') {
-                $rowWidth = 0;
+            try {
+                while (! feof($stream)) {
+                    $chunk = fread($stream, self::CHUNK_BYTES);
+
+                    if ($chunk === false) {
+                        throw new SpreadsheetReadException(SpreadsheetReadFailure::Unreadable);
+                    }
+
+                    $budget -= strlen($chunk);
+
+                    if ($budget < 0) {
+                        throw new SpreadsheetReadException(SpreadsheetReadFailure::TooLarge, limit: $limits->maxBytes);
+                    }
+                }
+            } finally {
+                fclose($stream);
+            }
+
+            $names[] = $name;
+        }
+
+        return $names;
+    }
+
+    /**
+     * Every XML entry, plus the targets of the workbook's sheets, which may have any name.
+     *
+     * @param  list<string>  $names
+     * @return list<string>
+     */
+    private function entriesToScan(string $path, array $names): array
+    {
+        $scan = array_filter($names, static fn (string $name): bool => str_ends_with(strtolower($name), '.xml'));
+
+        foreach ($this->sheetTargets($path, $names) as $target) {
+            $scan[] = $target;
+        }
+
+        return array_values(array_unique($scan));
+    }
+
+    /**
+     * The entries the workbook's <sheet r:id> point to through its relations, resolved as paths
+     * inside the archive. The id is read both by qualified name and by namespace.
+     *
+     * @param  list<string>  $names
+     * @return list<string>
+     */
+    private function sheetTargets(string $path, array $names): array
+    {
+        if (! in_array(self::WORKBOOK_RELATIONS, $names, true)) {
+            return [];
+        }
+
+        $ids = [];
+
+        $this->each($this->uri($path, self::WORKBOOK), function (XMLReader $xml) use (&$ids): void {
+            if ($xml->localName === 'sheet') {
+                $ids[] = (string) $xml->getAttribute('r:id');
+                $ids[] = (string) $xml->getAttributeNs('id', self::RELATIONSHIPS_NAMESPACE);
+            }
+        });
+
+        $targets = [];
+
+        $this->each($this->uri($path, self::WORKBOOK_RELATIONS), function (XMLReader $xml) use ($ids, $names, &$targets): void {
+            if ($xml->localName !== 'Relationship' || ! in_array((string) $xml->getAttribute('Id'), $ids, true)) {
+                return;
+            }
+
+            $target = $this->resolve((string) $xml->getAttribute('Target'));
+
+            if ($target !== null && in_array($target, $names, true)) {
+                $targets[] = $target;
+            }
+        });
+
+        return $targets;
+    }
+
+    /**
+     * A relation target as an entry name: absolute from the archive root, else relative to xl/.
+     */
+    private function resolve(string $target): ?string
+    {
+        $path = str_starts_with($target, '/') ? $target : 'xl/'.$target;
+        $segments = [];
+
+        foreach (explode('/', $path) as $segment) {
+            if ($segment === '' || $segment === '.') {
+                continue;
+            }
+
+            if ($segment === '..') {
+                array_pop($segments);
 
                 continue;
             }
 
-            // A cell without a reference takes the column after the previous one.
-            $rowWidth = $hasReference && $reference[2] !== ''
-                ? max($rowWidth, $this->columnIndex($reference[2], $maxColumns))
-                : $rowWidth + 1;
+            $segments[] = $segment;
+        }
+
+        return $segments === [] ? null : implode('/', $segments);
+    }
+
+    private function scan(string $uri, SpreadsheetLimitsDTO $limits, int $maxColumns): void
+    {
+        $rowWidth = 0;
+
+        $this->each($uri, function (XMLReader $xml) use (&$rowWidth, $limits, $maxColumns): void {
+            if ($xml->localName === 'row') {
+                $rowWidth = 0;
+                $number = $xml->getAttribute('r');
+
+                if ($number !== null) {
+                    $this->assertRowNumber($number, $limits);
+                }
+
+                return;
+            }
+
+            if ($xml->localName !== 'c') {
+                return;
+            }
+
+            $reference = $xml->getAttribute('r');
+
+            if ($reference === null) {
+                // A cell without a reference takes the column after the previous one.
+                $rowWidth++;
+            } else {
+                if (preg_match(self::CELL_REFERENCE, $reference, $parts) !== 1) {
+                    throw new SpreadsheetReadException(SpreadsheetReadFailure::Unreadable);
+                }
+
+                $this->assertRowNumber($parts[2], $limits);
+                $rowWidth = max($rowWidth, $this->columnIndex($parts[1], $maxColumns));
+            }
 
             if ($rowWidth > $maxColumns) {
                 throw new SpreadsheetReadException(SpreadsheetReadFailure::TooManyColumns, limit: $limits->maxColumns);
             }
+        });
+    }
+
+    private function assertRowNumber(string $number, SpreadsheetLimitsDTO $limits): void
+    {
+        if (! ctype_digit($number)) {
+            throw new SpreadsheetReadException(SpreadsheetReadFailure::Unreadable);
         }
 
-        return $tail;
+        if (strlen($number) > 7 || (int) $number > self::MAX_SHEET_ROWS) {
+            throw new SpreadsheetReadException(SpreadsheetReadFailure::TooManyRows, limit: $limits->maxRows);
+        }
     }
 
     /**
@@ -168,5 +257,46 @@ final class XlsxPreflight
         }
 
         return $index;
+    }
+
+    /**
+     * Calls $visit on every start tag of an XML entry. Any XML error ends as unreadable.
+     *
+     * @param  callable(XMLReader): void  $visit
+     */
+    private function each(string $uri, callable $visit): void
+    {
+        $previous = libxml_use_internal_errors(true);
+        libxml_clear_errors();
+        $xml = new XMLReader;
+
+        try {
+            if (! $xml->open($uri, null, LIBXML_NONET)) {
+                throw new SpreadsheetReadException(SpreadsheetReadFailure::Unreadable);
+            }
+
+            while ($xml->read()) {
+                if ($xml->nodeType === XMLReader::ELEMENT) {
+                    $visit($xml);
+                }
+            }
+
+            if (libxml_get_errors() !== []) {
+                throw new SpreadsheetReadException(SpreadsheetReadFailure::Unreadable);
+            }
+        } catch (SpreadsheetReadException $exception) {
+            throw $exception;
+        } catch (Throwable) {
+            throw new SpreadsheetReadException(SpreadsheetReadFailure::Unreadable);
+        } finally {
+            $xml->close();
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+        }
+    }
+
+    private function uri(string $path, string $name): string
+    {
+        return 'zip://'.$path.'#'.$name;
     }
 }
