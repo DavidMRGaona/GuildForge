@@ -839,7 +839,7 @@ Sort slots, so modules never depend on each other's numbers (core entries in bra
 | Contenido | [Eventos 10 · Artículos 20 · Galerías 30 · Biblioteca de medios 40 · Guías de ayuda 90] |
 | Actividades | game-tables Mesas 10 · tournaments Torneos 20 · venue-bookings Reservas 30 |
 | Comunicación | announcements Anuncios 10 · surveys Encuestas 20 · forum Foro 30, Moderación del foro 35 |
-| Personas | [Usuarios 10 · Roles 20] · memberships Socios 30 · contacts Contactos 40 |
+| Personas | [Usuarios 10 · Roles 20] · memberships Socios 30 · contacts Contactos 40 · achievements Logros 50 |
 | Sitio web | [Hero slides 10 · Navegación 20 · Pie de página 25 · Nosotros 30 · Páginas legales 40] · link-page Página de enlaces 50 · cookie-consent Cookies 60 |
 | Catálogos | game-tables Sistemas de juego 10, Editoriales 20, Avisos de contenido 30, Géneros 35 · tournaments Perfiles de torneo 40 · [Etiquetas 90] |
 | Sistema | [Configuración 10 · Módulos 20 · Actualizaciones de módulos 30 · Actualización del core 40] |
@@ -865,7 +865,7 @@ protected static ?string $cluster = SettingsCluster::class;
 protected static ?int $navigationSort = 130;
 ```
 
-Core settings use 10–50 (Configuración del sitio 10 · Correo 20 · Estadísticas de correo 30 · Escritorio 40 · Propuestas 50). Module slots: Anuncios 105 · Banner de cookies 110 · Boletín 115 · Encuestas 120 · Foro 125 · Inscripciones 127 · Mesas 130 · Notificaciones a canales 140 · Página de enlaces 150 · Reservas 160 · Socios 170 · Torneos 180. A module declares its page with `getSettingsPage()` too, so the «Configuración» button of *Módulos* opens it (see [Module settings](#module-settings)). A clustered page's path and route name gain the cluster prefix (`/admin/configuracion/<slug>`, `filament.admin.configuracion.pages.<slug>`). The core keeps a redirect under the old path and route name, query string included, so existing links and guides keep working; new guides use the new name.
+Core settings use 10–50 (Configuración del sitio 10 · Correo 20 · Estadísticas de correo 30 · Escritorio 40 · Propuestas 50). Module slots: Anuncios 105 · Banner de cookies 110 · Boletín 115 · Encuestas 120 · Foro 125 · Inscripciones 127 · Logros 128 · Mesas 130 · Notificaciones a canales 140 · Página de enlaces 150 · Reservas 160 · Socios 170 · Torneos 180. A module declares its page with `getSettingsPage()` too, so the «Configuración» button of *Módulos* opens it (see [Module settings](#module-settings)). A clustered page's path and route name gain the cluster prefix (`/admin/configuracion/<slug>`, `filament.admin.configuracion.pages.<slug>`). The core keeps a redirect under the old path and route name, query string included, so existing links and guides keep working; new guides use the new name.
 
 Modules declare no groups of their own: `registerNavigationGroups()` was removed from `ModuleServiceProvider` once every module had migrated (core#429).
 
