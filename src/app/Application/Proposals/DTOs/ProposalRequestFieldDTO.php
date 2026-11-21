@@ -21,7 +21,7 @@ use InvalidArgumentException;
  */
 final readonly class ProposalRequestFieldDTO
 {
-    public const string NAME_PATTERN = '/^[a-z][a-z0-9_]{0,39}$/';
+    public const string NAME_PATTERN = '/^[a-z][a-z0-9_]{0,39}$/D';
 
     public const int MAX_TEXT_LENGTH = 255;
 

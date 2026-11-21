@@ -14,6 +14,8 @@ use App\Domain\Modules\Exceptions\InvalidModuleNameException;
 use App\Domain\Modules\Exceptions\InvalidModuleVersionException;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Domain\Modules\ValueObjects\ModuleVersion;
+use App\Domain\Profiles\ValueObjects\ProfileKey;
+use App\Domain\SiteBlocks\ValueObjects\SiteBlockKey;
 use App\Domain\ValueObjects\HexColor;
 use App\Domain\ValueObjects\Slug;
 use Closure;
@@ -23,7 +25,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * PCRE's `$` also matches before a final newline, so "abc\n" used to pass patterns that
- * promise a strict format. Each value object ends its pattern in `\z`.
+ * promise a strict format. Each value object ends its pattern in `\z` or uses the `D` modifier.
  */
 final class ValueObjectsTrailingNewlineTest extends TestCase
 {
@@ -65,5 +67,18 @@ final class ValueObjectsTrailingNewlineTest extends TestCase
         $this->assertSame('game-tables', (string) new ModuleName('game-tables'));
         $this->assertSame('1.2.3', (string) ModuleVersion::fromString('1.2.3'));
         $this->assertSame('core.site.events', GuideId::fromString('core.site.events')->value());
+        $this->assertSame('core.links', SiteBlockKey::tryFrom('core.links')?->value);
+        $this->assertSame('forum.latest_posts', ProfileKey::tryFrom('forum.latest_posts')?->value);
+    }
+
+    public function test_a_site_block_key_with_a_trailing_newline_is_rejected(): void
+    {
+        $this->assertNull(SiteBlockKey::tryFrom("core.links\n"));
+        $this->assertNull(SiteBlockKey::tryFrom("newsletter.subscribe\n"));
+    }
+
+    public function test_a_profile_key_with_a_trailing_newline_is_rejected(): void
+    {
+        $this->assertNull(ProfileKey::tryFrom("core.about\n"));
     }
 }

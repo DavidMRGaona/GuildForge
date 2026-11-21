@@ -88,6 +88,7 @@ final class EventProposalRequestRegistryTest extends TestCase
             $this->request('other-module.thing'),
             $this->request('fixture.Bad_Key'),
             $this->request('fixture'),
+            $this->request("fixture.trailing-newline\n"),
             $this->request('fixture.throws', fields: static fn (): array => throw new RuntimeException('broken')),
             $this->request('fixture.not-a-list', fields: static fn (): array => ['a' => ProposalRequestFieldDTO::boolean('a', 'A')]),
             $this->request('fixture.not-fields', fields: static fn (): array => ['nope']),
