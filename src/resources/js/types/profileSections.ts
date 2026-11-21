@@ -5,6 +5,39 @@
 export type ProfileRegion = 'main' | 'aside';
 
 /**
+ * The colours a profile badge may have (core#776), the same values as
+ * `App\Domain\Profiles\ProfileBadgeColour`: a closed palette that reads well in both schemes.
+ */
+export type ProfileBadgeColour =
+    'slate' | 'red' | 'orange' | 'amber' | 'green' | 'teal' | 'sky' | 'blue' | 'violet' | 'pink';
+
+/**
+ * How large `ProfileBadges.vue` draws badges: `sm` as icons only, next to an author's name (a post
+ * header); `md` with their label, on the profile and its card.
+ */
+export type ProfileBadgeSize = 'sm' | 'md';
+
+/**
+ * A featured badge of a public profile (core#776), given by a module and checked on the server:
+ * `ProfileBadgeDTO`. Only badges of profiles the person viewing may see ever reach the browser.
+ */
+export interface ProfileBadge {
+    /** `<module>.<badge>`, unique among the badges of one account */
+    key: string;
+    /** The badge's name, already translated: its accessible name too */
+    label: string;
+    /** What it was given for, already translated; may be empty */
+    description: string;
+    /** One of `ProfileBadgeIcons::NAMES` (`profileBadgeIconMap`), drawn when there is no image */
+    icon: string;
+    colour: ProfileBadgeColour;
+    /** An `https` image, drawn cropped to a square instead of the icon */
+    imageUrl: string | null;
+    /** An absolute `https` address or a path of the site; null when it links nowhere */
+    url: string | null;
+}
+
+/**
  * The top of a public profile. Never the account name or the email: `publicName` is the only name.
  */
 export interface ProfileHeader {
@@ -22,6 +55,8 @@ export interface ProfileHeader {
     showsMembership: boolean;
     /** Whether the person viewing is the owner */
     isOwner: boolean;
+    /** At most three, in the owner's order, drawn under the name */
+    badges: ProfileBadge[];
 }
 
 /** A counter counted for the person viewing, already filtered to what can be drawn */
@@ -87,4 +122,6 @@ export interface ProfileCard {
     isOwner: boolean;
     /** At most four, in the owner's order */
     stats: ResolvedProfileStat[];
+    /** The featured badges, at most three, in the owner's order */
+    badges: ProfileBadge[];
 }

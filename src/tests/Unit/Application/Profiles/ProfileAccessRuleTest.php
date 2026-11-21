@@ -45,6 +45,9 @@ final class ProfileAccessRuleTest extends TestCase
     /** @var list<string> */
     private array $logged = [];
 
+    /** @var list<string> */
+    private array $checks = [];
+
     /**
      * @return iterable<string, array{ProfileVisibility, string, string, bool}>
      */
@@ -113,20 +116,81 @@ final class ProfileAccessRuleTest extends TestCase
         $this->assertSame([], $this->logged);
     }
 
+    /**
+     * A page of authors (core#776) is decided exactly as each profile would be on its own, for every
+     * kind of viewer.
+     */
+    public function test_a_page_of_profiles_is_decided_as_each_one_would_be(): void
+    {
+        $profiles = [];
+        foreach (ProfileVisibility::cases() as $visibility) {
+            foreach (['active', 'nameless', 'deactivated', 'anonymized'] as $state) {
+                $profiles[] = $this->profile($visibility, $state, userId: $visibility->value.'-'.$state);
+            }
+        }
+        $profiles[] = $this->profile(ProfileVisibility::Hidden, 'active');
+
+        foreach (array_keys(self::ACTIVE_OWNER_WITH_NAME['public']) as $kind) {
+            $viewer = $this->viewer($kind);
+            $expected = array_values(array_map(
+                static fn (PublicProfileDTO $profile): string => $profile->userId,
+                array_filter($profiles, fn (PublicProfileDTO $profile): bool => $this->rule()->canView($profile, $viewer)),
+            ));
+
+            $this->assertSame($expected, $this->rule()->visibleAmong($profiles, $viewer), $kind);
+        }
+
+        $this->assertSame([], $this->logged);
+    }
+
+    public function test_a_page_asks_about_the_viewer_once_whatever_the_number_of_profiles(): void
+    {
+        $profiles = [];
+        foreach (range(1, 5) as $n) {
+            $profiles[] = $this->profile(ProfileVisibility::Members, 'active', userId: 'members-'.$n);
+            $profiles[] = $this->profile(ProfileVisibility::Association, 'active', userId: 'association-'.$n);
+        }
+
+        $this->checks = [];
+        $this->assertCount(10, $this->rule()->visibleAmong($profiles, $this->viewer('socio')));
+
+        $this->assertSame(['email', 'membership'], $this->checks);
+    }
+
+    public function test_a_failing_check_hides_only_the_profiles_that_need_it_and_is_logged_once(): void
+    {
+        $profiles = [
+            $this->profile(ProfileVisibility::Public, 'active', userId: 'public'),
+            $this->profile(ProfileVisibility::Association, 'active', userId: 'association-1'),
+            $this->profile(ProfileVisibility::Association, 'active', userId: 'association-2'),
+            $this->profile(ProfileVisibility::Members, 'active', userId: 'members'),
+        ];
+
+        $this->assertSame(['public', 'members'], $this->rule(membershipFails: true)->visibleAmong($profiles, $this->viewer('socio')));
+        $this->assertSame(['warning'], $this->logged);
+    }
+
     public function recordLog(string $level): void
     {
         $this->logged[] = $level;
     }
 
+    public function recordCheck(string $check): void
+    {
+        $this->checks[] = $check;
+    }
+
     private function rule(bool $emailsFail = false, bool $membershipFails = false): ProfileAccessRule
     {
-        $emails = new readonly class($emailsFail, self::UNVERIFIED) implements EmailVerificationPolicyInterface
+        $emails = new readonly class($emailsFail, self::UNVERIFIED, $this) implements EmailVerificationPolicyInterface
         {
             /** @param list<string> $unverified */
-            public function __construct(private bool $fail, private array $unverified) {}
+            public function __construct(private bool $fail, private array $unverified, private ProfileAccessRuleTest $test) {}
 
             public function mustVerify(object $user): bool
             {
+                $this->test->recordCheck('email');
+
                 if ($this->fail) {
                     throw new RuntimeException('settings unreadable');
                 }
@@ -135,10 +199,10 @@ final class ProfileAccessRuleTest extends TestCase
             }
         };
 
-        $membership = new readonly class($membershipFails, self::SOCIOS) implements AssociationMembershipServiceInterface
+        $membership = new readonly class($membershipFails, self::SOCIOS, $this) implements AssociationMembershipServiceInterface
         {
             /** @param list<string> $socios */
-            public function __construct(private bool $fail, private array $socios) {}
+            public function __construct(private bool $fail, private array $socios, private ProfileAccessRuleTest $test) {}
 
             public function roleName(): string
             {
@@ -147,6 +211,8 @@ final class ProfileAccessRuleTest extends TestCase
 
             public function isAssociationMember(object $user): bool
             {
+                $this->test->recordCheck('membership');
+
                 if ($this->fail) {
                     throw new RuntimeException('roles unreadable');
                 }
@@ -169,10 +235,10 @@ final class ProfileAccessRuleTest extends TestCase
         return new ProfileAccessRule($emails, $membership, $log);
     }
 
-    private function profile(ProfileVisibility $visibility, string $state, ?string $publicName = 'Ana Prueba'): PublicProfileDTO
+    private function profile(ProfileVisibility $visibility, string $state, ?string $publicName = 'Ana Prueba', string $userId = self::OWNER): PublicProfileDTO
     {
         return new PublicProfileDTO(
-            userId: self::OWNER,
+            userId: $userId,
             handle: 'ana-prueba',
             publicName: $state === 'nameless' ? null : $publicName,
             visibility: $visibility,

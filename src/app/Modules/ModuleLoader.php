@@ -19,6 +19,7 @@ use App\Application\Modules\Services\ModuleNavigationRegistryInterface;
 use App\Application\Modules\Services\ModulePageRegistryInterface;
 use App\Application\Modules\Services\ModuleRouteRegistryInterface;
 use App\Application\Modules\Services\ModuleSlotRegistryInterface;
+use App\Application\Profiles\Services\ProfileBadgeSourceRegistryInterface;
 use App\Application\Profiles\Services\ProfileSectionRegistryInterface;
 use App\Application\Profiles\Services\ProfileStatRegistryInterface;
 use App\Application\Proposals\Services\EventProposalRequestRegistryInterface;
@@ -140,6 +141,7 @@ final class ModuleLoader
         // Register public profile sections and stats from the provider
         $this->registerProviderProfileSections($provider, $module->name()->value);
         $this->registerProviderProfileStats($provider, $module->name()->value);
+        $this->registerProviderProfileBadgeSources($provider, $module->name()->value);
 
         // Register survey subject sources from the provider
         $this->registerProviderSurveySubjectSources($provider, $module->name()->value);
@@ -401,6 +403,22 @@ final class ModuleLoader
 
         if ($this->app->bound(ProfileStatRegistryInterface::class)) {
             $this->app->make(ProfileStatRegistryInterface::class)->registerMany($stats, $moduleName);
+        }
+    }
+
+    /**
+     * Register the featured badge sources of public profiles from a module provider.
+     */
+    private function registerProviderProfileBadgeSources(ModuleServiceProvider $provider, string $moduleName): void
+    {
+        $sources = $provider->registerProfileBadgeSources();
+
+        if ($sources === []) {
+            return;
+        }
+
+        if ($this->app->bound(ProfileBadgeSourceRegistryInterface::class)) {
+            $this->app->make(ProfileBadgeSourceRegistryInterface::class)->registerMany($sources, $moduleName);
         }
     }
 

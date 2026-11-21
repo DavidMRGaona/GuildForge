@@ -10,6 +10,7 @@ use App\Application\Impersonation\Services\ImpersonationServiceInterface;
 use App\Application\Profiles\Contracts\ProfileSectionInterface;
 use App\Application\Profiles\DTOs\ProfileOwnerDTO;
 use App\Application\Profiles\DTOs\ProfileStatDTO;
+use App\Application\Profiles\Services\ProfileBadgeSourceRegistryInterface;
 use App\Application\Profiles\Services\ProfileSectionRegistryInterface;
 use App\Application\Profiles\Services\ProfileStatRegistryInterface;
 use App\Application\Services\SettingsServiceInterface;
@@ -29,6 +30,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Testing\TestResponse;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Response;
+use Tests\Support\Profiles\FakeProfileBadgeSource;
 use Tests\Support\Profiles\FakeProfileSection;
 use Tests\Support\Profiles\FakeProfileStat;
 use Tests\TestCase;
@@ -89,7 +91,27 @@ final class PublicProfileCardControllerTest extends TestCase
                 'showsMembership' => false,
                 'isOwner' => false,
                 'stats' => [],
+                'badges' => [],
             ]);
+    }
+
+    public function test_the_card_carries_the_owner_s_featured_badges(): void
+    {
+        $this->owner(ProfileVisibility::Public);
+        $this->app->instance('test-badge-source', new FakeProfileBadgeSource(answer: static fn (array $ids): array => [$ids[0] => [
+            FakeProfileBadgeSource::badge('achievements.first', url: '/logros/primera'),
+        ]]));
+        $this->app->make(ProfileBadgeSourceRegistryInterface::class)->register('test-badge-source', 'achievements');
+
+        $this->getJson('/miembros/ana-prueba/tarjeta')->assertOk()->assertJsonPath('badges', [[
+            'key' => 'achievements.first',
+            'label' => 'Primera partida',
+            'description' => 'Jugó su primera partida en la asociación.',
+            'icon' => 'trophy',
+            'colour' => 'amber',
+            'imageUrl' => null,
+            'url' => '/logros/primera',
+        ]]);
     }
 
     public function test_the_card_is_never_kept_by_a_shared_cache(): void

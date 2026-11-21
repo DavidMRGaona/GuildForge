@@ -631,6 +631,21 @@ declare const _default: typeof __VLS_export;
 export default _default;
 ```
 
+## resources/js/components/ui/ProfileBadges.vue
+
+```ts
+import type { ProfileBadge, ProfileBadgeSize } from '@/types/profileSections';
+type __VLS_Props = {
+    badges: ProfileBadge[];
+    size?: ProfileBadgeSize;
+};
+declare const __VLS_export: import("vue").DefineComponent<__VLS_Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<__VLS_Props> & Readonly<{}>, {
+    size: ProfileBadgeSize;
+}, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
+declare const _default: typeof __VLS_export;
+export default _default;
+```
+
 ## resources/js/composables/useAuth.ts
 
 ```ts
@@ -1262,6 +1277,17 @@ export interface ProfileTabMetadata {
 
 ```ts
 export type ProfileRegion = 'main' | 'aside';
+export type ProfileBadgeColour = 'slate' | 'red' | 'orange' | 'amber' | 'green' | 'teal' | 'sky' | 'blue' | 'violet' | 'pink';
+export type ProfileBadgeSize = 'sm' | 'md';
+export interface ProfileBadge {
+    key: string;
+    label: string;
+    description: string;
+    icon: string;
+    colour: ProfileBadgeColour;
+    imageUrl: string | null;
+    url: string | null;
+}
 export interface ProfileHeader {
     handle: string;
     publicName: string | null;
@@ -1270,6 +1296,7 @@ export interface ProfileHeader {
     memberSince: string | null;
     showsMembership: boolean;
     isOwner: boolean;
+    badges: ProfileBadge[];
 }
 export interface ResolvedProfileStat {
     key: string;
@@ -1304,6 +1331,7 @@ export interface ProfileCard {
     showsMembership: boolean;
     isOwner: boolean;
     stats: ResolvedProfileStat[];
+    badges: ProfileBadge[];
 }
 ```
 

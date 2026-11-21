@@ -8,6 +8,7 @@ use App\Application\Authorization\Services\AssociationMembershipServiceInterface
 use App\Application\Exceptions\NothingToDrawException;
 use App\Application\Profiles\Contracts\ProfileSectionInterface;
 use App\Application\Profiles\Contracts\ProfileStatInterface;
+use App\Application\Profiles\DTOs\ProfileBadgeDTO;
 use App\Application\Profiles\DTOs\ProfileHeaderDTO;
 use App\Application\Profiles\DTOs\ProfileOwnerDTO;
 use App\Application\Profiles\DTOs\ProfileRegistrationDTO;
@@ -54,6 +55,7 @@ final class ProfileRenderer implements ProfileRendererInterface, ProfileSummaryR
         private readonly ProfileSectionRegistryInterface $sections,
         private readonly ProfileStatRegistryInterface $stats,
         private readonly StoredProfiles $profiles,
+        private readonly ProfileBadgeCollector $badges,
         private readonly AssociationMembershipServiceInterface $membership,
         private readonly TimezoneServiceInterface $timezone,
         private readonly Container $container,
@@ -290,7 +292,28 @@ final class ProfileRenderer implements ProfileRendererInterface, ProfileSummaryR
             $memberSince,
             $profile?->show_membership === true && $user instanceof UserModel && $this->isAssociationMember($user),
             $viewer instanceof Authenticatable && $this->isOwner($owner, $viewer),
+            $this->badgesOf($owner),
         );
+    }
+
+    /**
+     * The owner's featured badges (core#776). The page and the card call the renderer only once the
+     * access rule let the person see the profile, so nothing is asked again here. Fails closed: the
+     * collector never throws for a source, and anything else draws the header without badges.
+     *
+     * @return list<ProfileBadgeDTO>
+     */
+    private function badgesOf(ProfileOwnerDTO $owner): array
+    {
+        try {
+            return $this->badges->collect([strtolower($owner->id)])[strtolower($owner->id)] ?? [];
+        } catch (Throwable $exception) {
+            $this->warnOnce('header', '', 'badges', 'The badges of a profile owner could not be read; the header is drawn without them.', [
+                'exception' => $exception::class,
+            ]);
+
+            return [];
+        }
     }
 
     /**

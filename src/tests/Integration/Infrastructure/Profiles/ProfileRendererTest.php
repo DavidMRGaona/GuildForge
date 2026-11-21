@@ -8,11 +8,13 @@ use App\Application\Authorization\Services\AssociationMembershipServiceInterface
 use App\Application\Exceptions\NothingToDrawException;
 use App\Application\Profiles\Contracts\ProfileSectionInterface;
 use App\Application\Profiles\Contracts\ProfileStatInterface;
+use App\Application\Profiles\DTOs\ProfileBadgeDTO;
 use App\Application\Profiles\DTOs\ProfileOwnerDTO;
 use App\Application\Profiles\DTOs\ProfileStatDTO;
 use App\Application\Profiles\DTOs\ResolvedProfileDTO;
 use App\Application\Profiles\DTOs\ResolvedProfileSectionDTO;
 use App\Application\Profiles\DTOs\ResolvedProfileStatDTO;
+use App\Application\Profiles\Services\ProfileBadgeSourceRegistryInterface;
 use App\Application\Profiles\Services\ProfileRendererInterface;
 use App\Application\Profiles\Services\ProfileSectionRegistryInterface;
 use App\Application\Profiles\Services\ProfileStatRegistryInterface;
@@ -20,6 +22,7 @@ use App\Application\Profiles\Services\ProfileSummaryRendererInterface;
 use App\Application\Services\TimezoneServiceInterface;
 use App\Application\SiteBlocks\Exceptions\NothingToDrawException as SiteBlockNothingToDrawException;
 use App\Domain\Profiles\ProfileRegion;
+use App\Domain\Profiles\ProfileVisibility;
 use App\Domain\Profiles\ValueObjects\ProfileLayout;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
@@ -31,6 +34,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Mockery;
 use RuntimeException;
+use Tests\Support\Profiles\FakeProfileBadgeSource;
 use Tests\Support\Profiles\FakeProfileSection;
 use Tests\Support\Profiles\FakeProfileStat;
 use Tests\TestCase;
@@ -85,6 +89,7 @@ final class ProfileRendererTest extends TestCase
             'memberSince' => $this->app->make(TimezoneServiceInterface::class)->iso(Carbon::parse('2024-06-03 10:00:00', 'UTC')),
             'showsMembership' => false,
             'isOwner' => false,
+            'badges' => [],
         ], $profile->header->toArray());
 
         $encoded = (string) json_encode($profile->toArray());
@@ -507,7 +512,36 @@ final class ProfileRendererTest extends TestCase
     {
         $user = UserModel::factory()->create(['display_name' => 'Ana']);
 
-        $this->assertSame('{"header":{"handle":"ana","publicName":"Ana","avatarPublicId":null,"bannerPublicId":null,"memberSince":'.json_encode($this->app->make(TimezoneServiceInterface::class)->iso($user->created_at)).',"showsMembership":false,"isOwner":false},"stats":[],"sections":{"main":[],"aside":[]}}', json_encode($this->render($user, null)->toArray()));
+        $this->assertSame('{"header":{"handle":"ana","publicName":"Ana","avatarPublicId":null,"bannerPublicId":null,"memberSince":'.json_encode($this->app->make(TimezoneServiceInterface::class)->iso($user->created_at)).',"showsMembership":false,"isOwner":false,"badges":[]},"stats":[],"sections":{"main":[],"aside":[]}}', json_encode($this->render($user, null)->toArray()));
+    }
+
+    public function test_the_header_carries_the_owner_s_featured_badges(): void
+    {
+        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+        $source = new FakeProfileBadgeSource;
+        $this->app->instance('test-badge-source', $source);
+        $this->app->make(ProfileBadgeSourceRegistryInterface::class)->register('test-badge-source', 'achievements');
+        $this->profileOf($user)->update(['visibility' => ProfileVisibility::Hidden->value]);
+
+        // Only the core's page and card call the renderer, once the access rule let the person see it
+        $profile = $this->render($user, $user);
+        $summary = $this->summary($user, null);
+
+        $this->assertSame(['achievements.first'], array_map(static fn (ProfileBadgeDTO $badge): string => $badge->key, $profile->header->badges));
+        $this->assertSame('achievements.first', $profile->header->toArray()['badges'][0]['key']);
+        $this->assertEquals($profile->header->badges, $summary->header->badges);
+        $this->assertSame([[$user->id], [$user->id]], $source->calls);
+    }
+
+    public function test_a_failing_badge_source_leaves_the_header_without_badges(): void
+    {
+        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+        $this->app->instance('test-badge-source', new FakeProfileBadgeSource(answer: static function (): never {
+            throw new RuntimeException('broken');
+        }));
+        $this->app->make(ProfileBadgeSourceRegistryInterface::class)->register('test-badge-source', 'achievements');
+
+        $this->assertSame([], $this->render($user, null)->header->badges);
     }
 
     public function test_the_summary_renderer_is_the_request_s_renderer(): void

@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import { BadgeCheck, Calendar, EyeOff, MailWarning, PencilLine, UserRound } from '@lucide/vue';
 import ProfileSection from '@/components/layout/ProfileSection.vue';
 import ProfileEditorPanel from '@/components/profileEditor/ProfileEditorPanel.vue';
+import ProfileBadges from '@/components/ui/ProfileBadges.vue';
 import { useNotifications } from '@/composables/useNotifications';
 import { buildAvatarUrl, buildImageUrl } from '@/utils/cloudinary';
 import { initialsOf } from '@/utils/initials';
@@ -178,6 +179,11 @@ const numberFormat = computed(() => new Intl.NumberFormat(locale.value));
                         >
                             {{ heading }}
                         </h1>
+                        <ProfileBadges
+                            v-if="header.badges.length > 0"
+                            :badges="header.badges"
+                            class="mt-3 justify-center sm:justify-start"
+                        />
                         <p class="mt-2 flex flex-wrap justify-center gap-2 sm:justify-start">
                             <span
                                 v-if="memberSince"

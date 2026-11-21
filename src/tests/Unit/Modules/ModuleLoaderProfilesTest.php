@@ -7,13 +7,16 @@ namespace Tests\Unit\Modules;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Profiles\Contracts\ProfileSectionInterface;
 use App\Application\Profiles\Contracts\ProfileStatInterface;
+use App\Application\Profiles\DTOs\ProfileBadgeSourceRegistrationDTO;
 use App\Application\Profiles\DTOs\ProfileRegistrationDTO;
+use App\Application\Profiles\Services\ProfileBadgeSourceRegistryInterface;
 use App\Application\Profiles\Services\ProfileSectionRegistryInterface;
 use App\Application\Profiles\Services\ProfileStatRegistryInterface;
 use App\Modules\ModuleLoader;
 use App\Modules\ModuleServiceProvider;
 use Mockery;
 use ReflectionMethod;
+use Tests\Support\Profiles\FakeProfileBadgeSource;
 use Tests\Support\Profiles\FakeProfileSection;
 use Tests\Support\Profiles\FakeProfileStat;
 use Tests\TestCase;
@@ -76,6 +79,30 @@ final class ModuleLoaderProfilesTest extends TestCase
         $this->assertNull($stats->find('example-module.count'));
     }
 
+    public function test_module_badge_sources_are_registered_under_the_module_name(): void
+    {
+        $provider = new class($this->app) extends ModuleServiceProvider
+        {
+            public function moduleName(): string
+            {
+                return 'example-module';
+            }
+
+            public function registerProfileBadgeSources(): array
+            {
+                return [FakeProfileBadgeSource::class];
+            }
+        };
+
+        $this->register($provider);
+
+        $registry = $this->app->make(ProfileBadgeSourceRegistryInterface::class);
+        $this->assertEquals([new ProfileBadgeSourceRegistrationDTO(FakeProfileBadgeSource::class, 'example-module')], $registry->all());
+
+        $registry->unregisterModule('example-module');
+        $this->assertSame([], $registry->all());
+    }
+
     public function test_a_module_without_profile_sections_or_stats_registers_nothing(): void
     {
         $provider = new class($this->app) extends ModuleServiceProvider
@@ -88,6 +115,7 @@ final class ModuleLoaderProfilesTest extends TestCase
 
         $this->assertSame([], $provider->registerProfileSections());
         $this->assertSame([], $provider->registerProfileStats());
+        $this->assertSame([], $provider->registerProfileBadgeSources());
         $this->register($provider);
 
         // Only the core's own section, and no stat
@@ -96,6 +124,7 @@ final class ModuleLoaderProfilesTest extends TestCase
             $this->app->make(ProfileSectionRegistryInterface::class)->all(),
         ));
         $this->assertSame([], $this->app->make(ProfileStatRegistryInterface::class)->all());
+        $this->assertSame([], $this->app->make(ProfileBadgeSourceRegistryInterface::class)->all());
     }
 
     private function register(ModuleServiceProvider $provider): void
@@ -105,7 +134,7 @@ final class ModuleLoaderProfilesTest extends TestCase
             Mockery::mock(EnabledModulesResolverInterface::class),
         );
 
-        foreach (['registerProviderProfileSections', 'registerProviderProfileStats'] as $method) {
+        foreach (['registerProviderProfileSections', 'registerProviderProfileStats', 'registerProviderProfileBadgeSources'] as $method) {
             (new ReflectionMethod($loader, $method))->invoke($loader, $provider, $provider->moduleName());
         }
     }

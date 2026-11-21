@@ -594,6 +594,9 @@ export default {
             notFound: 'No registrations found',
         },
     },
+    profileBadges: {
+        list: 'Featured badges',
+    },
     publicProfile: {
         noPublicName: 'No public name',
         membershipBadge: 'Association member',

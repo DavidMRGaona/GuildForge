@@ -107,6 +107,7 @@ function props(
                 memberSince: '2024-06-01T00:30:00+02:00',
                 showsMembership: false,
                 isOwner: false,
+                badges: [],
                 ...header,
             },
             stats: rest.stats ?? [],
@@ -171,6 +172,30 @@ describe('Profiles/Show', () => {
                 .get('[data-testid="profile-membership"]')
                 .text()
         ).toBe('Socio');
+    });
+
+    it('draws the featured badges right under the name, and nothing without them', () => {
+        expect(mountPage(props()).find('[data-testid="profile-badges"]').exists()).toBe(false);
+
+        const wrapper = mountPage(
+            props({
+                badges: [
+                    {
+                        key: 'achievements.first',
+                        label: 'Primera partida',
+                        description: 'Jugó su primera partida.',
+                        icon: 'trophy',
+                        colour: 'amber',
+                        imageUrl: null,
+                        url: null,
+                    },
+                ],
+            })
+        );
+
+        const badges = wrapper.get('h1 + [data-testid="profile-badges"]');
+        expect(badges.attributes('aria-label')).toBe('Insignias destacadas');
+        expect(badges.get('[data-badge="achievements.first"]').text()).toBe('Primera partida');
     });
 
     it('lists the counters in order, linking only those with an address', () => {
