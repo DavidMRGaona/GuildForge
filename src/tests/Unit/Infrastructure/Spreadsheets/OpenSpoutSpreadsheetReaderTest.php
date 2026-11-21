@@ -328,6 +328,12 @@ final class OpenSpoutSpreadsheetReaderTest extends TestCase
             ]));
         }
 
+        // openspout ignores TargetMode, so a sheet marked external is still an entry it opens.
+        $this->assertFailure(SpreadsheetReadFailure::Unreadable, $this->workbook([
+            'xl/_rels/workbook.xml.rels' => str_replace('Target="worksheets/sheet1.xml"', 'Target="datos/hoja.bin" TargetMode="External"', $rels),
+            'xl/datos/hoja.bin' => $wide,
+        ]));
+
         // An absolute target inside xl/ is the usual entry.
         $this->assertFailure(SpreadsheetReadFailure::TooManyColumns, $this->workbook([
             'xl/_rels/workbook.xml.rels' => str_replace('worksheets/sheet1.xml', '/xl/datos/hoja.bin', $rels),

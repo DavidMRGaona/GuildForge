@@ -178,9 +178,10 @@ final class XlsxPreflight
                 return;
             }
 
-            // External targets (URLs) are never opened.
+            // openspout ignores TargetMode and would open the target as an entry: a sheet or shared
+            // strings marked external is no workbook a spreadsheet program writes.
             if ($xml->getAttribute('TargetMode') === 'External') {
-                return;
+                throw new SpreadsheetReadException(SpreadsheetReadFailure::Unreadable);
             }
 
             $target = $this->resolve((string) $xml->getAttribute('Target'));
