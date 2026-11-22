@@ -21,8 +21,7 @@ use Throwable;
  *
  * Unchanged, a job costs one read of the version from the cache store (a query on the `cache`
  * table with the database store), which the job's own settings reads then reuse. After a change,
- * the next job reads the stored settings once for every module (SettingsService keeps them for
- * the rest of the job).
+ * the next job reads each module's stored settings once, a cost paid once per change and worker.
  *
  * One per process (a singleton, never scoped: the worker forgets scoped instances between jobs).
  * The store and the version are resolved on each call, so a binding replaced later is honoured.

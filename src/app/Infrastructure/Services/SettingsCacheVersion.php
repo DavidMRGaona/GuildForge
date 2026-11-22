@@ -20,14 +20,4 @@ final class SettingsCacheVersion
      * A rollback leaves it set until the request ends, which only costs uncached reads.
      */
     public bool $pendingWrite = false;
-
-    /**
-     * The settings read under $loadedWith, kept for the rest of the request or job, so reading
-     * several keys costs one cache read (core#825). A new token leaves them behind.
-     *
-     * @var array<string, string|null>|null
-     */
-    public ?array $loaded = null;
-
-    public ?string $loadedWith = null;
 }

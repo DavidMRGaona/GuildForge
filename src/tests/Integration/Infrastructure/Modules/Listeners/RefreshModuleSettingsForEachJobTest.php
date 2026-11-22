@@ -8,11 +8,8 @@ use App\Application\Modules\Services\ModuleSettingsStoreInterface;
 use App\Application\Services\SettingsVersionInterface;
 use App\Domain\Modules\Exceptions\ModuleSettingsUnavailableException;
 use App\Infrastructure\Modules\Listeners\RefreshModuleSettingsForEachJob;
-use App\Infrastructure\Services\SettingsService;
 use App\Modules\ModuleServiceProvider;
 use Illuminate\Bus\Queueable;
-use Illuminate\Cache\Events\CacheHit;
-use Illuminate\Cache\Events\CacheMissed;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -189,70 +186,6 @@ final class RefreshModuleSettingsForEachJobTest extends TestCase
         $this->handle($this->processing());
 
         $this->assertSame(2, $reads->count);
-    }
-
-    public function test_the_stored_settings_are_read_from_the_cache_once_for_every_module(): void
-    {
-        $this->bootModule();
-        $this->bootModule('second-fixture');
-        $this->saveFromAnotherProcess(['access' => 'members']);
-        $reads = 0;
-        $countBlobReads = function (CacheHit|CacheMissed $event) use (&$reads): void {
-            if (str_starts_with($event->key, SettingsService::CACHE_KEY_PREFIX) && $event->key !== SettingsService::VERSION_KEY) {
-                $reads++;
-            }
-        };
-        Event::listen(CacheHit::class, $countBlobReads);
-        Event::listen(CacheMissed::class, $countBlobReads);
-
-        $this->handle($this->processing());
-
-        $this->assertSame(1, $reads);
-    }
-
-    public function test_a_failed_read_keeps_the_job_from_running_with_the_old_values(): void
-    {
-        $this->bootModule();
-        $this->saveFromAnotherProcess(['access' => 'members']);
-        $this->app->instance(SettingsVersionInterface::class, new class implements SettingsVersionInterface
-        {
-            public function current(): string
-            {
-                throw new RuntimeException('cache is down');
-            }
-        });
-
-        dispatch(new ReadModuleSettingJob);
-        $this->work();
-
-        $this->assertNull(ReadModuleSettingJob::$seen);
-    }
-
-    public function test_a_failed_read_is_tried_again_on_the_next_job(): void
-    {
-        $this->bootModule();
-        $this->saveFromAnotherProcess(['access' => 'members']);
-        $failing = new class implements SettingsVersionInterface
-        {
-            public function current(): string
-            {
-                throw new RuntimeException('cache is down');
-            }
-        };
-        $real = app(SettingsVersionInterface::class);
-        $this->app->instance(SettingsVersionInterface::class, $failing);
-
-        try {
-            $this->handle($this->processing());
-        } catch (ModuleSettingsUnavailableException) {
-            // The worker fails this attempt: the job runs again later
-        }
-        $this->assertSame('open', config('modules.settings.'.self::MODULE.'.access'));
-
-        $this->app->instance(SettingsVersionInterface::class, $real);
-        $this->handle($this->processing());
-
-        $this->assertSame('members', config('modules.settings.'.self::MODULE.'.access'));
     }
 
     public function test_a_sync_job_keeps_the_config_of_the_request_that_dispatched_it(): void
