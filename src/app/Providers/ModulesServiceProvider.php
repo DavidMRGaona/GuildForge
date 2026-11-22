@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Application\Modules\Services\EnabledModulesResolverInterface;
 use App\Application\Modules\Services\ModuleChangeWindowInterface;
 use App\Application\Modules\Services\ModuleInstallerInterface;
+use App\Application\Modules\Services\ModuleSettingsConfigInterface;
 use App\Application\Modules\Services\ModuleSettingsStoreInterface;
 use App\Console\Commands\Module\ModuleDisableCommand;
 use App\Console\Commands\Module\ModuleDiscoverCommand;
@@ -55,7 +56,7 @@ final class ModulesServiceProvider extends ServiceProvider
         // Bound before any module provider registers: they read their settings through it
         $this->app->bind(ModuleSettingsStoreInterface::class, SettingsTableModuleSettingsStore::class);
         // One per process: remembers the booted modules and the settings version they were read with (core#825)
-        $this->app->singleton(ModuleSettingsConfig::class);
+        $this->app->singleton(ModuleSettingsConfigInterface::class, ModuleSettingsConfig::class);
         // Scoped: works out each module's settings page once per request, so a problem is logged once
         $this->app->scoped(ModuleSettingsPages::class);
         // One per process (never scoped: the queue worker forgets scoped instances between jobs), so

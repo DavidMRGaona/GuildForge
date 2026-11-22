@@ -8,8 +8,11 @@ use App\Application\Modules\Services\ModuleSettingsStoreInterface;
 use App\Application\Services\SettingsVersionInterface;
 use App\Domain\Modules\Exceptions\ModuleSettingsUnavailableException;
 use App\Infrastructure\Modules\Listeners\RefreshModuleSettingsForEachJob;
+use App\Infrastructure\Services\SettingsService;
 use App\Modules\ModuleServiceProvider;
 use Illuminate\Bus\Queueable;
+use Illuminate\Cache\Events\CacheHit;
+use Illuminate\Cache\Events\CacheMissed;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -18,8 +21,10 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Jobs\FakeJob;
 use Illuminate\Queue\Jobs\SyncJob;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Sleep;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -48,6 +53,7 @@ final class RefreshModuleSettingsForEachJobTest extends TestCase
         );
         config(['modules.path' => $this->modulesPath, 'queue.default' => 'database']);
         ReadModuleSettingJob::$seen = null;
+        Sleep::fake();
     }
 
     protected function tearDown(): void
@@ -133,9 +139,75 @@ final class RefreshModuleSettingsForEachJobTest extends TestCase
             }
         });
 
-        $this->expectException(ModuleSettingsUnavailableException::class);
+        try {
+            $this->handle($this->processing());
+            $this->fail('A job must not run when the settings cannot be read');
+        } catch (ModuleSettingsUnavailableException) {
+            // Only after the one retry
+        }
+
+        Sleep::assertSleptTimes(1);
+        $this->assertSame('open', config('modules.settings.'.self::MODULE.'.access'));
+    }
+
+    public function test_a_brief_cut_costs_the_job_no_attempt(): void
+    {
+        $this->bootModule();
+        $this->saveFromAnotherProcess(['access' => 'members']);
+        $flaky = new FlakySettingsVersion(app(SettingsVersionInterface::class), failures: 1);
+        $this->app->instance(SettingsVersionInterface::class, $flaky);
+
+        // Throws nothing: the read is tried again after a pause and the job runs with the new value
+        $this->handle($this->processing());
+
+        Sleep::assertSleptTimes(1);
+        $this->assertSame(2, $flaky->calls);
+        $this->assertSame('members', config('modules.settings.'.self::MODULE.'.access'));
+    }
+
+    public function test_a_brief_cut_lets_the_worker_run_the_job_on_its_first_attempt(): void
+    {
+        $this->bootModule();
+        $this->saveFromAnotherProcess(['access' => 'members']);
+        $this->app->instance(SettingsVersionInterface::class, new FlakySettingsVersion(app(SettingsVersionInterface::class), failures: 1));
+
+        dispatch(new ReadModuleSettingJob);
+        Artisan::call('queue:work', ['connection' => 'database', '--once' => true, '--sleep' => 0, '--tries' => 1]);
+
+        $this->assertSame('members', ReadModuleSettingJob::$seen);
+        $this->assertSame(0, DB::table('failed_jobs')->count());
+    }
+
+    public function test_a_module_booted_after_a_refresh_is_read_again_on_the_next_job(): void
+    {
+        $this->bootModule();
+        $this->handle($this->processing());
+        $reads = $this->countStoredReads();
+
+        // Its boot read carries no version (and may have fallen back to the defaults)
+        $this->bootModule('late-fixture');
+        $this->handle($this->processing());
+
+        $this->assertSame(2, $reads->count);
+    }
+
+    public function test_the_stored_settings_are_read_from_the_cache_once_for_every_module(): void
+    {
+        $this->bootModule();
+        $this->bootModule('second-fixture');
+        $this->saveFromAnotherProcess(['access' => 'members']);
+        $reads = 0;
+        $countBlobReads = function (CacheHit|CacheMissed $event) use (&$reads): void {
+            if (str_starts_with($event->key, SettingsService::CACHE_KEY_PREFIX) && $event->key !== SettingsService::VERSION_KEY) {
+                $reads++;
+            }
+        };
+        Event::listen(CacheHit::class, $countBlobReads);
+        Event::listen(CacheMissed::class, $countBlobReads);
 
         $this->handle($this->processing());
+
+        $this->assertSame(1, $reads);
     }
 
     public function test_a_failed_read_keeps_the_job_from_running_with_the_old_values(): void
@@ -227,15 +299,18 @@ final class RefreshModuleSettingsForEachJobTest extends TestCase
         $this->assertSame('open', config('modules.settings.'.self::MODULE.'.access'));
     }
 
-    private function bootModule(): void
+    private function bootModule(string $name = self::MODULE): void
     {
         $provider = new class($this->app) extends ModuleServiceProvider
         {
+            public string $name = '';
+
             public function moduleName(): string
             {
-                return 'worker-fixture';
+                return $this->name;
             }
         };
+        $provider->name = $name;
         $provider->register();
     }
 
@@ -339,5 +414,31 @@ final class CountingModuleSettingsStore implements ModuleSettingsStoreInterface
     public function forget(string $moduleName): void
     {
         $this->real->forget($moduleName);
+    }
+}
+
+/**
+ * The real version behind a few failures, as a cache store coming back after a brief cut.
+ */
+final class FlakySettingsVersion implements SettingsVersionInterface
+{
+    public int $calls = 0;
+
+    public function __construct(
+        private readonly SettingsVersionInterface $real,
+        private int $failures,
+    ) {}
+
+    public function current(): string
+    {
+        $this->calls++;
+
+        if ($this->failures > 0) {
+            $this->failures--;
+
+            throw new RuntimeException('cache is briefly down');
+        }
+
+        return $this->real->current();
     }
 }

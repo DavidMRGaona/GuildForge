@@ -205,7 +205,17 @@ final class SettingsService implements SettingsServiceInterface, SettingsVersion
             return $this->loadAll();
         }
 
-        return Cache::remember(self::CACHE_KEY_PREFIX.$this->current(), self::CACHE_TTL, $this->loadAll(...));
+        $version = $this->current();
+
+        if ($current->loaded !== null && $current->loadedWith === $version) {
+            return $current->loaded;
+        }
+
+        $settings = Cache::remember(self::CACHE_KEY_PREFIX.$version, self::CACHE_TTL, $this->loadAll(...));
+        $current->loaded = $settings;
+        $current->loadedWith = $version;
+
+        return $settings;
     }
 
     /**

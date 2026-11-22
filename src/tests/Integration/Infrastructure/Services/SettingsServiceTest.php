@@ -7,10 +7,13 @@ namespace Tests\Integration\Infrastructure\Services;
 use App\Infrastructure\Persistence\Eloquent\Models\SettingModel;
 use App\Infrastructure\Services\SettingsService;
 use Illuminate\Cache\ArrayStore;
+use Illuminate\Cache\Events\CacheHit;
+use Illuminate\Cache\Events\CacheMissed;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
@@ -297,6 +300,39 @@ final class SettingsServiceTest extends TestCase
 
         $this->startAnotherRequest();
         $this->assertNotSame($before, $this->settingsService->current());
+    }
+
+    public function test_several_reads_in_one_request_cost_one_cache_read(): void
+    {
+        SettingModel::create(['key' => 'first_key', 'value' => 'first']);
+        SettingModel::create(['key' => 'second_key', 'value' => 'second']);
+        $reads = 0;
+        $count = function (CacheHit|CacheMissed $event) use (&$reads): void {
+            if ($event->key !== SettingsService::VERSION_KEY && str_starts_with($event->key, SettingsService::CACHE_KEY_PREFIX)) {
+                $reads++;
+            }
+        };
+        Event::listen(CacheHit::class, $count);
+        Event::listen(CacheMissed::class, $count);
+
+        $this->assertSame('first', $this->settingsService->get('first_key'));
+        $this->assertSame('second', $this->settingsService->get('second_key'));
+        $this->assertNull($this->settingsService->get('missing_key'));
+
+        $this->assertSame(1, $reads);
+    }
+
+    public function test_the_settings_kept_for_a_request_are_left_behind_with_a_new_version(): void
+    {
+        SettingModel::create(['key' => 'kept_key', 'value' => 'old_value']);
+        $this->assertSame('old_value', $this->settingsService->get('kept_key'));
+
+        $this->settingsService->set('kept_key', 'new_value');
+
+        // The commit renewed the version: this request reads the new rows, not the ones it kept
+        $this->assertSame('new_value', $this->settingsService->get('kept_key'));
+        $this->startAnotherRequest();
+        $this->assertSame('new_value', $this->settingsService->get('kept_key'));
     }
 
     public function test_a_failed_renewal_drops_the_version_and_is_reported(): void

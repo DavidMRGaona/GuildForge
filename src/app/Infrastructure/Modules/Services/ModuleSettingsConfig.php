@@ -4,27 +4,34 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Modules\Services;
 
+use App\Application\Modules\Services\ModuleSettingsConfigInterface;
 use App\Application\Modules\Services\ModuleSettingsStoreInterface;
 use App\Application\Services\SettingsVersionInterface;
 use App\Domain\Modules\Exceptions\ModuleSettingsUnavailableException;
 use Illuminate\Contracts\Container\Container;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Sleep;
 use Throwable;
 
 /**
- * Publishes each booted module's settings under config('modules.settings.<name>') and keeps them
- * current in long-running processes (core#825).
+ * A module provider publishes its settings once, when the process boots. A web request ends soon
+ * after, but a queue worker runs for up to an hour: before each of its jobs, refresh() compares
+ * the settings version with the one it last published with and, when another process saved any
+ * setting since, publishes every module's settings again (core#825).
  *
- * A module provider publishes them once, when the process boots. A web request ends soon after,
- * but a queue worker runs for up to an hour: before each of its jobs, refresh() compares the
- * settings version with the one it last published with and, when another process saved any
- * setting since, publishes every module's settings again. Unchanged, a job costs one cache read
- * (the version, which the job's own settings reads then reuse).
+ * Unchanged, a job costs one read of the version from the cache store (a query on the `cache`
+ * table with the database store), which the job's own settings reads then reuse. After a change,
+ * the next job reads the stored settings once for every module (SettingsService keeps them for
+ * the rest of the job).
  *
  * One per process (a singleton, never scoped: the worker forgets scoped instances between jobs).
  * The store and the version are resolved on each call, so a binding replaced later is honoured.
  */
-final class ModuleSettingsConfig
+final class ModuleSettingsConfig implements ModuleSettingsConfigInterface
 {
+    /** Pause before the one retry: a store restarting or a brief network cut is usually back by then */
+    public const int RETRY_AFTER_MILLISECONDS = 1500;
+
     /** @var array<string, string> Module name => module path, in boot order */
     private array $modules = [];
 
@@ -35,14 +42,11 @@ final class ModuleSettingsConfig
         private readonly Container $container,
     ) {}
 
-    /**
-     * Publish a module's settings while it boots: release defaults with the stored values on top.
-     * Never throws: a store that cannot be read gives the defaults, and the first job a worker
-     * runs reads them again strictly.
-     */
     public function publish(string $moduleName, string $modulePath): void
     {
         $this->modules[$moduleName] = $modulePath;
+        // Published from a read without a version: the next refresh() reads every module again
+        $this->publishedWith = null;
 
         $settings = $this->store()->effective($moduleName, $modulePath);
 
@@ -51,19 +55,31 @@ final class ModuleSettingsConfig
         }
     }
 
-    /**
-     * Publish every booted module's settings again when any setting changed since the last time.
-     * Fails closed: when the version or the stored values cannot be read it throws, leaving the
-     * next call to read them all again, so the caller never goes on with values it cannot trust.
-     *
-     * @throws ModuleSettingsUnavailableException
-     */
     public function refresh(): void
     {
         if ($this->modules === []) {
             return;
         }
 
+        try {
+            $this->publishIfChanged();
+        } catch (ModuleSettingsUnavailableException $e) {
+            // A brief cut of the cache or the database must not cost every job reserved meanwhile
+            // an attempt (the worker retries without waiting): try once more after a pause
+            Log::warning('[Modules] Module settings could not be read before a job; trying again', [
+                'exception' => ($e->getPrevious() ?? $e)::class,
+            ]);
+            Sleep::for(self::RETRY_AFTER_MILLISECONDS)->milliseconds();
+
+            $this->publishIfChanged();
+        }
+    }
+
+    /**
+     * @throws ModuleSettingsUnavailableException
+     */
+    private function publishIfChanged(): void
+    {
         try {
             $version = $this->container->make(SettingsVersionInterface::class)->current();
         } catch (Throwable $e) {

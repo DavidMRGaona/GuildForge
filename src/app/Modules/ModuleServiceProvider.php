@@ -17,6 +17,7 @@ use App\Application\Modules\DTOs\NavigationItemDTO;
 use App\Application\Modules\DTOs\PagePrefixDTO;
 use App\Application\Modules\DTOs\PermissionDTO;
 use App\Application\Modules\DTOs\SlotRegistrationDTO;
+use App\Application\Modules\Services\ModuleSettingsConfigInterface;
 use App\Application\Profiles\Contracts\ProfileBadgeSourceInterface;
 use App\Application\Profiles\Contracts\ProfileSectionInterface;
 use App\Application\Profiles\Contracts\ProfileStatInterface;
@@ -27,7 +28,6 @@ use App\Application\Registration\Contracts\RegistrationFieldInterface;
 use App\Application\Search\Contracts\IndexedSearchSourceInterface;
 use App\Application\SiteBlocks\Contracts\SiteBlockInterface;
 use App\Application\Surveys\Contracts\SurveySubjectSourceInterface;
-use App\Infrastructure\Modules\Services\ModuleSettingsConfig;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Component;
 use Illuminate\Support\Facades\Gate;
@@ -69,7 +69,7 @@ abstract class ModuleServiceProvider extends ServiceProvider
 
         // Release defaults (config/settings.php) with the values saved in the panel on top; a queue
         // worker reads them again before each job once any setting changed (core#825)
-        $this->app->make(ModuleSettingsConfig::class)->publish($this->moduleName(), $this->modulePath());
+        $this->app->make(ModuleSettingsConfigInterface::class)->publish($this->moduleName(), $this->modulePath());
     }
 
     /**
