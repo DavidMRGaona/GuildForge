@@ -153,7 +153,7 @@ final readonly class MediaIndexer implements MediaIndexerInterface
             $module = $this->registry->moduleOf($type);
 
             DB::transaction(function () use ($source, $type, $module): void {
-                /** @var array<string, true> $seen */
+                /** @var array<string, bool> $seen whether each usage seen so far is hidden */
                 $seen = [];
                 $pending = [];
 
@@ -165,8 +165,10 @@ final readonly class MediaIndexer implements MediaIndexerInterface
                     }
 
                     $key = MediaIndexWriter::usageKey($row['file_id'], $row['record_id'], $row['role']);
+                    // A usage given twice is hidden when any copy is, even one already written in an earlier chunk
+                    $row['is_hidden'] = $row['is_hidden'] || ($seen[$key] ?? false);
                     $pending[$key] = $row;
-                    $seen[$key] = true;
+                    $seen[$key] = $row['is_hidden'];
 
                     if (count($pending) >= MediaIndexWriter::CHUNK) {
                         $this->writer->upsertUsages($pending);
@@ -191,7 +193,7 @@ final readonly class MediaIndexer implements MediaIndexerInterface
     }
 
     /**
-     * @param  array<string, true>  $seen
+     * @param  array<string, bool>  $seen
      */
     private function deleteUnseen(string $type, array $seen): void
     {
@@ -202,7 +204,7 @@ final readonly class MediaIndexer implements MediaIndexerInterface
             ->lazyById(MediaIndexWriter::CHUNK);
 
         foreach ($rows as $row) {
-            if (isset($seen[MediaIndexWriter::usageKey($row->file_id, $row->record_id, $row->role)])) {
+            if (array_key_exists(MediaIndexWriter::usageKey($row->file_id, $row->record_id, $row->role), $seen)) {
                 continue;
             }
 

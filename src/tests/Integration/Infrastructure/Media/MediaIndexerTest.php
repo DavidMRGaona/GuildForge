@@ -8,6 +8,7 @@ use App\Application\Media\Services\MediaCatalogInterface;
 use App\Application\Media\Services\MediaIndexerInterface;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Infrastructure\Media\Jobs\RefreshMediaUsagesJob;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaFileModel;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaUsageModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -256,5 +257,77 @@ final class MediaIndexerTest extends TestCase
         $source->usages = array_slice($source->usages, 0, 2);
         $this->indexer()->sync();
         $this->assertSame(2, MediaUsageModel::query()->where('source_type', 'galleries')->count());
+    }
+
+    public function test_sync_stores_whether_the_source_hides_each_usage(): void
+    {
+        $source = $this->source('badges')
+            ->use('badges/secret.png', 'b1', title: 'Logro secreto', hidden: true)
+            ->use('badges/public.png', 'b2', title: 'Primera partida');
+
+        $this->indexer()->sync();
+
+        $this->assertTrue(MediaUsageModel::query()->where('record_id', 'b1')->sole()->is_hidden);
+        $this->assertFalse(MediaUsageModel::query()->where('record_id', 'b2')->sole()->is_hidden);
+
+        // A secret that is revealed, and a usage hidden later, follow the source on the next sync
+        $source->usages = [];
+        $source->use('badges/secret.png', 'b1', title: 'Logro secreto')
+            ->use('badges/public.png', 'b2', title: 'Primera partida', hidden: true);
+
+        $this->indexer()->sync();
+
+        $this->assertFalse(MediaUsageModel::query()->where('record_id', 'b1')->sole()->is_hidden);
+        $this->assertTrue(MediaUsageModel::query()->where('record_id', 'b2')->sole()->is_hidden);
+    }
+
+    public function test_refreshing_one_record_stores_whether_its_usage_is_hidden(): void
+    {
+        $this->file('badges/secret');
+        $this->usage('badges/secret', 'badges', 'b1');
+        $this->source('badges')->use('badges/secret.png', 'b1', title: 'Logro secreto', hidden: true);
+
+        $this->app->call([new RefreshMediaUsagesJob('badges', 'b1'), 'handle']);
+
+        $row = MediaUsageModel::query()->where('source_type', 'badges')->sole();
+        $this->assertTrue($row->is_hidden);
+        $this->assertSame('Logro secreto', $row->title);
+    }
+
+    public function test_a_repeated_usage_is_hidden_when_any_copy_is(): void
+    {
+        // The same file, record and role twice: hidden wins, whichever comes last
+        $source = $this->source('badges')
+            ->use('badges/a.jpg', 'b1', hidden: true)
+            ->use('badges/a.png', 'b1');
+
+        $this->indexer()->sync();
+        $this->assertTrue(MediaUsageModel::query()->where('source_type', 'badges')->sole()->is_hidden);
+
+        $this->app->call([new RefreshMediaUsagesJob('badges', 'b1'), 'handle']);
+        $this->assertTrue(MediaUsageModel::query()->where('source_type', 'badges')->sole()->is_hidden);
+
+        $source->usages = array_reverse($source->usages);
+        $this->indexer()->sync();
+        $this->assertTrue(MediaUsageModel::query()->where('source_type', 'badges')->sole()->is_hidden);
+    }
+
+    public function test_a_repeated_usage_in_another_chunk_stays_hidden(): void
+    {
+        $source = $this->source('badges')->use('badges/a.jpg', 'b1', hidden: true);
+
+        for ($i = 0; $i < 600; $i++) {
+            $source->use("badges/p{$i}.jpg", "p{$i}");
+        }
+
+        $source->use('badges/a.png', 'b1');
+        $this->indexer()->sync();
+
+        $this->assertTrue(MediaUsageModel::query()->where('record_id', 'b1')->sole()->is_hidden);
+    }
+
+    public function test_usages_are_shown_unless_hidden(): void
+    {
+        $this->assertFalse($this->usage('events/a', 'events', 'e1')->refresh()->is_hidden);
     }
 }

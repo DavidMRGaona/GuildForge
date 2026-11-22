@@ -37,7 +37,7 @@ final readonly class MediaIndexWriter
      * Values longer than their column are cut rather than dropped: a dropped usage would make a used file
      * look unused.
      *
-     * @return array{file_id: string, source_type: string, module: ?string, record_id: string, role: string, title: string}|null
+     * @return array{file_id: string, source_type: string, module: ?string, record_id: string, role: string, title: string, is_hidden: bool}|null
      */
     public function usageRow(MediaUsageDTO $usage, string $type, ?string $module): ?array
     {
@@ -54,6 +54,7 @@ final readonly class MediaIndexWriter
             'record_id' => self::recordId($usage->recordId),
             'role' => mb_substr($usage->role, 0, self::ROLE_LENGTH),
             'title' => mb_substr($usage->title, 0, self::TITLE_LENGTH),
+            'is_hidden' => $usage->hidden,
         ];
     }
 
@@ -74,7 +75,7 @@ final readonly class MediaIndexWriter
     }
 
     /**
-     * @param  array<array{file_id: string, source_type: string, module: ?string, record_id: string, role: string, title: string}>  $rows  without repeated keys
+     * @param  array<array{file_id: string, source_type: string, module: ?string, record_id: string, role: string, title: string, is_hidden: bool}>  $rows  without repeated keys
      */
     public function upsertUsages(array $rows): void
     {
@@ -82,7 +83,7 @@ final readonly class MediaIndexWriter
             MediaUsageModel::query()->upsert(
                 $chunk,
                 ['file_id', 'source_type', 'record_id', 'role'],
-                ['module', 'title'],
+                ['module', 'title', 'is_hidden'],
             );
         }
     }

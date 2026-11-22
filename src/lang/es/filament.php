@@ -1298,6 +1298,7 @@ return [
             'required' => 'Elige una imagen.',
             'unavailable' => 'Esa imagen ya no se puede usar en este campo.',
             'missing' => 'La imagen elegida ya no está en la biblioteca.',
+            'hidden' => 'Esta imagen ya no se puede elegir.',
         ],
     ],
     'media_library' => [
@@ -1328,6 +1329,11 @@ return [
         'unknown_origin' => 'Origen desconocido',
         'no_usages' => 'Sin usos',
         'title_more' => ':title +:count',
+        'hidden_preview' => [
+            'alt' => 'Imagen oculta',
+            'tooltip' => 'Uno de sus usos oculta la imagen.',
+            'notice' => 'La imagen no se muestra: uno de sus usos la oculta. Sigue contando como en uso.',
+        ],
         'uploaded_on' => ':origin · subido el :date',
         'select_unused' => 'Seleccionar los sin usar',
         'sort' => [

@@ -218,6 +218,31 @@ final class MediaDeletionServiceTest extends TestCase
         $this->assertRefused($result, 'events/a', MediaDeletionRefusal::InUse);
     }
 
+    public function test_a_hidden_usage_keeps_the_file_like_any_other(): void
+    {
+        // Hiding a usage only hides the image in the library: the file is still in use
+        $this->source('events');
+        $this->file('events/a');
+        $this->usage('events/a', 'events', hidden: true);
+
+        $result = $this->service()->delete([new MediaFileId('events/a')], $this->deleter());
+
+        $this->assertRefused($result, 'events/a', MediaDeletionRefusal::InUse);
+    }
+
+    public function test_a_file_whose_hidden_usage_is_gone_is_deleted_like_any_other(): void
+    {
+        $this->source('events');
+        $this->file('events/a');
+        $this->usage('events/a', 'events', hidden: true);
+        MediaUsageModel::query()->where('file_id', 'events/a')->delete();
+
+        $result = $this->service()->delete([new MediaFileId('events/a')], $this->deleter());
+
+        $this->assertSame(1, $result->deleted);
+        $this->assertArrayNotHasKey('events/a', $this->catalog->assets);
+    }
+
     public function test_unclaimed_file_refuses(): void
     {
         $this->source('events');
@@ -421,7 +446,7 @@ final class MediaDeletionServiceTest extends TestCase
         ]);
     }
 
-    private function usage(string $fileId, string $type, ?string $module = null): void
+    private function usage(string $fileId, string $type, ?string $module = null, bool $hidden = false): void
     {
         MediaUsageModel::query()->create([
             'file_id' => $fileId,
@@ -430,6 +455,7 @@ final class MediaDeletionServiceTest extends TestCase
             'record_id' => 'record-1',
             'role' => 'Imagen',
             'title' => 'Registro',
+            'is_hidden' => $hidden,
         ]);
     }
 

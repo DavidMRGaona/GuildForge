@@ -234,6 +234,26 @@ final class EloquentMediaLibraryQueryTest extends TestCase
         $this->assertSame(['events/a'], $query->applyReusable($query->query())->pluck('file_id')->all());
     }
 
+    public function test_apply_reusable_never_offers_a_file_with_a_hidden_usage(): void
+    {
+        // The picker shows thumbnails too: a file whose image a source keeps out of sight is not offered
+        $this->registry->clear();
+        $this->register('events', new FakeMarkedMediaSource('events', ['events/']));
+        $this->file('events/shown');
+        $this->usage('events/shown');
+        $this->file('events/secret');
+        $this->usage('events/secret', recordId: 'record-1');
+        $this->usage('events/secret', hidden: true, recordId: 'record-2');
+
+        $query = $this->library();
+
+        $this->assertSame(['events/shown'], $query->applyReusable($query->query())->pluck('file_id')->all());
+        // Still listed, counted and in use in the library itself
+        $this->assertSame(['events/secret', 'events/shown'], $query->query()->orderBy('file_id')->pluck('file_id')->all());
+        $secret = MediaFileModel::query()->where('file_id', 'events/secret')->firstOrFail();
+        $this->assertSame(MediaFileStatus::InUse, $query->statusOf($secret));
+    }
+
     public function test_is_reusable_folder(): void
     {
         $this->registry->clear();
@@ -307,14 +327,15 @@ final class EloquentMediaLibraryQueryTest extends TestCase
         ]);
     }
 
-    private function usage(string $fileId): void
+    private function usage(string $fileId, bool $hidden = false, string $recordId = 'record-1'): void
     {
         MediaUsageModel::query()->create([
             'file_id' => $fileId,
             'source_type' => 'events',
-            'record_id' => 'record-1',
+            'record_id' => $recordId,
             'role' => 'Imagen',
             'title' => 'Registro',
+            'is_hidden' => $hidden,
         ]);
     }
 }

@@ -51,7 +51,8 @@ interface MediaLibraryQueryInterface
 
     /**
      * Narrows the query to the images a form may reuse: their folder is claimed by an active, visible source
-     * that releases files through the core (ReleasesMediaThroughCoreInterface), and they have a format.
+     * that releases files through the core (ReleasesMediaThroughCoreInterface), they have a format, and no
+     * usage hides them.
      *
      * @param  Builder<MediaFileModel>  $query
      * @return Builder<MediaFileModel>

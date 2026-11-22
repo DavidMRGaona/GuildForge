@@ -62,13 +62,12 @@ final class MediaLibraryPicker
                 allowFilePathUsing: static fn (string $file, FileUpload $component): bool => self::isStored($file, $component, $storedPaths)
                     || self::isPickable($file, $component, $constrain),
             )
-            // A chosen file deleted from the library while the form was open says so, instead of «tampered».
-            // The field's own messages are kept: Filament has no getter for them before it is mounted
+            // A chosen file deleted from the library, or hidden by a usage (core#830), while the form was open says
+            // so, instead of «tampered». The field's own messages are kept: Filament has no getter for them before
+            // it is mounted
             ->validationMessages([
                 ...(fn (): array => $this->validationMessages)->call($field),
-                'tampered' => static fn (FileUpload $component): ?string => self::holdsAFileGoneFromTheLibrary($component, $storedPaths)
-                    ? (string) __('filament.media_picker.errors.missing')
-                    : null,
+                'tampered' => static fn (FileUpload $component): ?string => self::lostSinceChosen($component, $storedPaths),
             ]);
     }
 
@@ -220,9 +219,12 @@ final class MediaLibraryPicker
     }
 
     /**
+     * Why a chosen file can no longer be saved, when it was deleted from the library or a usage hid it since it
+     * was chosen; null for anything else, which keeps the generic message.
+     *
      * @param  (Closure(): list<string>)|null  $storedPaths
      */
-    private static function holdsAFileGoneFromTheLibrary(FileUpload $component, ?Closure $storedPaths): bool
+    private static function lostSinceChosen(FileUpload $component, ?Closure $storedPaths): ?string
     {
         foreach ((array) $component->getRawState() as $file) {
             if (! is_string($file) || self::isStored($file, $component, $storedPaths)) {
@@ -231,12 +233,22 @@ final class MediaLibraryPicker
 
             $id = self::idOf($file);
 
-            if ($id instanceof MediaFileId && ! MediaFileModel::query()->where('file_id', $id->value)->exists()) {
-                return true;
+            if (! $id instanceof MediaFileId) {
+                continue;
+            }
+
+            $indexed = MediaFileModel::query()->where('file_id', $id->value)->first();
+
+            if (! $indexed instanceof MediaFileModel) {
+                return (string) __('filament.media_picker.errors.missing');
+            }
+
+            if ($indexed->hasHiddenUsage()) {
+                return (string) __('filament.media_picker.errors.hidden');
             }
         }
 
-        return false;
+        return null;
     }
 
     private static function idOf(string $file): ?MediaFileId

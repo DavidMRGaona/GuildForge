@@ -11,6 +11,7 @@ use App\Application\Media\Services\MediaSourceRegistryInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Domain\Media\Enums\MediaDeletionRefusal;
 use App\Domain\Media\ValueObjects\MediaFileId;
+use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Pages\MediaLibraryPage;
 use App\Infrastructure\Media\Jobs\SyncMediaLibraryJob;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaDeletionModel;
@@ -370,6 +371,94 @@ final class MediaLibraryPageTest extends TestCase
         $this->assertSame('https://res.cloudinary.com/demo/image/upload/site/events/a', $open->getUrl());
         $this->assertTrue($open->shouldOpenUrlInNewTab());
         $this->assertSame('copyUrl', $this->footerAction($file, 'copyUrl')->getName());
+    }
+
+    public function test_a_file_with_a_hidden_usage_shows_a_placeholder_instead_of_its_thumbnail(): void
+    {
+        $file = $this->hiddenFile();
+        $this->actingAs($this->viewer());
+
+        foreach (['grid', 'list'] as $layout) {
+            $page = Livewire::test(MediaLibraryPage::class)->set('display', $layout);
+            $thumbnail = $this->table($page)->getColumn('thumbnail');
+            $this->assertNotNull($thumbnail);
+            $thumbnail->record($file);
+            $this->assertNull($thumbnail->getState(), $layout);
+
+            $html = $page->call('loadTable')->html();
+            $this->assertStringNotContainsString('res.cloudinary.com', $html, $layout);
+            $this->assertStringContainsString(MediaLibraryPage::hiddenPreviewUrl(), $html, $layout);
+            $this->assertStringContainsString(e(__('filament.media_library.hidden_preview.alt')), $html, $layout);
+        }
+    }
+
+    public function test_the_title_of_a_hidden_usage_is_still_the_one_its_source_gives(): void
+    {
+        $file = $this->hiddenFile();
+        $this->actingAs($this->viewer());
+
+        Livewire::test(MediaLibraryPage::class)
+            ->assertTableColumnStateSet('title', 'Logro secreto +1', $file)
+            ->assertTableColumnStateSet('status', 'in_use', $file);
+    }
+
+    public function test_the_details_of_a_file_with_a_hidden_usage_give_neither_its_preview_nor_its_url(): void
+    {
+        $file = $this->hiddenFile();
+        $this->actingAs($this->viewer());
+
+        $html = $this->detailsHtml($file);
+        $this->assertStringNotContainsString('res.cloudinary.com', $html);
+        $this->assertStringNotContainsString('<a href', $html);
+        // Neither the heading nor the markup names the file
+        $this->assertStringNotContainsString('events/secret', $html);
+        $this->assertSame(__('filament.media_library.hidden_preview.alt'), $this->detailsAction($file)->getModalHeading());
+        $this->assertStringContainsString(__('filament.media_library.hidden_preview.notice'), $html);
+        // The uses are still listed, with the titles their source gives
+        $this->assertStringContainsString('Logro secreto', $html);
+        $this->assertStringContainsString('Torneo de otoño', $html);
+
+        $names = array_map(
+            static fn (mixed $action): ?string => $action instanceof Action ? $action->getName() : null,
+            $this->detailsAction($file)->getExtraModalFooterActions(),
+        );
+        $this->assertNotContains('openOriginal', $names);
+        $this->assertNotContains('copyUrl', $names);
+        $this->assertContains('delete', $names);
+    }
+
+    public function test_the_row_details_of_a_file_with_a_hidden_usage_show_the_placeholder(): void
+    {
+        $file = $this->hiddenFile();
+        $this->actingAs($this->viewer());
+
+        $content = $this->rowAction($this->listPage(), RowDetailsAction::NAME, $file)->getModalContent();
+        $this->assertInstanceOf(Htmlable::class, $content);
+        $html = $content->toHtml();
+
+        $this->assertStringNotContainsString('res.cloudinary.com', $html);
+        $this->assertStringContainsString(MediaLibraryPage::hiddenPreviewUrl(), $html);
+    }
+
+    public function test_a_file_with_a_hidden_usage_cannot_be_deleted_while_it_is_used(): void
+    {
+        $file = $this->hiddenFile();
+        $this->actingAs($this->deleter());
+
+        $delete = $this->rowAction($this->listPage(), 'delete', $file);
+        $this->assertTrue($delete->isDisabled());
+        $this->assertSame(__('filament.media_library.disabled_reasons.status'), $delete->getTooltip());
+    }
+
+    public function test_files_without_hidden_usages_keep_their_thumbnail_in_the_row_details(): void
+    {
+        $file = $this->file('events/a');
+        $this->usage('events/a', 'Torneo de otoño', 'record-1');
+        $this->actingAs($this->viewer());
+
+        $content = $this->rowAction($this->listPage(), RowDetailsAction::NAME, $file)->getModalContent();
+        $this->assertInstanceOf(Htmlable::class, $content);
+        $this->assertStringContainsString('/site/events/a', $content->toHtml());
     }
 
     public function test_next_moves_to_the_following_file_in_current_order(): void
@@ -931,7 +1020,19 @@ final class MediaLibraryPageTest extends TestCase
         ]);
     }
 
-    private function usage(string $fileId, string $title, string $recordId): void
+    /**
+     * A file used twice, once by a record whose source hides it (a secret achievement).
+     */
+    private function hiddenFile(): MediaFileModel
+    {
+        $file = $this->file('events/secret');
+        $this->usage('events/secret', 'Logro secreto', 'record-1', hidden: true);
+        $this->usage('events/secret', 'Torneo de otoño', 'record-2');
+
+        return $file;
+    }
+
+    private function usage(string $fileId, string $title, string $recordId, bool $hidden = false): void
     {
         MediaUsageModel::query()->create([
             'file_id' => $fileId,
@@ -939,6 +1040,7 @@ final class MediaLibraryPageTest extends TestCase
             'record_id' => $recordId,
             'role' => 'Imagen',
             'title' => $title,
+            'is_hidden' => $hidden,
         ]);
     }
 }

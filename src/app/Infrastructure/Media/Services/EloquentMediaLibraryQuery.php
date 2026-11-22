@@ -87,7 +87,10 @@ final readonly class EloquentMediaLibraryQuery implements MediaLibraryQueryInter
         $claims = $this->claims();
         $reusable = array_filter($this->visible($claims), static fn (array $claim): bool => $claim['releasesThroughCore']);
 
-        $query->where('media_files.resource_type', 'image')->whereNotNull('media_files.format');
+        $query->where('media_files.resource_type', 'image')
+            ->whereNotNull('media_files.format')
+            // The picker shows thumbnails: an image a source keeps out of sight is never offered (core#830)
+            ->whereDoesntHave('usages', static fn (Builder $usages): Builder => $usages->where('is_hidden', true));
 
         return $this->whereClaimed($query, $reusable, $claims, negate: false);
     }

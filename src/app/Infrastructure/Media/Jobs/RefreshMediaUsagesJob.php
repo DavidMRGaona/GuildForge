@@ -73,7 +73,10 @@ final class RefreshMediaUsagesJob implements ShouldQueue
                     continue;
                 }
 
-                $rows[MediaIndexWriter::usageKey($row['file_id'], $row['record_id'], $row['role'])] = $row;
+                $key = MediaIndexWriter::usageKey($row['file_id'], $row['record_id'], $row['role']);
+                // A usage given twice is hidden when any copy is
+                $row['is_hidden'] = $row['is_hidden'] || ($rows[$key]['is_hidden'] ?? false);
+                $rows[$key] = $row;
                 $paths[$row['file_id']] ??= $usage->storedPath;
             }
 

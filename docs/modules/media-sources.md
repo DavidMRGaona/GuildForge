@@ -30,7 +30,29 @@ A source implements `App\Application\Media\Contracts\MediaUsageSourceInterface`:
 | `usesFile(MediaFileId $file)` | Whether any record uses the file right now |
 | `editUrl(string $recordId, object $user)` | Where this person can edit the record, or `null` |
 
-`MediaUsageDTO` carries `storedPath` (the value as stored, in any form the file id resolver understands), `recordId`, `role` (what the file is for, translated, such as «Imagen») and `title` (the record's name).
+`MediaUsageDTO` carries `storedPath` (the value as stored, in any form the file id resolver understands), `recordId`, `role` (what the file is for, translated, such as «Imagen»), `title` (the record's name) and, last and optional, `hidden` (`false` by default, core ≥ the release with #830).
+
+### Hiding one usage
+
+`hidden: true` keeps the image of one usage out of sight while its file stays in an ordinary folder: the badge of a secret achievement, say. Hiding a whole source (`hidden()`) is not the same: its files are never listed and never deleted.
+
+```php
+yield new MediaUsageDTO($record->badge, (string) $record->id, __('achievements::media.badge'), $title, hidden: $record->is_secret);
+```
+
+A source built on `EloquentColumnMediaSource` overrides `isHidden(Model $record)` instead ([below](#eloquentcolumnmediasource)).
+
+When any usage of a file is hidden, the media library (stored in `media_usages.is_hidden`):
+
+- draws a placeholder instead of the thumbnail in the grid, the list, «Ver detalles» and the details panel, does not offer «Abrir original» or «Copiar URL», and titles the details «Imagen oculta» instead of the file name;
+- keeps listing the file, its size, its folder and every usage with the title the source gives: mask the title yourself when it gives the secret away;
+- never offers the file in «Elegir de la biblioteca»; a file chosen there and hidden before the form is saved is refused with «Esta imagen ya no se puede elegir».
+
+A file shared by a shown usage and a hidden one is hidden for both. If a source gives the same usage (file, record and role) twice, it is hidden when any copy is.
+
+This keeps the team that manages the library from seeing a secret by accident; it is not access control. The library is only for `media.view_any`, the file is still public in Cloudinary, and its id can still be read from the page (the delete dialog, for instance), so anyone determined could build its address. Never rely on it for an image that must not be public.
+
+Deletion does not change: the file is in use while any usage exists (hidden or not), and once the last one is gone it is deleted like any other. The flag only follows the source on the next sync or refresh of the record, so publish the change (`MediaIndexerInterface::refresh()`, or let the observer do it) when a record stops being secret.
 
 ### Rules
 
@@ -74,7 +96,12 @@ final class TableMediaSource extends EloquentColumnMediaSource
 }
 ```
 
-The base class implements `usages()`, `usagesFor()`, `usesFile()` (a prefiltered query confirmed with the resolver), `editUrl()` and `hidden()` (`false`), and includes soft-deleted records. A source that keeps several files, a list of photos or paths inside rich text implements the interface directly.
+The base class implements `usages()`, `usagesFor()`, `usesFile()` (a prefiltered query confirmed with the resolver), `editUrl()` and `hidden()` (`false`), and includes soft-deleted records. To keep the image of some records out of sight ([Hiding one usage](#hiding-one-usage)), override `isHidden()` (`false` by default):
+
+```php
+protected function isHidden(Model $record): bool { return (bool) $record->getAttribute('is_secret'); }
+```
+ A source that keeps several files, a list of photos or paths inside rich text implements the interface directly.
 
 ## Registering
 
