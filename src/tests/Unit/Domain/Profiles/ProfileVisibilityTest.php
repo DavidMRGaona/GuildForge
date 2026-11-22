@@ -35,4 +35,12 @@ final class ProfileVisibilityTest extends TestCase
         $this->assertSame(ProfileVisibility::Hidden, ProfileVisibility::fromStored(null));
         $this->assertSame(ProfileVisibility::Public, ProfileVisibility::fromStored('public'));
     }
+
+    public function test_only_public_and_members_profiles_are_seen_by_every_signed_in_member(): void
+    {
+        $this->assertTrue(ProfileVisibility::Public->isSeenByEveryMember());
+        $this->assertTrue(ProfileVisibility::Members->isSeenByEveryMember());
+        $this->assertFalse(ProfileVisibility::Association->isSeenByEveryMember());
+        $this->assertFalse(ProfileVisibility::Hidden->isSeenByEveryMember());
+    }
 }
