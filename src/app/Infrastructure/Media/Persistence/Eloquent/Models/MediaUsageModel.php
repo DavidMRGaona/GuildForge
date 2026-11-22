@@ -18,6 +18,7 @@ use Illuminate\Support\Carbon;
  * @property string $record_id
  * @property string $role
  * @property string $title
+ * @property bool $is_hidden
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -36,7 +37,18 @@ final class MediaUsageModel extends Model
         'record_id',
         'role',
         'title',
+        'is_hidden',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_hidden' => 'boolean',
+        ];
+    }
 
     /**
      * @return BelongsTo<MediaFileModel, $this>

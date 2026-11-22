@@ -87,6 +87,9 @@ final class MediaLibraryPage extends Page implements HasTable
 
     private const int PREVIEW_WIDTH = 1200;
 
+    /** Drawn instead of the image of a file one of whose usages is hidden (core#830) */
+    private const string HIDDEN_PREVIEW = 'images/media-library/hidden-preview.svg';
+
     /** Refused files listed by name in the notification; the rest are counted */
     private const int REFUSALS_LISTED = 5;
 
@@ -320,7 +323,10 @@ final class MediaLibraryPage extends Page implements HasTable
                 $this->thumbnailColumn()
                     ->imageWidth('100%')
                     ->imageHeight('auto')
-                    ->extraImgAttributes(['class' => 'aspect-square w-full rounded-lg object-cover', 'loading' => 'lazy', 'alt' => '']),
+                    ->extraImgAttributes(fn (MediaFileModel $record): array => $this->thumbnailAttributes(
+                        $record,
+                        ['class' => 'aspect-square w-full rounded-lg object-cover', 'loading' => 'lazy', 'alt' => ''],
+                    )),
                 $this->titleColumn()
                     ->weight(FontWeight::Medium)
                     ->wrap(),
@@ -362,7 +368,7 @@ final class MediaLibraryPage extends Page implements HasTable
                 ->label(__('filament.media_library.columns.thumbnail'))
                 ->square()
                 ->imageSize(48)
-                ->extraImgAttributes(['loading' => 'lazy', 'alt' => '']),
+                ->extraImgAttributes(fn (MediaFileModel $record): array => $this->thumbnailAttributes($record, ['loading' => 'lazy', 'alt' => ''])),
             $this->titleColumn()
                 ->label(__('filament.media_library.columns.title'))
                 ->placeholder(__('filament.media_library.no_usages'))
@@ -389,10 +395,42 @@ final class MediaLibraryPage extends Page implements HasTable
         ];
     }
 
+    /**
+     * The picture of the file, or the placeholder when a usage hides it: then no URL of the file reaches the
+     * page, in the cards, the list or «Ver detalles», which draws this same column.
+     */
     private function thumbnailColumn(): ImageColumn
     {
         return ImageColumn::make('thumbnail')
-            ->state(fn (MediaFileModel $record): ?string => $this->urls()->mediaThumbnail($record->file_id, self::THUMBNAIL_SIZE, $record->format));
+            ->state(fn (MediaFileModel $record): ?string => $record->hasHiddenUsage()
+                ? null
+                : $this->urls()->mediaThumbnail($record->file_id, self::THUMBNAIL_SIZE, $record->format))
+            ->defaultImageUrl(fn (MediaFileModel $record): ?string => $record->hasHiddenUsage() ? self::hiddenPreviewUrl() : null)
+            ->tooltip(fn (MediaFileModel $record): ?string => $record->hasHiddenUsage()
+                ? (string) __('filament.media_library.hidden_preview.tooltip')
+                : null);
+    }
+
+    /**
+     * @param  array<string, string>  $attributes
+     * @return array<string, string>
+     */
+    private function thumbnailAttributes(MediaFileModel $record, array $attributes): array
+    {
+        if (! $record->hasHiddenUsage()) {
+            return $attributes;
+        }
+
+        return [
+            ...$attributes,
+            'class' => trim(($attributes['class'] ?? '').' bg-gray-100 dark:bg-white/5'),
+            'alt' => (string) __('filament.media_library.hidden_preview.alt'),
+        ];
+    }
+
+    public static function hiddenPreviewUrl(): string
+    {
+        return asset(self::HIDDEN_PREVIEW);
     }
 
     /**
@@ -479,7 +517,8 @@ final class MediaLibraryPage extends Page implements HasTable
     private function detailsFooterActions(MediaFileModel $file): array
     {
         [$previous, $next] = $this->adjacentFiles($file);
-        $original = $this->urls()->mediaOriginal($file->file_id, $file->resource_type);
+        // A file whose image a usage hides is neither opened nor its address copied
+        $original = $file->hasHiddenUsage() ? null : $this->urls()->mediaOriginal($file->file_id, $file->resource_type);
 
         return array_values(array_filter([
             ReadOnlyActions::allow(Action::make('previous')
@@ -793,8 +832,11 @@ final class MediaLibraryPage extends Page implements HasTable
             })
             ->all();
 
+        $concealed = $file->hasHiddenUsage();
+
         return [
-            'imageUrl' => $this->urls()->mediaPreview($file->file_id, self::PREVIEW_WIDTH, $file->format),
+            'imageUrl' => $concealed ? null : $this->urls()->mediaPreview($file->file_id, self::PREVIEW_WIDTH, $file->format),
+            'concealed' => $concealed,
             'fileId' => $file->file_id,
             'dimensions' => $file->width !== null && $file->height !== null ? $file->width.' × '.$file->height : null,
             'size' => FileSize::format($file->bytes),

@@ -30,7 +30,23 @@ A source implements `App\Application\Media\Contracts\MediaUsageSourceInterface`:
 | `usesFile(MediaFileId $file)` | Whether any record uses the file right now |
 | `editUrl(string $recordId, object $user)` | Where this person can edit the record, or `null` |
 
-`MediaUsageDTO` carries `storedPath` (the value as stored, in any form the file id resolver understands), `recordId`, `role` (what the file is for, translated, such as «Imagen») and `title` (the record's name).
+`MediaUsageDTO` carries `storedPath` (the value as stored, in any form the file id resolver understands), `recordId`, `role` (what the file is for, translated, such as «Imagen»), `title` (the record's name) and, last and optional, `hidden` (`false` by default, core ≥ the release with #830).
+
+### Hiding one usage
+
+`hidden: true` keeps the image of one usage out of sight while its file stays in an ordinary folder: the badge of a secret achievement, say. Hiding a whole source (`hidden()`) is not the same: its files are never listed and never deleted.
+
+```php
+yield new MediaUsageDTO($record->badge, (string) $record->id, __('achievements::media.badge'), $title, hidden: $record->is_secret);
+```
+
+When any usage of a file is hidden, the media library (stored in `media_usages.is_hidden`):
+
+- draws a placeholder instead of the thumbnail in the grid, the list, «Ver detalles» and the details panel, and puts no URL of the file in the page («Abrir original» and «Copiar URL» are not offered);
+- keeps listing the file, its size and every usage with the title the source gives: mask the title yourself when it gives the secret away;
+- never offers the file in «Elegir de la biblioteca».
+
+Deletion does not change: the file is in use while any usage exists (hidden or not), and once the last one is gone it is deleted like any other. The flag only follows the source on the next sync or refresh of the record, so publish the change (`MediaIndexerInterface::refresh()`, or let the observer do it) when a record stops being secret.
 
 ### Rules
 

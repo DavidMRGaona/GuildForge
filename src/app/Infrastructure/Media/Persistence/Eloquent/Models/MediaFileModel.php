@@ -65,4 +65,17 @@ final class MediaFileModel extends Model
     {
         return $this->hasMany(MediaUsageModel::class, 'file_id', 'file_id');
     }
+
+    /**
+     * Whether a source keeps the image out of sight in one of its usages (core#830): the library shows a
+     * placeholder then, and gives no link to the file. Reads the loaded usages when there are.
+     */
+    public function hasHiddenUsage(): bool
+    {
+        if ($this->relationLoaded('usages')) {
+            return $this->usages->contains(static fn (MediaUsageModel $usage): bool => $usage->is_hidden);
+        }
+
+        return $this->usages()->where('is_hidden', true)->exists();
+    }
 }

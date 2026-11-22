@@ -28,9 +28,9 @@ final class InMemoryMediaSource implements MediaUsageSourceInterface
         private readonly array $folders = ['memory/'],
     ) {}
 
-    public function use(string $storedPath, string $recordId, string $role = 'Imagen', string $title = 'Registro'): self
+    public function use(string $storedPath, string $recordId, string $role = 'Imagen', string $title = 'Registro', bool $hidden = false): self
     {
-        $this->usages[] = new MediaUsageDTO($storedPath, $recordId, $role, $title);
+        $this->usages[] = new MediaUsageDTO($storedPath, $recordId, $role, $title, $hidden);
 
         return $this;
     }

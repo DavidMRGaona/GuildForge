@@ -35,6 +35,8 @@ Las tarjetas salen de la subida más reciente a la más antigua (**Más reciente
 
 No aparecen los **avatares** de las cuentas: no se muestran y nunca se pueden borrar desde aquí.
 
+Algunos módulos ocultan la imagen de un uso concreto, como la insignia de un logro secreto. Ese archivo sigue en la lista con su tamaño y sus usos, pero en lugar de la miniatura aparece un ojo tachado, y la ficha no permite abrir el original ni copiar su dirección. Cuenta como **En uso** igual que los demás y tampoco se ofrece en **Elegir de la biblioteca**.
+
 ## Estados
 
 | Estado | Qué significa |

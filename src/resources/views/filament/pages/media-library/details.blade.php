@@ -1,6 +1,11 @@
 {{-- Details of a media library file (slide-over of MediaLibraryPage) --}}
 <div class="flex flex-col gap-6" data-media-details="{{ $fileId }}">
-    @if ($imageUrl !== null)
+    @if ($concealed)
+        <div class="flex flex-col items-center gap-3 rounded-lg bg-gray-100 px-6 py-10 text-center dark:bg-white/5" data-media-hidden-preview>
+            <x-filament::icon icon="heroicon-o-eye-slash" class="h-10 w-10 text-gray-400 dark:text-gray-500" />
+            <p class="text-sm text-gray-600 dark:text-gray-300">{{ __('filament.media_library.hidden_preview.notice') }}</p>
+        </div>
+    @elseif ($imageUrl !== null)
         <a href="{{ $imageUrl }}" target="_blank" rel="noopener noreferrer" class="block">
             <img
                 src="{{ $imageUrl }}"
