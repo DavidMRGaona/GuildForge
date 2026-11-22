@@ -9,13 +9,19 @@ use App\Application\Profiles\Services\ProfileBadgeSourceRegistryInterface;
 use App\Application\Profiles\Services\ProfileCardServiceInterface;
 use App\Application\Profiles\Services\ProfileEditorInterface;
 use App\Application\Profiles\Services\ProfileLayoutOptionsInterface;
+use App\Application\Profiles\Services\ProfileMembershipDisplayInterface;
 use App\Application\Profiles\Services\ProfileRendererInterface;
 use App\Application\Profiles\Services\ProfileSectionRegistryInterface;
 use App\Application\Profiles\Services\ProfileStatRegistryInterface;
 use App\Application\Profiles\Services\ProfileSummaryRendererInterface;
 use App\Application\Profiles\Services\PublicProfileServiceInterface;
 use App\Application\Profiles\Services\UserProfileServiceInterface;
+use App\Domain\Events\UserActiveRolesChanged;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
+use App\Infrastructure\Profiles\Listeners\AnnounceMembershipDisplayOnActiveRolesChanged;
+use App\Infrastructure\Profiles\Observers\AccountMembershipDisplayObserver;
+use App\Infrastructure\Profiles\Observers\ProfileMembershipDisplayObserver;
 use App\Infrastructure\Profiles\Observers\UserProfileObserver;
 use App\Infrastructure\Profiles\ProfileBadgeCollector;
 use App\Infrastructure\Profiles\ProfileBadgeSourceRegistry;
@@ -27,10 +33,13 @@ use App\Infrastructure\Profiles\ProfileStatRegistry;
 use App\Infrastructure\Profiles\Sections\AboutProfileSection;
 use App\Infrastructure\Profiles\Services\ProfileBadges;
 use App\Infrastructure\Profiles\Services\ProfileCardService;
+use App\Infrastructure\Profiles\Services\ProfileMembershipDisplay;
+use App\Infrastructure\Profiles\Services\ProfileMembershipDisplayAnnouncer;
 use App\Infrastructure\Profiles\Services\PublicProfileService;
 use App\Infrastructure\Profiles\Services\UserProfileService;
 use App\Infrastructure\Profiles\StoredProfiles;
 use Illuminate\Contracts\Cache\Repository as Cache;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -75,10 +84,17 @@ final class ProfilesServiceProvider extends ServiceProvider
         // The owner's editor (core#743): what it offers is read once per request, like the renderer
         $this->app->scoped(ProfileLayoutOptionsInterface::class, ProfileLayoutOptions::class);
         $this->app->bind(ProfileEditorInterface::class, ProfileEditor::class);
+        // Whether an account shows its membership (core#824) and the announcer of the changes that can alter it
+        $this->app->bind(ProfileMembershipDisplayInterface::class, ProfileMembershipDisplay::class);
+        $this->app->scoped(ProfileMembershipDisplayAnnouncer::class);
     }
 
     public function boot(): void
     {
         UserModel::observe(UserProfileObserver::class);
+        // What can change whether an account shows its membership (core#824)
+        UserModel::observe(AccountMembershipDisplayObserver::class);
+        UserProfileModel::observe(ProfileMembershipDisplayObserver::class);
+        Event::listen(UserActiveRolesChanged::class, [AnnounceMembershipDisplayOnActiveRolesChanged::class, 'handle']);
     }
 }

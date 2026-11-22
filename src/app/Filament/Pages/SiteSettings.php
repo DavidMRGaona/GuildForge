@@ -21,6 +21,7 @@ use App\Infrastructure\Authorization\Services\InactiveRoleHolders;
 use App\Infrastructure\Authorization\Services\RoleChangeAnnouncer;
 use App\Infrastructure\Knowledge\Jobs\SyncKnowledgeCatalogJob;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
+use App\Infrastructure\Profiles\Jobs\AnnounceMembershipDisplayForRolesJob;
 use Filament\Actions\Action;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
@@ -822,10 +823,10 @@ final class SiteSettings extends Page implements HasForms
         }
 
         // Who was a member under the role in force before and is not under the one in force now
-        app(RoleChangeAnnouncer::class)->announceAssociationRoleSwitch(
-            $associationRoleNameBefore,
-            app(AssociationMembershipServiceInterface::class)->roleName(),
-        );
+        $associationRoleNameAfter = app(AssociationMembershipServiceInterface::class)->roleName();
+        app(RoleChangeAnnouncer::class)->announceAssociationRoleSwitch($associationRoleNameBefore, $associationRoleNameAfter);
+        // Whoever depends on who shows their membership asks again about every holder of either role (core#824)
+        AnnounceMembershipDisplayForRolesJob::dispatchSafely($associationRoleNameBefore, $associationRoleNameAfter);
 
         // The guides' plain text carries the site name and the association role name
         if (app(SiteBrandingServiceInterface::class)->siteName() !== $siteNameBefore
