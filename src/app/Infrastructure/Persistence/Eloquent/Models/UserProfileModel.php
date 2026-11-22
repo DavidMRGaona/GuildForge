@@ -25,6 +25,7 @@ use JsonException;
  * @property string|null $banner_public_id
  * @property bool $show_membership
  * @property ProfileLayout $layout
+ * @property Carbon|null $completed_at when it became complete: public name, avatar and «Sobre mí» (core#777)
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -69,6 +70,7 @@ final class UserProfileModel extends Model
             'handle_chosen' => 'boolean',
             'handle_changed_at' => 'datetime',
             'show_membership' => 'boolean',
+            'completed_at' => 'datetime',
         ];
     }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Modules;
 
+use App\Application\Activity\DTOs\ActivitySourceRegistrationDTO;
 use App\Application\Activity\Services\ActivitySourceRegistryInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
@@ -57,7 +58,12 @@ final class ModuleLoaderActivitySourcesTest extends TestCase
 
         $this->app->make(ModuleLoader::class)->bootModule($this->module());
 
-        $this->assertSame([], $this->app->make(ActivitySourceRegistryInterface::class)->all());
+        // Only the core's own sources (core#777): the module adds none
+        $types = array_map(
+            static fn (ActivitySourceRegistrationDTO $registration): string => $registration->type,
+            $this->app->make(ActivitySourceRegistryInterface::class)->all(),
+        );
+        $this->assertSame(['core.account', 'core.profile-completed', 'core.proposal'], $types);
     }
 
     private function module(): Module

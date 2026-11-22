@@ -10,6 +10,7 @@ use App\Application\Proposals\Services\ProposalSettingsServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Domain\Proposals\Enums\ProposalAccessLevel;
 use App\Domain\Proposals\Enums\ProposalType;
+use App\Infrastructure\Activity\Jobs\PublishApprovedEventProposalsJob;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use JsonException;
 
@@ -47,6 +48,8 @@ final readonly class ProposalSettingsService implements ProposalSettingsServiceI
 
     public function save(ProposalSettingsDTO $settings): void
     {
+        $showedProposer = $this->flag(self::key(ProposalType::Event, 'show_proposer'));
+
         foreach (ProposalType::cases() as $type) {
             $typeSettings = $settings->forType($type);
 
@@ -60,6 +63,11 @@ final readonly class ProposalSettingsService implements ProposalSettingsServiceI
         $this->settings->set(self::MAX_OPEN_DRAFTS, (string) $this->clamp($settings->maxOpenDrafts, ProposalSettingsDTO::MAX_LIMIT));
         $this->settings->set(self::REJECTED_RETENTION_DAYS, (string) $this->clamp($settings->rejectedRetentionDays, ProposalSettingsDTO::MAX_RETENTION_DAYS));
         $this->settings->set(self::SUBMISSIONS_PER_HOUR, (string) $this->clamp($settings->submissionsPerHour, ProposalSettingsDTO::MAX_LIMIT));
+
+        // Event proposals count for the activity contract only while the proposer is shown (core#777)
+        if ($showedProposer !== $settings->events->showProposer) {
+            PublishApprovedEventProposalsJob::dispatch()->afterCommit();
+        }
     }
 
     private function typeSettings(ProposalType $type): ProposalTypeSettingsDTO

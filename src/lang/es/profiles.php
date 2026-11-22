@@ -12,6 +12,11 @@ return [
         'would_fail' => '{1} :count cuenta se quedaría sin dirección libre|[0,*] :count cuentas se quedarían sin dirección libre',
         'dry_run_note' => 'Simulación: no se ha escrito nada. Una carrera con otra escritura solo se ve al ejecutarlo de verdad.',
     ],
+    'stamp_completed' => [
+        'stamped' => '{1} :count perfil completo marcado|[0,*] :count perfiles completos marcados',
+        'would_stamp' => '{1} :count perfil completo se marcaría|[0,*] :count perfiles completos se marcarían',
+        'dry_run_note' => 'Simulación: no se ha escrito nada.',
+    ],
     'sections' => [
         'about' => [
             'label' => 'Sobre mí',
