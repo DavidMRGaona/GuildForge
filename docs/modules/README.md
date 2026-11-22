@@ -1734,6 +1734,21 @@ public function subscribe(
 
 Promoted constructor properties take the attribute too (a value object holding a key, for example).
 
+### 12. Delete uploaded files with personal data
+
+A file uploaded through a panel form (`FileUpload`, a Livewire upload) waits in Livewire's temporary directory until the code using it stores or deletes it. A file left behind (a dialog or tab closed before saving) is deleted by the core's hourly `uploads:prune-temporary` (core ≥ the release with #827) once it is six hours old, on whichever disk Livewire uploads to. Livewire never touches the file again while the form stays open, so a form saved more than six hours after the upload loses it and the person uploads it again.
+
+When the file holds personal data (an import of members or attendees), do not wait for the pruning: delete it as soon as the module is done with it, also when the confirmation fails, and never keep it elsewhere for later. `TemporaryUploadedFile::delete()` leaves its `.json` metadata behind, so delete both:
+
+```php
+use Livewire\Features\SupportFileUploads\FileUploadConfiguration;
+
+$file->delete();
+FileUploadConfiguration::storage()->delete(FileUploadConfiguration::path($file->getFilename().'.json', false));
+```
+
+A disk configured with `'report' => true` reports a failed delete with its exception, whose message names the path (and so the file).
+
 ---
 
 ## Legal notices in emails
