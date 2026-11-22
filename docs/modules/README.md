@@ -778,6 +778,17 @@ $apiKey = config('modules.settings.my-module.api_key');
 
 `updateSettings()` replaces the stored values with the array it receives, so pass the whole form state, not a single key.
 
+### Settings in queued jobs (core ≥ the release with #825)
+
+`config('modules.settings.my-module')` is filled when the process boots. A web request ends soon after, but a queue worker runs for up to an hour, so the core keeps it current there: before each job (`JobProcessing`), `ModuleSettingsConfigInterface::refresh()` compares the settings version (`SettingsVersionInterface`, the same token `SettingsServiceInterface::get()` reads with) with the one the worker last published with and, when any setting was saved since, publishes every module's settings again. Modules change nothing: a job reading `config('modules.settings.my-module.access')` sees the value saved before it was taken.
+
+- **Cost.** Unchanged, one read of the version from the cache store per job: with `CACHE_STORE=database` (the usual setting) that is one query on the `cache` table per job; with Redis, one Redis call. The job's own settings reads reuse that version. After a save, the next job reads each module's stored settings once (one cache read per module), once per change and worker.
+- **Fails closed.** A read that fails (cache or database briefly unreachable) is tried once more after a pause of 1.5 s, so a short cut costs no attempt. If it fails again, the listener throws `ModuleSettingsUnavailableException`: the worker counts a failed attempt and runs the job again later, never with values that may be outdated or with the release defaults in place of what the site saved. Strict reads go through `ModuleSettingsStoreInterface::current()`; `effective()` keeps falling back to the defaults for booting.
+- **A long cut.** While the cache stays unreachable, each attempt costs about 1.5 s plus the failed reads. With `--tries=3` and no wait between attempts, a job ends in `failed_jobs` after a cut of about 5 s, like any job that cannot reach its cache.
+- **The window left by #722.** When a save commits but the cache can neither store the new version nor forget the old one (see *Reading and writing site settings*), nothing tells the worker: it keeps the old values until the next write to the settings table or until it restarts (`--max-time`, at most an hour).
+- **Sync jobs** run inside the request or command that dispatched them and keep its config (a test may set values in it on purpose).
+- **Scope.** Only `config('modules.settings.*')`. A module that keeps settings anywhere else for the whole process (a singleton built from them, a static) must read them again per job, for example through a scoped binding. Other long-running processes need nothing: the scheduler starts each run in a fresh process, and Reverb runs no module code (channels are authorized by a web request).
+
 ### Reading and writing site settings (core ≥ the release with #722)
 
 `SettingsServiceInterface` (`App\Application\Services`) reads and writes the `settings` table one key at a time (`get()`, `set()`, `getEncrypted()`, `setEncrypted()`). Reads come from a cache shared by every request:

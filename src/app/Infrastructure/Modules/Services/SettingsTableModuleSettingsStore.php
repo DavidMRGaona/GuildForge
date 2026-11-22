@@ -6,6 +6,7 @@ namespace App\Infrastructure\Modules\Services;
 
 use App\Application\Modules\Services\ModuleSettingsStoreInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Domain\Modules\Exceptions\ModuleSettingsUnavailableException;
 use App\Infrastructure\Persistence\Eloquent\Models\SettingModel;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -25,6 +26,17 @@ final readonly class SettingsTableModuleSettingsStore implements ModuleSettingsS
     public function effective(string $moduleName, string $modulePath): array
     {
         return self::merge($this->defaults($modulePath), $this->stored($moduleName));
+    }
+
+    public function current(string $moduleName, string $modulePath): array
+    {
+        try {
+            $value = $this->settings->get(self::KEY_PREFIX.$moduleName);
+        } catch (Throwable $e) {
+            throw ModuleSettingsUnavailableException::forModule($moduleName, $e);
+        }
+
+        return self::merge($this->defaults($modulePath), $this->decode($moduleName, $value));
     }
 
     public function defaults(string $modulePath): array
@@ -57,6 +69,26 @@ final readonly class SettingsTableModuleSettingsStore implements ModuleSettingsS
             return [];
         }
 
+        return $this->decode($moduleName, $value);
+    }
+
+    public function store(string $moduleName, array $settings): void
+    {
+        $this->settings->set(self::KEY_PREFIX.$moduleName, json_encode($settings, JSON_THROW_ON_ERROR));
+    }
+
+    public function forget(string $moduleName): void
+    {
+        SettingModel::query()->where('key', self::KEY_PREFIX.$moduleName)->delete();
+
+        $this->settings->clearCache();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function decode(string $moduleName, mixed $value): array
+    {
         if ($value === null || $value === '') {
             return [];
         }
@@ -72,18 +104,6 @@ final readonly class SettingsTableModuleSettingsStore implements ModuleSettingsS
 
         /** @var array<string, mixed> $decoded */
         return $decoded;
-    }
-
-    public function store(string $moduleName, array $settings): void
-    {
-        $this->settings->set(self::KEY_PREFIX.$moduleName, json_encode($settings, JSON_THROW_ON_ERROR));
-    }
-
-    public function forget(string $moduleName): void
-    {
-        SettingModel::query()->where('key', self::KEY_PREFIX.$moduleName)->delete();
-
-        $this->settings->clearCache();
     }
 
     /**
