@@ -73,3 +73,8 @@ Schedule::command('proposals:purge-rejected')
 Schedule::command('profiles:create-missing')
     ->daily()
     ->withoutOverlapping();
+
+// Livewire temporary uploads (core#827): files left by a closed dialog or tab, which may hold personal data
+Schedule::command('uploads:prune-temporary')
+    ->hourly()
+    ->withoutOverlapping();
