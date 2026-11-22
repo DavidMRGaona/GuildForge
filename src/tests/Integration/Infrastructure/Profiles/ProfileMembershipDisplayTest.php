@@ -195,6 +195,20 @@ final class ProfileMembershipDisplayTest extends TestCase
         $this->assertSame([$member->id => true], $this->shows([$member->id]));
     }
 
+    public function test_another_role_that_needs_two_factor_does_not_make_the_reader_ask_for_it(): void
+    {
+        $member = $this->shower();
+        $council = RoleModel::query()->create(['name' => 'consejo', 'display_name' => 'Consejo', 'requires_two_factor' => true]);
+        $member->roles()->attach($council->id);
+        // The answer depends on the association role alone, so a reader that fails is never asked
+        $reader = Mockery::mock(TwoFactorStatusReaderInterface::class);
+        $reader->shouldReceive('enabledAmong')->never();
+        $reader->shouldReceive('isEnabled')->never();
+        $this->app->instance(TwoFactorStatusReaderInterface::class, $reader);
+
+        $this->assertSame([$member->id => true], $this->shows([$member->id]));
+    }
+
     public function test_more_accounts_than_the_limit_are_refused_not_cut(): void
     {
         $ids = [];

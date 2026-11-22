@@ -12,9 +12,11 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
 
 /**
- * The roles of all the accounts at once, each account's passed through ActiveRoleResolver::filter() (the
- * rule AuthorizationService caches per account), and a member is whoever keeps the association role after
- * it. The two-factor reader is asked once for all of them, and only when a role needs it; TwoFactorHolders
+ * The association role's rows of all the accounts at once, each passed through ActiveRoleResolver::filter()
+ * (the rule AuthorizationService caches per account), and a member is whoever keeps the role after it. No
+ * other role of the account can pause the association role (membership is decided first, from the stored
+ * roles), so only that role is read: the two-factor reader is asked once for all of them, and only when the
+ * association role itself requires it, never because of another role an account holds. TwoFactorHolders
  * swallows a failing reader (so roles stay paused), and here that is an error, not an answer.
  *
  * TwoFactorHolders is bound scoped: resolved on each call, so a long-lived instance of this one is safe.
@@ -51,6 +53,7 @@ final readonly class AssociationMembersAmong implements AssociationMembersAmongI
         $rolesOf = [];
         $rows = RoleModel::query()
             ->join('user_role', 'user_role.role_id', '=', 'roles.id')
+            ->where('roles.name', $roleName)
             ->whereIn('user_role.user_id', $ids)
             ->get([...ActiveRoleResolver::ROLE_COLUMNS, 'user_role.user_id as holder_id']);
 
