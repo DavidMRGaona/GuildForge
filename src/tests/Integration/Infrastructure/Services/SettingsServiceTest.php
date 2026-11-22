@@ -272,6 +272,33 @@ final class SettingsServiceTest extends TestCase
         $this->assertSame('updated_value', $this->settingsService->get('request_key'));
     }
 
+    public function test_the_current_version_is_the_one_this_request_reads_settings_with(): void
+    {
+        $version = $this->settingsService->current();
+
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{32}$/', $version);
+        $this->assertSame($version, $this->storedVersion());
+
+        // Another process renews it: this request keeps the one it read, the next one sees the new
+        Cache::forever(SettingsService::VERSION_KEY, str_repeat('b', 32));
+        $this->assertSame($version, $this->settingsService->current());
+        $this->startAnotherRequest();
+        $this->assertSame(str_repeat('b', 32), $this->settingsService->current());
+    }
+
+    public function test_the_current_version_changes_once_a_write_commits(): void
+    {
+        $before = $this->settingsService->current();
+
+        DB::transaction(function () use ($before): void {
+            $this->settingsService->set('versioned_key', 'value');
+            $this->assertSame($before, $this->storedVersion());
+        });
+
+        $this->startAnotherRequest();
+        $this->assertNotSame($before, $this->settingsService->current());
+    }
+
     public function test_a_failed_renewal_drops_the_version_and_is_reported(): void
     {
         $store = new class extends ArrayStore

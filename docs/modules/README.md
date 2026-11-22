@@ -778,6 +778,15 @@ $apiKey = config('modules.settings.my-module.api_key');
 
 `updateSettings()` replaces the stored values with the array it receives, so pass the whole form state, not a single key.
 
+### Settings in queued jobs (core ≥ the release with #825)
+
+`config('modules.settings.my-module')` is filled when the process boots. A web request ends soon after, but a queue worker runs for up to an hour, so the core keeps it current there: before each job (`JobProcessing`), `ModuleSettingsConfig::refresh()` compares the settings version (`SettingsVersionInterface`, the same token `SettingsServiceInterface::get()` reads with) with the one the worker last published with and, when any setting was saved since, publishes every module's settings again. Modules change nothing: a job reading `config('modules.settings.my-module.access')` sees the value saved before it was taken.
+
+- **Cost.** Unchanged, one cache read per job (the version, which the job's own settings reads then reuse). After a save, one read of the stored values for the whole worker, the next job only.
+- **Fails closed.** When the version or the stored values cannot be read, the listener throws `ModuleSettingsUnavailableException`: the worker counts a failed attempt and runs the job again later, never with values that may be outdated or with the release defaults in place of what the site saved. Strict reads go through `ModuleSettingsStoreInterface::current()`; `effective()` keeps falling back to the defaults for booting.
+- **Sync jobs** run inside the request or command that dispatched it and keep its config (a test may set values in it on purpose).
+- **Scope.** Only `config('modules.settings.*')`. A module that keeps settings anywhere else for the whole process (a singleton built from them, a static) must read them again per job, for example through a scoped binding. Other long-running processes need nothing: the scheduler starts each run in a fresh process, and Reverb runs no module code (channels are authorized by a web request).
+
 ### Reading and writing site settings (core ≥ the release with #722)
 
 `SettingsServiceInterface` (`App\Application\Services`) reads and writes the `settings` table one key at a time (`get()`, `set()`, `getEncrypted()`, `setEncrypted()`). Reads come from a cache shared by every request:

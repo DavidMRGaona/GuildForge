@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Application\Modules\Services;
 
+use App\Domain\Modules\Exceptions\ModuleSettingsUnavailableException;
+
 /**
  * Where the module settings saved in the panel live.
  *
@@ -23,6 +25,19 @@ interface ModuleSettingsStoreInterface
      * @return array<string, mixed>
      */
     public function effective(string $moduleName, string $modulePath): array;
+
+    /**
+     * The same values as effective(), but read strictly: throws ModuleSettingsUnavailableException
+     * when the stored values cannot be read, instead of falling back to the defaults. For code
+     * that must not act on the defaults in place of what the site saved (a queue worker
+     * refreshing its settings, core#825). Stored values that are not a JSON object still give
+     * the defaults, as effective() does.
+     *
+     * @return array<string, mixed>
+     *
+     * @throws ModuleSettingsUnavailableException
+     */
+    public function current(string $moduleName, string $modulePath): array;
 
     /**
      * Release defaults only (the module's config/settings.php); [] when it ships none.

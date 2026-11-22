@@ -6,6 +6,7 @@ namespace Tests\Integration\Infrastructure\Modules\Services;
 
 use App\Application\Modules\Services\ModuleSettingsStoreInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Domain\Modules\Exceptions\ModuleSettingsUnavailableException;
 use App\Infrastructure\Persistence\Eloquent\Models\SettingModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\File;
@@ -136,6 +137,36 @@ final class SettingsTableModuleSettingsStoreTest extends TestCase
         $this->app->instance(SettingsServiceInterface::class, $settings);
 
         $this->assertSame(['a' => 1], $this->store()->effective('fixture', $this->modulePath));
+    }
+
+    public function test_current_returns_the_defaults_with_the_stored_values_on_top(): void
+    {
+        $this->defaults(['a' => 1, 'b' => ['c' => true, 'd' => true]]);
+        $this->store()->store('fixture', ['b' => ['c' => false]]);
+
+        $this->assertSame(['a' => 1, 'b' => ['c' => false, 'd' => true]], $this->store()->current('fixture', $this->modulePath));
+    }
+
+    public function test_current_throws_instead_of_falling_back_to_defaults_when_the_settings_store_throws(): void
+    {
+        // A job must never run with the release defaults in place of what the site saved
+        $this->defaults(['a' => 1]);
+        $settings = Mockery::mock(SettingsServiceInterface::class);
+        $settings->shouldReceive('get')->andThrow(new RuntimeException('database is down'));
+        $this->app->instance(SettingsServiceInterface::class, $settings);
+
+        $this->expectException(ModuleSettingsUnavailableException::class);
+
+        $this->store()->current('fixture', $this->modulePath);
+    }
+
+    public function test_current_uses_the_defaults_for_stored_values_that_are_not_a_json_object(): void
+    {
+        // Readable but unusable: the same answer the process got when it booted
+        $this->defaults(['a' => 1]);
+        SettingModel::query()->create(['key' => 'module_settings:fixture', 'value' => '[1,2]']);
+
+        $this->assertSame(['a' => 1], $this->store()->current('fixture', $this->modulePath));
     }
 
     public function test_defaults_ignore_a_settings_file_that_does_not_return_an_array(): void

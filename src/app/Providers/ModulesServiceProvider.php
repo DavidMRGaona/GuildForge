@@ -28,11 +28,14 @@ use App\Console\Commands\Module\ModulePublishAssetsCommand;
 use App\Console\Commands\Module\ModuleSyncFromImageCommand;
 use App\Filament\Support\ModuleSettingsPages;
 use App\Infrastructure\Modules\Listeners\KeepQueueWorkersInStepWithModules;
+use App\Infrastructure\Modules\Listeners\RefreshModuleSettingsForEachJob;
 use App\Infrastructure\Modules\Services\CacheModuleChangeWindow;
 use App\Infrastructure\Modules\Services\ModuleInstaller;
+use App\Infrastructure\Modules\Services\ModuleSettingsConfig;
 use App\Infrastructure\Modules\Services\SettingsTableModuleSettingsStore;
 use App\Modules\ModuleLoader;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Queue\Events\Looping;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -51,6 +54,8 @@ final class ModulesServiceProvider extends ServiceProvider
         $this->app->bind(ModuleInstallerInterface::class, ModuleInstaller::class);
         // Bound before any module provider registers: they read their settings through it
         $this->app->bind(ModuleSettingsStoreInterface::class, SettingsTableModuleSettingsStore::class);
+        // One per process: remembers the booted modules and the settings version they were read with (core#825)
+        $this->app->singleton(ModuleSettingsConfig::class);
         // Scoped: works out each module's settings page once per request, so a problem is logged once
         $this->app->scoped(ModuleSettingsPages::class);
         // One per process (never scoped: the queue worker forgets scoped instances between jobs), so
@@ -65,6 +70,8 @@ final class ModulesServiceProvider extends ServiceProvider
     {
         // Before each job a queue worker checks it still runs the modules the site has (core#624)
         Event::listen(Looping::class, KeepQueueWorkersInStepWithModules::class);
+        // Before each job it reads the module settings saved since the worker booted (core#825)
+        Event::listen(JobProcessing::class, RefreshModuleSettingsForEachJob::class);
 
         // Register console commands
         if ($this->app->runningInConsole()) {

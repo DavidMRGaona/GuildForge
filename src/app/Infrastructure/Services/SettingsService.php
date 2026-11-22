@@ -6,6 +6,7 @@ namespace App\Infrastructure\Services;
 
 use App\Application\DTOs\Response\LocationSettingsDTO;
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Services\SettingsVersionInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\SettingModel;
 use DateTimeImmutable;
 use Illuminate\Contracts\Encryption\DecryptException;
@@ -20,7 +21,7 @@ use Throwable;
  * token after its commit instead of forgetting a fixed key, so a read that loaded the old rows
  * before the commit can only store them under a version nobody asks for again.
  */
-final class SettingsService implements SettingsServiceInterface
+final class SettingsService implements SettingsServiceInterface, SettingsVersionInterface
 {
     public const string CACHE_KEY_PREFIX = 'site_settings_';
 
@@ -119,6 +120,15 @@ final class SettingsService implements SettingsServiceInterface
     }
 
     /**
+     * The version this request or job reads the settings with: read once, then kept until the
+     * next one starts (SettingsCacheVersion is scoped).
+     */
+    public function current(): string
+    {
+        return app(SettingsCacheVersion::class)->token ??= $this->readVersion();
+    }
+
+    /**
      * Check if public registration is enabled.
      */
     public function isRegistrationEnabled(): bool
@@ -195,9 +205,7 @@ final class SettingsService implements SettingsServiceInterface
             return $this->loadAll();
         }
 
-        $version = $current->token ??= $this->readVersion();
-
-        return Cache::remember(self::CACHE_KEY_PREFIX.$version, self::CACHE_TTL, $this->loadAll(...));
+        return Cache::remember(self::CACHE_KEY_PREFIX.$this->current(), self::CACHE_TTL, $this->loadAll(...));
     }
 
     /**

@@ -68,6 +68,7 @@ use App\Application\Services\ImageOptimizationServiceInterface;
 use App\Application\Services\LegalPageServiceInterface;
 use App\Application\Services\LogContextProviderInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Services\SettingsVersionInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\Services\SitemapQueryServiceInterface;
 use App\Application\Services\SlugRedirectService;
@@ -306,6 +307,8 @@ class AppServiceProvider extends ServiceProvider
 
         // Application Service bindings
         $this->app->singleton(SettingsServiceInterface::class, SettingsService::class);
+        // The version alone, for long-running processes that keep what they derived from settings (core#825)
+        $this->app->singleton(SettingsVersionInterface::class, SettingsService::class);
         $this->app->scoped(SettingsCacheVersion::class);
         $this->app->singleton(
             TimezoneServiceInterface::class,
