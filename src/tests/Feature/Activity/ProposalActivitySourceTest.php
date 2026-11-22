@@ -558,7 +558,7 @@ final class ProposalActivitySourceTest extends TestCase
         $deactivated = UserModel::factory()->create();
         EventModel::factory()->proposal(ProposalStatus::Approved, $anonymized)->create();
         EventModel::factory()->proposal(ProposalStatus::Approved, $deactivated)->create();
-        Log::spy();
+        $log = Log::spy();
         $this->fakeActivityEvents();
         DB::listen(static function (QueryExecuted $query): void {
             if (str_contains($query->sql, 'select "id" from') && str_contains($query->sql, 'proposal_status')) {
@@ -575,7 +575,7 @@ final class ProposalActivitySourceTest extends TestCase
         // What does not depend on the failing read still goes out
         $this->assertActivityPublished('core.account', (string) $anonymized->id);
         $this->assertActivityPublished('core.account', (string) $deactivated->id);
-        Log::shouldHaveReceived('warning')->withArgs(static fn (string $message, array $context): bool => str_contains($message, 'could not be published') && $context['exception'] === RuntimeException::class)->atLeast()->once();
+        $log->shouldHaveReceived('warning')->withArgs(static fn (string $message, array $context): bool => str_contains($message, 'could not be published') && $context['exception'] === RuntimeException::class)->atLeast()->once();
     }
 
     private function assertSubjectPublished(string $subjectId): void
