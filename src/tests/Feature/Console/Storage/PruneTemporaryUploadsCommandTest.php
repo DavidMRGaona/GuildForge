@@ -78,7 +78,7 @@ final class PruneTemporaryUploadsCommandTest extends TestCase
 
     public function test_a_directory_that_names_the_whole_disk_is_refused(): void
     {
-        Log::spy();
+        $log = Log::spy();
         config()->set('livewire.temporary_file_upload.directory', '/');
         $this->storeFile('livewire-tmp/old-upload.csv', minutesAgo: 90);
         $this->storeFile('old-file-at-the-root.csv', minutesAgo: 90);
@@ -86,7 +86,7 @@ final class PruneTemporaryUploadsCommandTest extends TestCase
         $this->artisanCommand('uploads:prune-temporary')->assertFailed();
 
         $this->assertSame(['livewire-tmp/old-upload.csv', 'old-file-at-the-root.csv'], $this->files());
-        Log::shouldHaveReceived('error')->once();
+        $log->shouldHaveReceived('error')->once();
     }
 
     public function test_it_runs_every_hour_without_overlapping(): void
@@ -117,6 +117,6 @@ final class PruneTemporaryUploadsCommandTest extends TestCase
         $files = $this->disk->allFiles();
         sort($files);
 
-        return array_values($files);
+        return $files;
     }
 }

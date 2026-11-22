@@ -1734,6 +1734,10 @@ public function subscribe(
 
 Promoted constructor properties take the attribute too (a value object holding a key, for example).
 
+### 12. Delete uploaded files with personal data
+
+A file uploaded through a panel form (`FileUpload`, a Livewire upload) waits in Livewire's temporary directory until the code using it stores or deletes it. When it holds personal data (an import of members or attendees), delete it and its `.json` metadata as soon as the module is done with it, also when the confirmation fails. A file left behind (a dialog or tab closed before importing) is deleted by the core's hourly `uploads:prune-temporary` (core ≥ the release with #827) once it is an hour old, on whichever disk Livewire uploads to; never keep such a file elsewhere for later.
+
 ---
 
 ## Legal notices in emails

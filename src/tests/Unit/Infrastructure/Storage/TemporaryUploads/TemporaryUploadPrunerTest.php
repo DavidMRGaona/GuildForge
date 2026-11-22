@@ -24,8 +24,14 @@ final class TemporaryUploadPrunerTest extends TestCase
 
     private const int NEW = self::CUTOFF + 1;
 
-    /** @var list<array{level: mixed, message: string, context: array<array-key, mixed>}> */
-    private array $logs = [];
+    private RecordingLogger $logger;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->logger = new RecordingLogger;
+    }
 
     protected function tearDown(): void
     {
@@ -51,7 +57,7 @@ final class TemporaryUploadPrunerTest extends TestCase
         $this->assertTrue($result->listed);
         $this->assertSame(2, $result->deleted);
         $this->assertSame(0, $result->failed);
-        $this->assertSame([], $this->logs);
+        $this->assertSame([], $this->logger->records);
     }
 
     public function test_paths_outside_the_directory_are_never_touched_even_when_listed(): void
@@ -80,9 +86,9 @@ final class TemporaryUploadPrunerTest extends TestCase
 
         $this->assertFalse($result->listed);
         $this->assertSame(0, $result->deleted);
-        $this->assertCount(1, $this->logs);
-        $this->assertSame('error', $this->logs[0]['level']);
-        $this->assertSame(['disk' => 'local'], $this->logs[0]['context']);
+        $this->assertCount(1, $this->logger->records);
+        $this->assertSame('error', $this->logger->records[0]['level']);
+        $this->assertSame(['disk' => 'local'], $this->logger->records[0]['context']);
     }
 
     public function test_a_listing_that_fails_is_logged_and_deletes_nothing(): void
@@ -96,9 +102,9 @@ final class TemporaryUploadPrunerTest extends TestCase
         $result = $this->pruner()->prune('s3', $disk, 'livewire-tmp', self::CUTOFF);
 
         $this->assertFalse($result->listed);
-        $this->assertCount(1, $this->logs);
-        $this->assertSame('error', $this->logs[0]['level']);
-        $this->assertSame(['disk' => 's3', 'exception' => UnableToListContents::class], $this->logs[0]['context']);
+        $this->assertCount(1, $this->logger->records);
+        $this->assertSame('error', $this->logger->records[0]['level']);
+        $this->assertSame(['disk' => 's3', 'exception' => UnableToListContents::class], $this->logger->records[0]['context']);
         $this->assertLogsNeverName('secret-name');
     }
 
@@ -127,13 +133,13 @@ final class TemporaryUploadPrunerTest extends TestCase
         $this->assertTrue($result->listed);
         $this->assertSame(1, $result->deleted);
         $this->assertSame(3, $result->failed);
-        $this->assertCount(1, $this->logs);
-        $this->assertSame('warning', $this->logs[0]['level']);
+        $this->assertCount(1, $this->logger->records);
+        $this->assertSame('warning', $this->logger->records[0]['level']);
         $this->assertSame([
             'disk' => 's3',
             'failed' => 3,
             'exceptions' => [UnableToRetrieveMetadata::class, UnableToDeleteFile::class],
-        ], $this->logs[0]['context']);
+        ], $this->logger->records[0]['context']);
         $this->assertLogsNeverName('secret');
     }
 
@@ -150,7 +156,7 @@ final class TemporaryUploadPrunerTest extends TestCase
 
         $this->assertSame(0, $result->deleted);
         $this->assertSame(0, $result->failed);
-        $this->assertSame([], $this->logs);
+        $this->assertSame([], $this->logger->records);
     }
 
     /**
@@ -170,24 +176,22 @@ final class TemporaryUploadPrunerTest extends TestCase
 
     private function pruner(): TemporaryUploadPruner
     {
-        $logs = &$this->logs;
-
-        return new TemporaryUploadPruner(new class($logs) extends AbstractLogger
-        {
-            /**
-             * @param  list<array{level: mixed, message: string, context: array<array-key, mixed>}>  $logs
-             */
-            public function __construct(private array &$logs) {}
-
-            public function log($level, string|Stringable $message, array $context = []): void
-            {
-                $this->logs[] = ['level' => $level, 'message' => (string) $message, 'context' => $context];
-            }
-        });
+        return new TemporaryUploadPruner($this->logger);
     }
 
     private function assertLogsNeverName(string $needle): void
     {
-        $this->assertStringNotContainsString($needle, (string) json_encode($this->logs));
+        $this->assertStringNotContainsString($needle, (string) json_encode($this->logger->records));
+    }
+}
+
+final class RecordingLogger extends AbstractLogger
+{
+    /** @var list<array{level: mixed, message: string, context: array<array-key, mixed>}> */
+    public array $records = [];
+
+    public function log($level, string|Stringable $message, array $context = []): void
+    {
+        $this->records[] = ['level' => $level, 'message' => (string) $message, 'context' => $context];
     }
 }

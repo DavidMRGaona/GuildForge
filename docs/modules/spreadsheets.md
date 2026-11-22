@@ -32,6 +32,8 @@ foreach ($sheet->rows as $row) {
 }
 ```
 
+An uploaded file with personal data is deleted when the import ends or its confirmation fails; one left behind in Livewire's temporary directory goes with the core's hourly pruning (see [Delete uploaded files with personal data](./README.md#12-delete-uploaded-files-with-personal-data)).
+
 `SpreadsheetDTO` carries:
 
 | Field | Content |
