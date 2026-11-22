@@ -12,9 +12,8 @@ use League\Flysystem\UnableToRetrieveMetadata;
 use Mockery;
 use Mockery\MockInterface;
 use PHPUnit\Framework\TestCase;
-use Psr\Log\AbstractLogger;
 use RuntimeException;
-use Stringable;
+use Tests\Support\Logging\RecordingLogger;
 
 final class TemporaryUploadPrunerTest extends TestCase
 {
@@ -63,17 +62,30 @@ final class TemporaryUploadPrunerTest extends TestCase
     public function test_paths_outside_the_directory_are_never_touched_even_when_listed(): void
     {
         // An adapter that answered more than the directory asked for must not widen the pruning
-        $disk = $this->disk([
-            'livewire-tmp-archive/old.csv' => self::OLD,
-            'other/livewire-tmp/old.csv' => self::OLD,
-            'old.csv' => self::OLD,
-            'livewire-tmp/old.csv' => self::OLD,
-        ]);
+        $outside = [
+            'livewire-tmp-archive/old.csv',
+            'other/livewire-tmp/old.csv',
+            'old.csv',
+            'livewire-tmp/../old.csv',
+            'livewire-tmp/nested/../../old.csv',
+            'livewire-tmp/./old.csv',
+        ];
+        $disk = Mockery::mock(Filesystem::class);
+        $disk->shouldReceive('allFiles')->once()->with('livewire-tmp')->andReturn([...$outside, 'livewire-tmp/old.csv']);
+        $disk->shouldReceive('lastModified')->once()->with('livewire-tmp/old.csv')->andReturn(self::OLD);
         $disk->shouldReceive('delete')->once()->with('livewire-tmp/old.csv')->andReturnTrue();
+
+        foreach ($outside as $path) {
+            $disk->shouldReceive('lastModified')->never()->with($path);
+            $disk->shouldReceive('exists')->never()->with($path);
+            $disk->shouldReceive('delete')->never()->with($path);
+        }
 
         $result = $this->pruner()->prune('local', $disk, 'livewire-tmp', self::CUTOFF);
 
         $this->assertSame(1, $result->deleted);
+        $this->assertSame(0, $result->failed);
+        $this->assertSame([], $this->logger->records);
     }
 
     public function test_an_empty_directory_is_refused_without_listing_the_disk(): void
@@ -182,16 +194,5 @@ final class TemporaryUploadPrunerTest extends TestCase
     private function assertLogsNeverName(string $needle): void
     {
         $this->assertStringNotContainsString($needle, (string) json_encode($this->logger->records));
-    }
-}
-
-final class RecordingLogger extends AbstractLogger
-{
-    /** @var list<array{level: mixed, message: string, context: array<array-key, mixed>}> */
-    public array $records = [];
-
-    public function log($level, string|Stringable $message, array $context = []): void
-    {
-        $this->records[] = ['level' => $level, 'message' => (string) $message, 'context' => $context];
     }
 }

@@ -14,13 +14,18 @@ use Throwable;
  * panel may hold personal data (member imports), and Livewire only prunes them inside a later upload,
  * on a local disk and after a day.
  *
+ * Six hours, not less: Livewire never touches the file again while the form stays open, so a form
+ * saved after the cutoff loses its upload. Code that handles personal data deletes its file when done.
+ *
  * Only the contract's methods are used, so a local and a remote disk behave alike. Nothing outside
- * the directory is touched: an empty directory (the whole disk) is refused and every listed path must
- * sit under it. Logs carry the disk, counts and exception classes, never a file name or content.
+ * the directory is touched: an empty directory (the whole disk) is refused, and every listed path must
+ * sit under it with no `.` or `..` segment. Logs carry the disk, counts and exception classes, never a
+ * file name or content (a disk configured with `report => true` reports its own failed deletes, path
+ * included).
  */
 final readonly class TemporaryUploadPruner
 {
-    public const int MAX_AGE_MINUTES = 60;
+    public const int MAX_AGE_MINUTES = 360;
 
     public function __construct(private LoggerInterface $logger) {}
 
@@ -53,7 +58,7 @@ final readonly class TemporaryUploadPruner
         $failures = [];
 
         foreach ($paths as $path) {
-            if (! str_starts_with($path, $prefix)) {
+            if (! $this->isInside($path, $prefix)) {
                 continue;
             }
 
@@ -81,6 +86,18 @@ final readonly class TemporaryUploadPruner
         }
 
         return new TemporaryUploadPruneResult(listed: true, deleted: $deleted, failed: count($failures));
+    }
+
+    private function isInside(string $path, string $prefix): bool
+    {
+        if (! str_starts_with($path, $prefix)) {
+            return false;
+        }
+
+        // A disk normalises these segments when deleting, which could take the path out of the directory
+        $segments = explode('/', substr($path, strlen($prefix)));
+
+        return ! in_array('..', $segments, true) && ! in_array('.', $segments, true);
     }
 
     private function isOlderThan(Filesystem $disk, string $path, int $cutoff): bool

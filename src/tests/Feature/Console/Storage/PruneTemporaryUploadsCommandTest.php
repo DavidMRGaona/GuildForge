@@ -9,6 +9,7 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use League\Flysystem\PathTraversalDetected;
 use Livewire\Features\SupportFileUploads\FileUploadConfiguration;
 use Tests\TestCase;
 
@@ -24,13 +25,13 @@ final class PruneTemporaryUploadsCommandTest extends TestCase
         $this->disk = Storage::fake(FileUploadConfiguration::disk());
     }
 
-    public function test_it_deletes_uploads_and_their_metadata_older_than_an_hour(): void
+    public function test_it_deletes_uploads_and_their_metadata_older_than_six_hours(): void
     {
-        $this->storeFile('livewire-tmp/old-upload.csv', minutesAgo: 61);
-        $this->storeFile('livewire-tmp/old-upload.csv.json', minutesAgo: 61);
-        $this->storeFile('livewire-tmp/orphan-metadata.xlsx.json', minutesAgo: 120);
-        $this->storeFile('livewire-tmp/recent-upload.xlsx', minutesAgo: 59);
-        $this->storeFile('livewire-tmp/recent-upload.xlsx.json', minutesAgo: 59);
+        $this->storeFile('livewire-tmp/old-upload.csv', minutesAgo: 361);
+        $this->storeFile('livewire-tmp/old-upload.csv.json', minutesAgo: 361);
+        $this->storeFile('livewire-tmp/orphan-metadata.xlsx.json', minutesAgo: 720);
+        $this->storeFile('livewire-tmp/recent-upload.xlsx', minutesAgo: 359);
+        $this->storeFile('livewire-tmp/recent-upload.xlsx.json', minutesAgo: 359);
         $this->storeFile('livewire-tmp/just-uploaded.csv', minutesAgo: 0);
         $this->storeFile('livewire-tmp/just-uploaded.csv.json', minutesAgo: 0);
 
@@ -67,9 +68,9 @@ final class PruneTemporaryUploadsCommandTest extends TestCase
     public function test_it_follows_the_configured_temporary_directory(): void
     {
         config()->set('livewire.temporary_file_upload.directory', 'uploads/pending');
-        $this->storeFile('uploads/pending/old-upload.csv', minutesAgo: 90);
-        $this->storeFile('uploads/pending/old-upload.csv.json', minutesAgo: 90);
-        $this->storeFile('livewire-tmp/old-upload.csv', minutesAgo: 90);
+        $this->storeFile('uploads/pending/old-upload.csv', minutesAgo: 400);
+        $this->storeFile('uploads/pending/old-upload.csv.json', minutesAgo: 400);
+        $this->storeFile('livewire-tmp/old-upload.csv', minutesAgo: 400);
 
         $this->artisanCommand('uploads:prune-temporary')->assertSuccessful();
 
@@ -80,13 +81,27 @@ final class PruneTemporaryUploadsCommandTest extends TestCase
     {
         $log = Log::spy();
         config()->set('livewire.temporary_file_upload.directory', '/');
-        $this->storeFile('livewire-tmp/old-upload.csv', minutesAgo: 90);
-        $this->storeFile('old-file-at-the-root.csv', minutesAgo: 90);
+        $this->storeFile('livewire-tmp/old-upload.csv', minutesAgo: 400);
+        $this->storeFile('old-file-at-the-root.csv', minutesAgo: 400);
 
         $this->artisanCommand('uploads:prune-temporary')->assertFailed();
 
         $this->assertSame(['livewire-tmp/old-upload.csv', 'old-file-at-the-root.csv'], $this->files());
         $log->shouldHaveReceived('error')->once();
+    }
+
+    public function test_a_directory_that_climbs_out_of_the_disk_is_refused(): void
+    {
+        $log = Log::spy();
+        config()->set('livewire.temporary_file_upload.directory', '../elsewhere');
+        $this->storeFile('livewire-tmp/old-upload.csv', minutesAgo: 400);
+
+        $this->artisanCommand('uploads:prune-temporary')->assertFailed();
+
+        $this->assertSame(['livewire-tmp/old-upload.csv'], $this->files());
+        $log->shouldHaveReceived('error')->once()->withArgs(
+            fn (string $message, array $context): bool => $context === ['exception' => PathTraversalDetected::class],
+        );
     }
 
     public function test_it_runs_every_hour_without_overlapping(): void
@@ -100,6 +115,8 @@ final class PruneTemporaryUploadsCommandTest extends TestCase
         $this->assertInstanceOf(Event::class, $event);
         $this->assertSame('0 * * * *', $event->expression);
         $this->assertTrue($event->withoutOverlapping);
+        // A run that dies midway holds the lock 55 minutes, never the default 24 hours
+        $this->assertSame(55, $event->expiresAt);
     }
 
     private function storeFile(string $path, int $minutesAgo): void
