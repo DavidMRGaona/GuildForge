@@ -207,6 +207,28 @@ final class MediaLibraryPickerTest extends TestCase
         $this->assertSame([__('filament.media_picker.errors.missing')], $page->errors()->get('data.image_public_id'));
     }
 
+    public function test_save_reports_a_file_hidden_since_it_was_chosen(): void
+    {
+        $this->image('events/secret');
+        $page = Livewire::test(MediaPickerFixturePage::class)
+            ->callAction($this->pick(), data: ['file' => 'events/secret']);
+
+        // A source hid one of its usages while the form was open (core#830)
+        MediaUsageModel::query()->create([
+            'file_id' => 'events/secret',
+            'source_type' => 'events',
+            'record_id' => 'record-1',
+            'role' => 'Imagen',
+            'title' => 'Logro secreto',
+            'is_hidden' => true,
+        ]);
+
+        $page->call('save')->assertHasFormErrors(['image_public_id']);
+
+        $this->assertSame([__('filament.media_picker.errors.hidden')], $page->errors()->get('data.image_public_id'));
+        $this->assertNull($page->get('saved'));
+    }
+
     public function test_original_record_path_is_always_accepted(): void
     {
         // An old path no source claims, never indexed

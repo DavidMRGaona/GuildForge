@@ -249,7 +249,12 @@ final class MediaLibraryPage extends Page implements HasTable
             ->record(fn (array $arguments): ?MediaFileModel => $this->findFile($arguments['file'] ?? null))
             ->visible(fn (?MediaFileModel $record): bool => $record instanceof MediaFileModel)
             ->slideOver()
-            ->modalHeading(fn (?MediaFileModel $record): string => $record instanceof MediaFileModel ? basename($record->file_id) : '')
+            // A file whose image a usage hides is not named by its id either (core#830)
+            ->modalHeading(fn (?MediaFileModel $record): string => match (true) {
+                ! $record instanceof MediaFileModel => '',
+                $record->hasHiddenUsage() => (string) __('filament.media_library.hidden_preview.alt'),
+                default => basename($record->file_id),
+            })
             ->modalContent(fn (?MediaFileModel $record): ?View => $record instanceof MediaFileModel
                 ? view('filament.pages.media-library.details', $this->detailsData($record))
                 : null)

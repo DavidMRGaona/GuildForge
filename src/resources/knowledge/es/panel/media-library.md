@@ -35,7 +35,11 @@ Las tarjetas salen de la subida más reciente a la más antigua (**Más reciente
 
 No aparecen los **avatares** de las cuentas: no se muestran y nunca se pueden borrar desde aquí.
 
-Algunos módulos ocultan la imagen de un uso concreto, como la insignia de un logro secreto. Ese archivo sigue en la lista con su tamaño y sus usos, pero en lugar de la miniatura aparece un ojo tachado, y la ficha no permite abrir el original ni copiar su dirección. Cuenta como **En uso** igual que los demás y tampoco se ofrece en **Elegir de la biblioteca**.
+Algunos módulos ocultan la imagen de un uso concreto, como la insignia de un logro secreto. Ese archivo sigue en la lista con su tamaño y sus usos, pero en lugar de la miniatura aparece un ojo tachado, la ficha se titula «Imagen oculta» y no permite abrir el original ni copiar su dirección. Cuenta como **En uso** igual que los demás.
+
+Si un archivo lo comparten un registro visible y uno oculto, se oculta para los dos y deja de ofrecerse en **Elegir de la biblioteca**.
+
+Sirve para no destripar sorpresas a quien gestiona la biblioteca, no para guardar un secreto: la imagen sigue siendo pública en Cloudinary.
 
 ## Estados
 

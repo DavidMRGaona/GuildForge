@@ -134,6 +134,15 @@ abstract class EloquentColumnMediaSource implements MediaUsageSourceInterface
     }
 
     /**
+     * Whether the image of this record's usage stays out of sight in the media library (core#830): the
+     * badge of a secret achievement, say. Never changes whether the file is used or can be deleted.
+     */
+    protected function isHidden(Model $record): bool
+    {
+        return false;
+    }
+
+    /**
      * The query usages are read from: the base query by default. A source whose titles need related rows
      * eager-loads them here, so usesFile(), which only reads the column, never loads them.
      *
@@ -178,6 +187,7 @@ abstract class EloquentColumnMediaSource implements MediaUsageSourceInterface
             recordId: is_scalar($recordId) ? (string) $recordId : '',
             role: $this->role(),
             title: $this->titleOf($record),
+            hidden: $this->isHidden($record),
         );
     }
 

@@ -1298,6 +1298,7 @@ return [
             'required' => 'Elige una imagen.',
             'unavailable' => 'Esa imagen ya no se puede usar en este campo.',
             'missing' => 'La imagen elegida ya no está en la biblioteca.',
+            'hidden' => 'Esta imagen ya no se puede elegir.',
         ],
     ],
     'media_library' => [

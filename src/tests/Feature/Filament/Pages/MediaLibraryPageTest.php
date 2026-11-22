@@ -410,6 +410,9 @@ final class MediaLibraryPageTest extends TestCase
         $html = $this->detailsHtml($file);
         $this->assertStringNotContainsString('res.cloudinary.com', $html);
         $this->assertStringNotContainsString('<a href', $html);
+        // Neither the heading nor the markup names the file
+        $this->assertStringNotContainsString('events/secret', $html);
+        $this->assertSame(__('filament.media_library.hidden_preview.alt'), $this->detailsAction($file)->getModalHeading());
         $this->assertStringContainsString(__('filament.media_library.hidden_preview.notice'), $html);
         // The uses are still listed, with the titles their source gives
         $this->assertStringContainsString('Logro secreto', $html);
