@@ -21,8 +21,8 @@ use WeakMap;
 
 /**
  * Dispatches ActivityRecorded once the transaction of the default connection commits (core#774), at
- * once outside one, and once per subject within one transaction (UUID ids in lower case). Nothing while an impersonation lasts or inside its safety net: the change will be
- * rolled back, and nothing may leave the request. A listener's failure (a queue that cannot take the
+ * once outside one, and once per subject within one outermost transaction, savepoints included (UUID ids in lower case).
+ * Nothing while an impersonation lasts or inside its safety net: the change will be rolled back, and nothing may leave the request. A listener's failure (a queue that cannot take the
  * job) is warned once a day, by its class, and never reaches the module that published.
  */
 final readonly class EventActivityPublisher implements ActivityPublisherInterface
@@ -34,7 +34,7 @@ final readonly class EventActivityPublisher implements ActivityPublisherInterfac
      * announced once. Keyed by Laravel's record of the transaction: when it rolls back the record
      * is dropped, and its entry with it.
      *
-     * @var WeakMap<DatabaseTransactionRecord, array<string, true>>
+     * @var WeakMap<DatabaseTransactionRecord, array<string, AnnouncementMark>>
      */
     private WeakMap $pending;
 
@@ -70,23 +70,19 @@ final readonly class EventActivityPublisher implements ActivityPublisherInterfac
             return;
         }
 
-        $transaction = $this->currentTransaction();
+        $event = new ActivityRecorded($sourceType, $normalizedId);
+        // Shared by every callback of the same subject in the same outermost transaction: the first one
+        // that runs once it commits announces it, the others find it announced. A savepoint that rolls
+        // back takes its callback with it, and the subject recorded again afterwards still gets one.
+        $announced = $this->announcedInCurrentTransaction($sourceType.'|'.$normalizedId);
 
-        if ($transaction instanceof DatabaseTransactionRecord) {
-            $key = $sourceType.'|'.$normalizedId;
-            $announced = $this->pending[$transaction] ?? [];
-
-            if (isset($announced[$key])) {
+        $this->database->connection()->afterCommit(function () use ($event, $announced): void {
+            if ($announced->done) {
                 return;
             }
 
-            $announced[$key] = true;
-            $this->pending[$transaction] = $announced;
-        }
+            $announced->done = true;
 
-        $event = new ActivityRecorded($sourceType, $normalizedId);
-
-        $this->database->connection()->afterCommit(function () use ($event): void {
             try {
                 $this->events->dispatch($event);
             } catch (Throwable $exception) {
@@ -101,10 +97,31 @@ final readonly class EventActivityPublisher implements ActivityPublisherInterfac
     }
 
     /**
-     * The innermost open transaction of the default connection whose callbacks wait for a commit,
-     * or null outside one (a test's own wrapping transaction does not count, as for afterCommit()).
+     * Whether a subject was already announced, as a mark shared by everything published for it in the
+     * outermost open transaction (a fresh one outside any).
      */
-    private function currentTransaction(): ?DatabaseTransactionRecord
+    private function announcedInCurrentTransaction(string $key): AnnouncementMark
+    {
+        $transaction = $this->outermostTransaction();
+
+        if (! $transaction instanceof DatabaseTransactionRecord) {
+            return new AnnouncementMark;
+        }
+
+        $announced = $this->pending[$transaction] ?? [];
+        $announced[$key] ??= new AnnouncementMark;
+        $this->pending[$transaction] = $announced;
+
+        return $announced[$key];
+    }
+
+    /**
+     * The outermost open transaction of the default connection whose callbacks wait for a commit, or
+     * null outside one (a test's own wrapping transaction does not count, as for afterCommit()). A
+     * savepoint is a transaction of its own to Laravel, but what is published inside it belongs to the
+     * one it sits in: grouping by the innermost would announce a subject once per savepoint.
+     */
+    private function outermostTransaction(): ?DatabaseTransactionRecord
     {
         $connection = $this->database->connection();
 
@@ -112,10 +129,14 @@ final readonly class EventActivityPublisher implements ActivityPublisherInterfac
             return null;
         }
 
-        $transactions = $this->container->make('db.transactions');
+        $applicable = $this->container->make('db.transactions')->callbackApplicableTransactions();
         $name = $connection->getName();
+        $record = $applicable->last(static fn (DatabaseTransactionRecord $record): bool => $record->connection === $name);
 
-        return $transactions->callbackApplicableTransactions()
-            ->last(static fn (DatabaseTransactionRecord $record): bool => $record->connection === $name);
+        while ($record instanceof DatabaseTransactionRecord && $record->parent instanceof DatabaseTransactionRecord && $applicable->contains($record->parent)) {
+            $record = $record->parent;
+        }
+
+        return $record;
     }
 }

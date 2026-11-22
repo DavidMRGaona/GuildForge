@@ -9,6 +9,7 @@ use App\Domain\Profiles\ProfileCompletenessRule;
 use App\Infrastructure\Activity\Sources\ProfileCompletedActivitySource;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Keeps `user_profiles.completed_at` in step with the profile (core#777) and tells the activity
@@ -30,21 +31,33 @@ final readonly class ProfileCompletion
      */
     public function refresh(string $userId, bool $publish = false): void
     {
-        $profile = UserProfileModel::query()->find($userId);
+        // Its own savepoint, so a failing query cannot abort the caller's transaction; the publication
+        // stays outside it, in the caller's, so the publisher announces a subject once per transaction
+        $changed = DB::transaction(function () use ($userId): bool {
+            $profile = UserProfileModel::query()->find($userId);
 
-        if ($profile instanceof UserProfileModel) {
+            if (! $profile instanceof UserProfileModel) {
+                return false;
+            }
+
             $complete = $this->isComplete($userId, $profile);
 
             if ($complete && $profile->completed_at === null) {
-                UserProfileModel::query()->whereKey($userId)->toBase()->update(['completed_at' => now()]);
-                $publish = true;
-            } elseif (! $complete && $profile->completed_at !== null) {
-                UserProfileModel::query()->whereKey($userId)->toBase()->update(['completed_at' => null]);
-                $publish = true;
-            }
-        }
+                UserProfileModel::query()->whereKey($userId)->whereNull('completed_at')->toBase()->update(['completed_at' => now()]);
 
-        if ($publish) {
+                return true;
+            }
+
+            if (! $complete && $profile->completed_at !== null) {
+                UserProfileModel::query()->whereKey($userId)->whereNotNull('completed_at')->toBase()->update(['completed_at' => null]);
+
+                return true;
+            }
+
+            return false;
+        });
+
+        if ($changed || $publish) {
             $this->activity->recorded(ProfileCompletedActivitySource::TYPE, strtolower($userId));
         }
     }
@@ -52,7 +65,8 @@ final readonly class ProfileCompletion
     /**
      * For `profiles:stamp-completed`: a profile that is complete and has no date (it was complete
      * before the column existed) gets its last change as the best date there is, and is published.
-     * With $dryRun nothing is written.
+     * With $dryRun nothing is written. A date written meanwhile (by a change of the profile itself)
+     * is never overwritten.
      *
      * @return bool whether the profile was (or, in a dry run, would be) stamped
      */
@@ -64,12 +78,17 @@ final readonly class ProfileCompletion
             return false;
         }
 
-        if (! $dryRun) {
-            UserProfileModel::query()->whereKey($userId)->toBase()->update(['completed_at' => $profile->updated_at ?? now()]);
+        if ($dryRun) {
+            return true;
+        }
+
+        $stamped = UserProfileModel::query()->whereKey($userId)->whereNull('completed_at')->toBase()->update(['completed_at' => $profile->updated_at ?? now()]);
+
+        if ($stamped > 0) {
             $this->activity->recorded(ProfileCompletedActivitySource::TYPE, strtolower($userId));
         }
 
-        return true;
+        return $stamped > 0;
     }
 
     private function isComplete(string $userId, UserProfileModel $profile): bool

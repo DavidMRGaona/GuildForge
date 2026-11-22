@@ -67,6 +67,45 @@ final class EventActivityPublisherTest extends TestCase
         Event::assertDispatchedTimes(ActivityRecorded::class, 1);
     }
 
+    public function test_savepoints_do_not_split_what_one_transaction_publishes(): void
+    {
+        Event::fake([ActivityRecorded::class]);
+        $publisher = $this->publisher();
+
+        DB::transaction(static function () use ($publisher): void {
+            $publisher->recorded('core.account', '42');
+            DB::transaction(static fn () => $publisher->recorded('core.account', '42'));
+            DB::transaction(static function () use ($publisher): void {
+                DB::transaction(static fn () => $publisher->recorded('core.account', '42'));
+            });
+            DB::transaction(static fn () => $publisher->recorded('core.account', '43'));
+        });
+
+        Event::assertDispatchedTimes(ActivityRecorded::class, 2);
+    }
+
+    public function test_a_subject_published_in_a_savepoint_that_rolls_back_is_still_announced_by_the_next_publication(): void
+    {
+        Event::fake([ActivityRecorded::class]);
+        $publisher = $this->publisher();
+
+        DB::transaction(static function () use ($publisher): void {
+            try {
+                DB::transaction(static function () use ($publisher): void {
+                    $publisher->recorded('core.account', '42');
+
+                    throw new RuntimeException('The savepoint fails.');
+                });
+            } catch (RuntimeException) {
+                // The savepoint is undone; the outer transaction goes on
+            }
+
+            DB::transaction(static fn () => $publisher->recorded('core.account', '42'));
+        });
+
+        Event::assertDispatchedTimes(ActivityRecorded::class, 1);
+    }
+
     public function test_it_announces_nothing_when_the_transaction_rolls_back(): void
     {
         Event::fake([ActivityRecorded::class]);

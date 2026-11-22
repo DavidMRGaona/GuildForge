@@ -99,9 +99,7 @@ abstract class AccountBasedActivitySource implements ActivitySourceInterface
             return [];
         }
 
-        $users = $this->counted()->whereKey($id)->get();
-
-        return array_values($this->factsOf($users));
+        return array_values($this->factsOf($this->ofIds([$id])));
     }
 
     public function history(?string $cursor, int $limit): ActivityHistoryPageDTO
@@ -112,14 +110,8 @@ abstract class AccountBasedActivitySource implements ActivitySourceInterface
             $after = $this->accountId(OpaqueCursor::decode($cursor)) ?? throw new InvalidArgumentException('The activity history cursor cannot be read.');
         }
 
-        $query = $this->counted();
-
-        if ($after !== null) {
-            $query->where($query->qualifyColumn('id'), '>', $after);
-        }
-
         // One more than asked tells whether there is another page, without a cursor to an empty one
-        $users = $query->limit($limit + 1)->get();
+        $users = $this->scan($after, $limit + 1);
         $hasMore = $users->count() > $limit;
         $page = $users->take($limit)->values();
         $facts = $this->factsOf($page);
@@ -149,7 +141,7 @@ abstract class AccountBasedActivitySource implements ActivitySourceInterface
             return [];
         }
 
-        $users = $this->counted()->whereKey($ids)->get();
+        $users = $this->ofIds($ids);
         $rows = $this->profiles->findMany($ids);
 
         $descriptions = [];
@@ -183,6 +175,64 @@ abstract class AccountBasedActivitySource implements ActivitySourceInterface
         }
 
         return $described;
+    }
+
+    /**
+     * The accounts that count among these ids.
+     *
+     * @param  list<string>  $ids
+     * @return Collection<int, UserModel>
+     */
+    private function ofIds(array $ids): Collection
+    {
+        return $this->counted()->whereKey($ids)->get()->filter($this->hasPublicName(...))->values();
+    }
+
+    /**
+     * The next accounts that count after an id, in order. The query only narrows: whether a public
+     * name is blank is decided in PHP, as PublicProfileDTO does (SQL's trim() leaves tabs and breaks),
+     * so it reads on until it has what was asked or there is nothing more.
+     *
+     * @return Collection<int, UserModel>
+     */
+    private function scan(?string $after, int $want): Collection
+    {
+        /** @var Collection<int, UserModel> $kept */
+        $kept = new Collection;
+        $last = $after;
+
+        while ($kept->count() < $want) {
+            $query = $this->counted();
+
+            if ($last !== null) {
+                $query->where($query->qualifyColumn('id'), '>', $last);
+            }
+
+            $batch = $query->limit($want)->get();
+
+            foreach ($batch as $user) {
+                $last = strtolower((string) $user->id);
+
+                if ($this->hasPublicName($user)) {
+                    $kept->push($user);
+                }
+
+                if ($kept->count() === $want) {
+                    break;
+                }
+            }
+
+            if ($batch->count() < $want) {
+                break;
+            }
+        }
+
+        return $kept;
+    }
+
+    private function hasPublicName(UserModel $user): bool
+    {
+        return trim((string) $user->display_name) !== '';
     }
 
     /**

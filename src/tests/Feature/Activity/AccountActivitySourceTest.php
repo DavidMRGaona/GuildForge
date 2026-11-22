@@ -183,6 +183,48 @@ final class AccountActivitySourceTest extends TestCase
         $this->assertNotContains((string) $user->id, $this->listedSubjects());
     }
 
+    public function test_a_public_name_of_only_tabs_and_breaks_is_not_a_name(): void
+    {
+        $user = UserModel::factory()->create();
+        UserModel::query()->whereKey($user->id)->toBase()->update(['display_name' => "\t \n"]);
+
+        $this->assertSame([], $this->activitySource()->facts((string) $user->id));
+        $this->assertNotContains((string) $user->id, $this->listedSubjects());
+        $this->assertSame([], $this->activitySource()->describe([(string) $user->id], null));
+    }
+
+    public function test_history_pages_are_full_even_when_accounts_without_a_name_sit_between_the_others(): void
+    {
+        $counted = [];
+        foreach (range(1, 5) as $position) {
+            $user = UserModel::factory()->create();
+            if ($position % 2 === 1) {
+                UserModel::query()->whereKey($user->id)->toBase()->update(['display_name' => " \t\n"]);
+            } else {
+                $counted[] = (string) $user->id;
+            }
+        }
+        $source = $this->activitySource();
+        $listed = [];
+        $cursor = null;
+
+        do {
+            $page = $source->history($cursor, 1);
+            $this->assertLessThanOrEqual(1, count($page->subjects));
+            if ($page->nextCursor !== null) {
+                $this->assertCount(1, $page->subjects, 'A page with a next cursor is full.');
+            }
+            foreach ($page->subjects as $subject) {
+                $listed[] = $subject->subjectId;
+            }
+            $cursor = $page->nextCursor;
+        } while ($cursor !== null);
+
+        sort($counted);
+        sort($listed);
+        $this->assertSame($counted, $listed);
+    }
+
     public function test_changing_the_visibility_publishes_the_account(): void
     {
         $user = UserModel::factory()->create();

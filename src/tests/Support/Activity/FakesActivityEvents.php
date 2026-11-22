@@ -7,6 +7,7 @@ namespace Tests\Support\Activity;
 use App\Application\Activity\Services\ActivityPublisherInterface;
 use App\Domain\Activity\Events\ActivityRecorded;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Testing\Fakes\EventFake;
 
 /**
  * Watching what the core publishes (core#777). The publisher is scoped and keeps the dispatcher it
@@ -27,6 +28,16 @@ trait FakesActivityEvents
             ActivityRecorded::class,
             static fn (ActivityRecorded $event): bool => $event->sourceType === $sourceType && $event->subjectId === $subjectId,
         );
+    }
+
+    protected function assertActivityPublishedTimes(string $sourceType, string $subjectId, int $times): void
+    {
+        $fake = Event::getFacadeRoot();
+        $this->assertInstanceOf(EventFake::class, $fake, 'Start with fakeActivityEvents().');
+        $this->assertCount($times, $fake->dispatched(
+            ActivityRecorded::class,
+            static fn (ActivityRecorded $event): bool => $event->sourceType === $sourceType && $event->subjectId === $subjectId,
+        ), "Expected {$times} announcement(s) of {$sourceType} {$subjectId}.");
     }
 
     protected function assertNoActivityPublished(): void

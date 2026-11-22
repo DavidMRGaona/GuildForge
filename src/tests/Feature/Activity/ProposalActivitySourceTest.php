@@ -6,7 +6,9 @@ namespace Tests\Feature\Activity;
 
 use App\Application\Activity\Contracts\ActivitySourceInterface;
 use App\Application\Activity\Contracts\OffersActivityAttributes;
+use App\Application\Activity\Enums\ActivityReadOutcome;
 use App\Application\Activity\Services\ActivityPublisherInterface;
+use App\Application\Activity\Services\ActivityReaderInterface;
 use App\Application\Proposals\DTOs\ArticleProposalDataDTO;
 use App\Application\Proposals\DTOs\EventProposalDataDTO;
 use App\Application\Proposals\DTOs\ProposalSettingsDTO;
@@ -31,6 +33,7 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Event;
 use PHPUnit\Framework\Attributes\DataProvider;
+use RuntimeException;
 use Tests\Support\Activity\ActivitySourceContractTests;
 use Tests\Support\Activity\FakesActivityEvents;
 use Tests\TestCase;
@@ -471,6 +474,79 @@ final class ProposalActivitySourceTest extends TestCase
             location: 'Local',
             tagIds: [],
         );
+    }
+
+    public function test_an_article_counts_only_while_its_byline_is_its_proposer(): void
+    {
+        $proposer = UserModel::factory()->create();
+        $article = ArticleModel::factory()->proposal(ProposalStatus::Approved, $proposer)->create();
+        $other = UserModel::factory()->create();
+        $this->fakeActivityEvents();
+
+        // The panel changes the signature: the proposer is no longer shown, so no longer reported
+        $article->update(['author_id' => $other->id]);
+
+        $this->assertSubjectPublished('articles:'.$article->id);
+        $this->assertSame([], $this->activitySource()->facts('articles:'.$article->id));
+        $this->assertSame([], $this->listedSubjects());
+        $this->assertSame([], $this->activitySource()->describe(['articles:'.$article->id], null));
+
+        $this->fakeActivityEvents();
+        $article->update(['author_id' => $proposer->id]);
+
+        $this->assertSubjectPublished('articles:'.$article->id);
+        $this->assertCount(1, $this->activitySource()->facts('articles:'.$article->id));
+    }
+
+    public function test_a_failing_settings_read_is_a_failed_answer_not_an_empty_one(): void
+    {
+        $event = EventModel::factory()->proposal(ProposalStatus::Approved)->create();
+        $article = ArticleModel::factory()->proposal(ProposalStatus::Approved)->create();
+        $this->app->bind(ProposalSettingsServiceInterface::class, static fn (): ProposalSettingsServiceInterface => new class implements ProposalSettingsServiceInterface
+        {
+            public function settings(): ProposalSettingsDTO
+            {
+                throw new RuntimeException('Settings are unreadable.');
+            }
+
+            public function save(ProposalSettingsDTO $settings): void {}
+        });
+        $reader = $this->app->make(ActivityReaderInterface::class);
+
+        $this->assertSame(ActivityReadOutcome::Failed, $reader->facts('core.proposal', 'events:'.$event->id)->outcome);
+        $this->assertSame(ActivityReadOutcome::Failed, $reader->history('core.proposal', null, 10)->outcome);
+        // Articles never depend on the setting
+        $this->assertSame(ActivityReadOutcome::Read, $reader->facts('core.proposal', 'articles:'.$article->id)->outcome);
+    }
+
+    public function test_the_fallback_date_is_the_creation_not_the_last_edit(): void
+    {
+        $event = EventModel::factory()->proposal(ProposalStatus::Approved)->create();
+        EventModel::query()->whereKey($event->id)->toBase()->update(['reviewed_at' => null]);
+        $created = EventModel::query()->findOrFail($event->id)->created_at;
+
+        $this->travelTo(now()->addDays(2));
+        EventModel::query()->findOrFail($event->id)->update(['title' => 'Editado más tarde']);
+
+        $facts = $this->activitySource()->facts('events:'.$event->id);
+
+        $this->assertSame($created?->getTimestamp(), $facts[0]->occurredAt->getTimestamp());
+    }
+
+    public function test_a_permanent_deletion_publishes_the_proposals_once_the_account_is_gone(): void
+    {
+        $proposer = UserModel::factory()->create();
+        $event = EventModel::factory()->proposal(ProposalStatus::Approved, $proposer)->create();
+        $accountWasThere = [];
+        Event::listen(ActivityRecorded::class, static function (ActivityRecorded $recorded) use ($proposer, &$accountWasThere): void {
+            $accountWasThere[$recorded->subjectId] = UserModel::withTrashed()->whereKey($proposer->id)->exists();
+        });
+        $this->app->forgetInstance(ActivityPublisherInterface::class);
+
+        $proposer->forceDelete();
+
+        $this->assertArrayHasKey('events:'.$event->id, $accountWasThere);
+        $this->assertFalse($accountWasThere['events:'.$event->id], 'It was announced before the account was deleted.');
     }
 
     private function assertSubjectPublished(string $subjectId): void

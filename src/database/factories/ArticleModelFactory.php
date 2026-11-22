@@ -76,7 +76,8 @@ final class ArticleModelFactory extends Factory
     public function proposal(ProposalStatus $status = ProposalStatus::Draft, ?UserModel $by = null, bool $submitted = false): static
     {
         return $this->state(function (array $attributes) use ($status, $by, $submitted): array {
-            $proposer = $by instanceof UserModel ? $by->id : UserModel::factory();
+            // One account, as the proposer and as the byline it starts with (a lazy factory would make two)
+            $proposer = $by instanceof UserModel ? $by->id : UserModel::factory()->create()->id;
             $wasSubmitted = $status !== ProposalStatus::Draft || $submitted;
             $wasReviewed = in_array($status, [ProposalStatus::Approved, ProposalStatus::Rejected], true) || ($status === ProposalStatus::Draft && $submitted);
 
@@ -84,7 +85,7 @@ final class ArticleModelFactory extends Factory
                 'proposal_status' => $status,
                 'proposed_by' => $proposer,
                 // The displayed author starts as the proposer
-                'author_id' => static fn (array $attributes): mixed => $attributes['proposed_by'],
+                'author_id' => $proposer,
                 'submitted_at' => $wasSubmitted ? now()->subDay() : null,
                 'reviewed_at' => $wasReviewed ? now() : null,
                 ...($status === ProposalStatus::Approved ? ['is_published' => true, 'published_at' => now()] : ['is_published' => false, 'published_at' => null]),

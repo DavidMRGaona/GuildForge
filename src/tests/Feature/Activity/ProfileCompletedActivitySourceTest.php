@@ -349,6 +349,52 @@ final class ProfileCompletedActivitySourceTest extends TestCase
         $this->assertCount(1, $this->activitySource()->facts((string) $user->id));
     }
 
+    public function test_anonymizing_announces_the_profile_once(): void
+    {
+        $user = $this->completeAccount();
+        $this->fakeActivityEvents();
+
+        $this->app->make(UserServiceInterface::class)->anonymize((string) $user->id);
+
+        $this->assertActivityPublishedTimes('core.profile-completed', (string) $user->id, 1);
+        $this->assertActivityPublishedTimes('core.account', (string) $user->id, 1);
+    }
+
+    public function test_one_save_that_completes_the_profile_and_changes_its_visibility_announces_it_once(): void
+    {
+        $user = UserModel::factory()->create(['display_name' => 'Ana', 'avatar_public_id' => 'avatars/ana.png']);
+        $profile = UserProfileModel::query()->findOrFail($user->id);
+        $this->fakeActivityEvents();
+
+        $this->app->make(UserProfileServiceInterface::class)->update((string) $user->id, new ProfileUpdateDTO(
+            handle: $profile->handle,
+            visibility: ProfileVisibility::Hidden,
+            bio: 'Escrito desde el editor.',
+            showMembership: false,
+            sections: [],
+            stats: [],
+            offeredSections: [],
+            offeredStats: [],
+        ));
+
+        $this->assertActivityPublishedTimes('core.profile-completed', (string) $user->id, 1);
+    }
+
+    public function test_a_visibility_change_between_two_that_every_member_sees_publishes_nothing(): void
+    {
+        $user = $this->completeAccount();
+        $this->fakeActivityEvents();
+
+        UserProfileModel::query()->findOrFail($user->id)->update(['visibility' => ProfileVisibility::Public]);
+        UserProfileModel::query()->findOrFail($user->id)->update(['visibility' => ProfileVisibility::Members]);
+        UserProfileModel::query()->findOrFail($user->id)->update(['visibility' => ProfileVisibility::Hidden]);
+        $this->assertActivityPublished('core.profile-completed', (string) $user->id);
+
+        $this->fakeActivityEvents();
+        UserProfileModel::query()->findOrFail($user->id)->update(['visibility' => ProfileVisibility::Association]);
+        $this->assertNoActivityPublished();
+    }
+
     private function assertProfilePublished(UserModel $user): void
     {
         $this->assertActivityPublished('core.profile-completed', (string) $user->id);

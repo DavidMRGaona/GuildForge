@@ -24,7 +24,6 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
-use Throwable;
 
 /**
  * Approved proposals (core#777, core#570): an event or an article somebody proposed from the web
@@ -36,8 +35,9 @@ use Throwable;
  * It counts only while the content is approved and published, which is what any member (any guest)
  * can see on the site, and its proposer's account is active. An event proposal counts only while the
  * site shows who proposed it (the `events` proposals setting «Mostrar quién propone», off by
- * default): a member could not know who proposed it otherwise. Articles always count, since the
- * proposer is the author the site shows. Changing the setting publishes every approved event
+ * default): a member could not know who proposed it otherwise. An article counts only while its
+ * byline (`author_id`) is its proposer: the panel may sign it as somebody else, and then the
+ * proposer is no longer shown. Changing the setting publishes every approved event
  * proposal (PublishApprovedEventProposalsJob). Unpublishing it in the panel, deleting
  * it or deactivating or anonymizing the account stops it counting; ProposalActivityObserver and
  * UserActivityObserver publish each of those. Content made in the panel is not a proposal.
@@ -195,6 +195,11 @@ final readonly class ProposalActivitySource implements ActivitySourceInterface, 
             return $query->whereRaw('0 = 1');
         }
 
+        if ($type === ProposalType::Article) {
+            // The proposer is kept apart from the byline: the panel may sign it as somebody else
+            $query->whereColumn('author_id', 'proposed_by');
+        }
+
         return $query
             ->where('proposal_status', ProposalStatus::Approved->value)
             ->where('is_published', true)
@@ -205,9 +210,9 @@ final readonly class ProposalActivitySource implements ActivitySourceInterface, 
 
     /**
      * Whether a type's proposals count. An article's proposer is the author the site shows, so
-     * articles always do; an event's proposer is shown only when the site says so (`events` setting
-     * «Mostrar quién propone», off by default), and a member could not know who proposed it
-     * otherwise. Fails closed: an unreadable setting is off.
+     * articles do while their byline is the proposer (counted()); an event's proposer is shown only
+     * when the site says so (`events` setting «Mostrar quién propone», off by default), and a member
+     * could not know who proposed it otherwise. A setting that cannot be read throws.
      */
     private function countsType(ProposalType $type): bool
     {
@@ -215,11 +220,9 @@ final readonly class ProposalActivitySource implements ActivitySourceInterface, 
             return true;
         }
 
-        try {
-            return $this->settings->settings()->events->showProposer;
-        } catch (Throwable) {
-            return false;
-        }
+        // An unreadable setting is not «off»: the exception goes up and the reader answers Failed, so a
+        // consumer never deletes real facts because a read failed
+        return $this->settings->settings()->events->showProposer;
     }
 
     /**
@@ -238,8 +241,8 @@ final readonly class ProposalActivitySource implements ActivitySourceInterface, 
 
     private function factOf(ProposalType $type, EventModel|ArticleModel $content): ActivityFactDTO
     {
-        // Stable: never the moment it is read. Approving writes reviewed_at; the others are the best a row without it has
-        $approvedAt = $content->reviewed_at ?? $content->updated_at ?? $content->created_at;
+        // Stable: never the moment it is read. Approving writes reviewed_at; a row without it has its creation, never its last edit
+        $approvedAt = $content->reviewed_at ?? $content->created_at;
 
         return new ActivityFactDTO(
             strtolower((string) $content->proposed_by),
