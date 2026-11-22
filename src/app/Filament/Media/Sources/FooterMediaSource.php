@@ -7,6 +7,7 @@ namespace App\Filament\Media\Sources;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Media\Contracts\MediaUsageSourceInterface;
 use App\Application\Media\Contracts\ReleasesMediaThroughCoreInterface;
+use App\Application\Media\Contracts\ShowsMediaPreviews;
 use App\Application\Media\DTOs\MediaUsageDTO;
 use App\Application\Media\Services\MediaFileIdResolverInterface;
 use App\Application\Media\Services\MediaUrlExtractorInterface;
@@ -27,7 +28,7 @@ use App\Infrastructure\Footer\StoredFooterLayout;
  *
  * Read from the table, never the settings cache; an unreadable row throws, so no file looks unused.
  */
-final readonly class FooterMediaSource implements MediaUsageSourceInterface, ReleasesMediaThroughCoreInterface
+final readonly class FooterMediaSource implements MediaUsageSourceInterface, ReleasesMediaThroughCoreInterface, ShowsMediaPreviews
 {
     public const string TYPE = 'footer';
 

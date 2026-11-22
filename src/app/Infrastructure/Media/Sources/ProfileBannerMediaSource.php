@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Media\Sources;
 
+use App\Application\Media\Contracts\ShowsMediaPreviews;
 use App\Application\Media\DTOs\MediaUsageDTO;
+use App\Domain\Profiles\ProfileVisibility;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
 use App\Infrastructure\Profiles\Services\UserProfileService;
@@ -16,8 +18,12 @@ use Illuminate\Support\Str;
  * The banners of public profiles (core#743), one per profile, stored by its owner under
  * `profiles/banners/<Y>/<m>/`. Listed in the library like any other image, titled by the public name
  * (never the account name) or the address, and without a link: only the owner edits it, from the profile.
+ *
+ * The library shows a banner only when every signed-in member may see its profile (core#837): a public name,
+ * an account neither deactivated nor anonymized, and a `public` or `members` visibility. Any other banner is
+ * a hidden usage, so the panel team never sees one the profile page would not show them.
  */
-final class ProfileBannerMediaSource extends EloquentColumnMediaSource
+final class ProfileBannerMediaSource extends EloquentColumnMediaSource implements ShowsMediaPreviews
 {
     public const string TYPE = 'core.profile-banner';
 
@@ -71,13 +77,14 @@ final class ProfileBannerMediaSource extends EloquentColumnMediaSource
     }
 
     /**
-     * The public names for the titles, in the same query; usesFile() reads only the banners.
+     * The public names for the titles and what decides whether the banner is shown, in the same query;
+     * usesFile() reads only the banners.
      *
      * @return Builder<Model>
      */
     protected function usagesQuery(): Builder
     {
-        return parent::usagesQuery()->with('user:id,display_name');
+        return parent::usagesQuery()->with('user:id,display_name,deleted_at,anonymized_at');
     }
 
     protected function titleOf(Model $record): string
@@ -86,6 +93,19 @@ final class ProfileBannerMediaSource extends EloquentColumnMediaSource
         $publicName = $user instanceof UserModel ? trim((string) $user->display_name) : '';
 
         return $publicName !== '' ? $publicName : '/miembros/'.$record->getAttribute('handle');
+    }
+
+    protected function isHidden(Model $record): bool
+    {
+        $user = $record->getRelation('user');
+
+        if (! $user instanceof UserModel || $user->trashed() || $user->anonymized_at !== null || trim((string) $user->display_name) === '') {
+            return true;
+        }
+
+        $visibility = $record->getAttribute('visibility');
+
+        return ! $visibility instanceof ProfileVisibility || ! $visibility->isSeenByEveryMember();
     }
 
     protected function editUrlOf(Model $record, object $user): ?string

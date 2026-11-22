@@ -62,8 +62,8 @@ final class MediaLibraryPicker
                 allowFilePathUsing: static fn (string $file, FileUpload $component): bool => self::isStored($file, $component, $storedPaths)
                     || self::isPickable($file, $component, $constrain),
             )
-            // A chosen file deleted from the library, or hidden by a usage (core#830), while the form was open says
-            // so, instead of «tampered». The field's own messages are kept: Filament has no getter for them before
+            // A chosen file deleted from the library, or concealed by it (core#830, core#837), while the form was
+            // open says so, instead of «tampered». The field's own messages are kept: Filament has no getter for them before
             // it is mounted
             ->validationMessages([
                 ...(fn (): array => $this->validationMessages)->call($field),
@@ -219,8 +219,8 @@ final class MediaLibraryPicker
     }
 
     /**
-     * Why a chosen file can no longer be saved, when it was deleted from the library or a usage hid it since it
-     * was chosen; null for anything else, which keeps the generic message.
+     * Why a chosen file can no longer be saved, when it was deleted from the library or the library conceals it
+     * since it was chosen; null for anything else, which keeps the generic message.
      *
      * @param  (Closure(): list<string>)|null  $storedPaths
      */
@@ -243,7 +243,7 @@ final class MediaLibraryPicker
                 return (string) __('filament.media_picker.errors.missing');
             }
 
-            if ($indexed->hasHiddenUsage()) {
+            if (resolve(MediaLibraryQueryInterface::class)->conceals($indexed)) {
                 return (string) __('filament.media_picker.errors.hidden');
             }
         }

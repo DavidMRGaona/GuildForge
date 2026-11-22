@@ -51,8 +51,9 @@ interface MediaLibraryQueryInterface
 
     /**
      * Narrows the query to the images a form may reuse: their folder is claimed by an active, visible source
-     * that releases files through the core (ReleasesMediaThroughCoreInterface), they have a format, and no
-     * usage hides them.
+     * that releases files through the core (ReleasesMediaThroughCoreInterface) and shows its previews
+     * (ShowsMediaPreviews), they have a format, and no usage hides them. The picker shows thumbnails, so it
+     * never offers a file the library conceals.
      *
      * @param  Builder<MediaFileModel>  $query
      * @return Builder<MediaFileModel>
@@ -65,6 +66,14 @@ interface MediaLibraryQueryInterface
     public function isReusableFolder(string $folder): bool;
 
     public function statusOf(MediaFileModel $file): MediaFileStatus;
+
+    /**
+     * Whether the library keeps the image of the file out of sight (core#830, core#837): a placeholder instead
+     * of its thumbnail and preview, and no link to it. Hidden by default: only a file whose folder is claimed
+     * by an active, visible source that shows its previews (ShowsMediaPreviews), with no hidden usage, is
+     * shown. Unknown origin and any failure conceal it. Never changes its status or whether it can be deleted.
+     */
+    public function conceals(MediaFileModel $file): bool;
 
     public function stats(): MediaLibraryStatsDTO;
 }

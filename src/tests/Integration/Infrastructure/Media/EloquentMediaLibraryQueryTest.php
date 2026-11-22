@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\Media;
 
 use App\Application\Media\Contracts\MediaUsageSourceInterface;
+use App\Application\Media\Contracts\ReleasesMediaThroughCoreInterface;
+use App\Application\Media\Contracts\ShowsMediaPreviews;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Domain\Media\Enums\MediaFileStatus;
@@ -19,6 +21,7 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\Support\Media\FakeMarkedMediaSource;
 use Tests\Support\Media\FakeMediaSource;
+use Tests\Support\Media\FakePreviewedMediaSource;
 use Tests\TestCase;
 
 final class EloquentMediaLibraryQueryTest extends TestCase
@@ -254,6 +257,121 @@ final class EloquentMediaLibraryQueryTest extends TestCase
         $this->assertSame(MediaFileStatus::InUse, $query->statusOf($secret));
     }
 
+    public function test_a_file_of_a_source_that_does_not_show_previews_is_concealed(): void
+    {
+        $this->registry->clear();
+        $this->register('forum', new FakeMediaSource('forum', ['forum/']));
+        $this->file('forum/a');
+        $this->usage('forum/a');
+
+        $this->assertTrue($this->library()->conceals($this->model('forum/a')));
+    }
+
+    public function test_a_file_of_a_source_that_shows_previews_is_not_concealed(): void
+    {
+        $this->registry->clear();
+        $this->register('events', new FakePreviewedMediaSource('events', ['events/']));
+        $this->file('events/a');
+        $this->usage('events/a');
+
+        $this->assertFalse($this->library()->conceals($this->model('events/a')));
+    }
+
+    public function test_a_hidden_usage_conceals_a_file_of_a_source_that_shows_previews(): void
+    {
+        $this->registry->clear();
+        $this->register('events', new FakePreviewedMediaSource('events', ['events/']));
+        $this->file('events/secret');
+        $this->usage('events/secret', recordId: 'record-1');
+        $this->usage('events/secret', hidden: true, recordId: 'record-2');
+
+        $this->assertTrue($this->library()->conceals($this->model('events/secret')));
+    }
+
+    public function test_a_file_of_unknown_origin_is_concealed(): void
+    {
+        $this->registry->clear();
+        $this->register('events', new FakePreviewedMediaSource('events', ['events/']));
+        $this->file('unknown/a');
+        $this->usage('unknown/a');
+        $this->file('unknown/b');
+
+        $this->assertTrue($this->library()->conceals($this->model('unknown/a')));
+        $this->assertTrue($this->library()->conceals($this->model('unknown/b')));
+    }
+
+    public function test_an_unused_file_of_a_folder_that_shows_previews_is_not_concealed(): void
+    {
+        // The decision is per claiming source: unused files are what gets reviewed before deleting
+        $this->registry->clear();
+        $this->register('events', new FakePreviewedMediaSource('events', ['events/']));
+        $this->file('events/unused');
+
+        $this->assertFalse($this->library()->conceals($this->model('events/unused')));
+    }
+
+    public function test_the_source_that_wins_the_folder_decides(): void
+    {
+        // A nested folder claimed by a source without previews hides its files, and the other way round
+        $this->registry->clear();
+        $this->register('galleries', new FakePreviewedMediaSource('galleries', ['galleries/']));
+        $this->register('covers', new FakeMediaSource('covers', ['galleries/covers/']));
+        $this->register('forum', new FakeMediaSource('forum', ['forum/'], excludedSubfolders: ['public/']));
+        $this->register('public', new FakePreviewedMediaSource('public', ['forum/public/']));
+        $this->file('galleries/a');
+        $this->file('galleries/covers/b');
+        $this->file('forum/c');
+        $this->file('forum/public/d');
+
+        $query = $this->library();
+
+        $this->assertFalse($query->conceals($this->model('galleries/a')));
+        $this->assertTrue($query->conceals($this->model('galleries/covers/b')));
+        $this->assertTrue($query->conceals($this->model('forum/c')));
+        $this->assertFalse($query->conceals($this->model('forum/public/d')));
+    }
+
+    public function test_a_file_of_a_hidden_source_is_concealed_even_if_it_shows_previews(): void
+    {
+        $this->registry->clear();
+        $this->register('avatars', new FakePreviewedMediaSource('avatars', ['avatars/'], hidden: true));
+        $this->file('avatars/a');
+
+        $this->assertTrue($this->library()->conceals($this->model('avatars/a')));
+    }
+
+    public function test_a_source_that_cannot_tell_whether_it_is_hidden_conceals_its_files(): void
+    {
+        $this->registry->clear();
+        $moody = new class('moody', ['moody/']) extends FakeMediaSource implements ShowsMediaPreviews
+        {
+            public function hidden(): bool
+            {
+                throw new \RuntimeException('unreadable');
+            }
+        };
+        $this->register('moody', $moody);
+        $this->file('moody/a');
+
+        $this->assertTrue($this->library()->conceals($this->model('moody/a')));
+    }
+
+    public function test_apply_reusable_never_offers_a_file_of_a_source_that_does_not_show_previews(): void
+    {
+        $this->registry->clear();
+        $this->register('events', new FakeMarkedMediaSource('events', ['events/']));
+        $releasing = new class('forum', ['forum/']) extends FakeMediaSource implements ReleasesMediaThroughCoreInterface {};
+        $this->register('forum', $releasing);
+        $this->file('events/a');
+        $this->file('forum/b');
+
+        $query = $this->library();
+
+        $this->assertSame(['events/a'], $query->applyReusable($query->query())->pluck('file_id')->all());
+        // Still listed in the library itself
+        $this->assertSame(['events/a', 'forum/b'], $query->query()->orderBy('file_id')->pluck('file_id')->all());
+    }
+
     public function test_is_reusable_folder(): void
     {
         $this->registry->clear();
@@ -288,6 +406,11 @@ final class EloquentMediaLibraryQueryTest extends TestCase
 
         $this->assertSame(['hero_slides/b'], $query->applySearch($query->query(), 'otoño')->pluck('file_id')->all());
         $this->assertSame(['events/2026/a'], $query->applySearch($query->query(), 'events/2026')->pluck('file_id')->all());
+    }
+
+    private function model(string $id): MediaFileModel
+    {
+        return MediaFileModel::query()->where('file_id', $id)->firstOrFail();
     }
 
     private function library(): MediaLibraryQueryInterface

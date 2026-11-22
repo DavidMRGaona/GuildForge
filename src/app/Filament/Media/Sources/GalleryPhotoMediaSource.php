@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Media\Sources;
 
 use App\Application\Media\Contracts\ReleasesMediaThroughCoreInterface;
+use App\Application\Media\Contracts\ShowsMediaPreviews;
 use App\Filament\Resources\GalleryResource;
 use App\Infrastructure\Media\Sources\EloquentColumnMediaSource;
 use App\Infrastructure\Persistence\Eloquent\Models\GalleryModel;
@@ -16,7 +17,7 @@ use Illuminate\Support\Facades\Gate;
 /**
  * Photos of galleries: the record is the photo, the title and the edit page are the gallery's.
  */
-final class GalleryPhotoMediaSource extends EloquentColumnMediaSource implements ReleasesMediaThroughCoreInterface
+final class GalleryPhotoMediaSource extends EloquentColumnMediaSource implements ReleasesMediaThroughCoreInterface, ShowsMediaPreviews
 {
     public function type(): string
     {

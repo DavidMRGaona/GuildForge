@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament\Media;
 
+use App\Application\Media\Contracts\ReleasesMediaThroughCoreInterface;
 use App\Application\Media\Services\MediaFileIdResolverInterface;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
 use App\Filament\Forms\Components\MediaLibraryBrowser;
@@ -94,6 +95,20 @@ final class MediaLibraryPickerTest extends TestCase
         foreach (['events/webp', 'events/big', 'link-page/c', 'unknown/d', 'avatars/e'] as $hidden) {
             $this->assertStringNotContainsString('data-media-file="'.$hidden.'"', $html, $hidden);
         }
+    }
+
+    public function test_browser_never_offers_a_file_of_a_source_that_does_not_show_previews(): void
+    {
+        // Reusable, but its images are concealed in the library (core#837), so the picker cannot show them
+        $this->register('forum', new class('forum', ['forum/']) extends FakeMediaSource implements ReleasesMediaThroughCoreInterface {});
+        $this->image('events/a');
+        $this->image('forum/post');
+
+        $html = $this->browserHtml(Livewire::test(MediaPickerFixturePage::class)->mountAction($this->pick()));
+
+        $this->assertStringContainsString('data-media-file="events/a"', $html);
+        $this->assertStringNotContainsString('data-media-file="forum/post"', $html);
+        $this->assertSaveRejected('forum/post.jpg', missing: false);
     }
 
     public function test_browser_searches_by_usage_title(): void

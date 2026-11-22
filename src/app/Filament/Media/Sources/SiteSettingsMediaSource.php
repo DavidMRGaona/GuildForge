@@ -7,6 +7,7 @@ namespace App\Filament\Media\Sources;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Media\Contracts\MediaUsageSourceInterface;
 use App\Application\Media\Contracts\ReleasesMediaThroughCoreInterface;
+use App\Application\Media\Contracts\ShowsMediaPreviews;
 use App\Application\Media\DTOs\MediaUsageDTO;
 use App\Application\Media\Services\MediaFileIdResolverInterface;
 use App\Application\Services\SettingsServiceInterface;
@@ -17,7 +18,7 @@ use App\Filament\Pages\SiteSettings;
 /**
  * Images kept in site settings (logos, favicons, the «Nosotros» hero); the record id is the settings key.
  */
-final readonly class SiteSettingsMediaSource implements MediaUsageSourceInterface, ReleasesMediaThroughCoreInterface
+final readonly class SiteSettingsMediaSource implements MediaUsageSourceInterface, ReleasesMediaThroughCoreInterface, ShowsMediaPreviews
 {
     /** Settings keys edited in «Configuración del sitio» */
     private const array SITE_KEYS = [

@@ -7,6 +7,7 @@ The panel media library (**Contenido → Biblioteca de medios**) lists the image
 - Modules only register **media usage sources**. The core copies every use a source reports into an index of usages and works out the status of each file from it: in use, recent, unused or unknown origin.
 - A file is **unused** only when no source uses it and it was uploaded more than 7 days ago (`MediaFileStatusRule::GRACE_DAYS`). Inside that margin it is **recent**.
 - A file whose folder no active source claims has an **unknown origin** («Origen desconocido») and is never deleted.
+- Images are **hidden by default** (core ≥ the release with #837): the library shows a file's thumbnail only when the source that claims its folder implements `ShowsMediaPreviews` ([Showing previews](#showing-previews)). Files of unknown origin and of sources without it are listed with a placeholder.
 - Deletion is off until the installation sets `MEDIA_LIBRARY_DELETE_ENABLED=true`, and it needs the permission `media.delete`, which is not granted to any role by default (the `media.view_any` permission, suggested for editors, only shows the library). Before each deletion the service checks the file again against the live sources, not the index, and keeps the file when any check fails.
 - The core sources (`EventMediaSource`, `ArticleMediaSource`, `GalleryPhotoMediaSource`, `HeroSlideMediaSource`, `SiteSettingsMediaSource` in `app/Filament/Media/Sources/`), `AvatarMediaSource` and `ProfileBannerMediaSource` follow the rules below and are the best examples.
 - `ProfileBannerMediaSource` (type `core.profile-banner`, «Banners de perfil», role «Banner», core ≥ the release with #743) claims `profiles/banners/`, where the owners of public profiles upload their banners (`profiles/banners/<Y>/<m>/<uuid>.<ext>`), and counts each profile's banner as used. Usages are titled with the public name (never the account name) or the profile's address, and have no edit link: only the owner changes a banner, from the profile.
@@ -32,6 +33,24 @@ A source implements `App\Application\Media\Contracts\MediaUsageSourceInterface`:
 
 `MediaUsageDTO` carries `storedPath` (the value as stored, in any form the file id resolver understands), `recordId`, `role` (what the file is for, translated, such as «Imagen»), `title` (the record's name) and, last and optional, `hidden` (`false` by default, core ≥ the release with #830).
 
+### Showing previews
+
+The library hides every image unless whoever knows where it comes from says it may be seen (core ≥ the release with #837). A file shows its thumbnail, its preview, «Abrir original» and «Copiar URL», and can be chosen in «Elegir de la biblioteca», only when all three hold:
+
+1. the active source that claims its folder (the longest matching one, as for the status) implements the marker interface `App\Application\Media\Contracts\ShowsMediaPreviews` (no methods);
+2. none of its usages is hidden ([Hiding one usage](#hiding-one-usage));
+3. that source is not hidden (`hidden()`, the avatars).
+
+Anything else is **concealed**, with the same placeholder as a hidden usage (below): files of unknown origin, files of a source without the marker, and files of a source whose `hidden()` throws. It is decided per claiming source, not per usage, so the unused files of a shown folder keep their thumbnail: they are what gets reviewed before deleting. It is worked out when the page is read, from the sources active now, so enabling, disabling or updating a module changes it at once.
+
+**To show your module's thumbnails again**, once every image of its folders may be seen by whoever opens the library, declare the marker on each source that claims them:
+
+```php
+final class TableMediaSource extends EloquentColumnMediaSource implements ReleasesMediaThroughCoreInterface, ShowsMediaPreviews
+```
+
+Do not declare it on a source that also stores private images (hidden or pending posts, private categories, hidden profiles) unless those usages are hidden. Until a module declares it, its images show the placeholder and are not offered for reuse; nothing else changes. Every core source with folders declares it; `ProfileBannerMediaSource` hides the banner of a profile not every member may see (visibility `association` or `hidden`, no public name, deactivated account). `RichTextMediaSource` declares it too, but it claims no folder, so it decides nothing.
+
 ### Hiding one usage
 
 `hidden: true` keeps the image of one usage out of sight while its file stays in an ordinary folder: the badge of a secret achievement, say. Hiding a whole source (`hidden()`) is not the same: its files are never listed and never deleted.
@@ -42,11 +61,11 @@ yield new MediaUsageDTO($record->badge, (string) $record->id, __('achievements::
 
 A source built on `EloquentColumnMediaSource` overrides `isHidden(Model $record)` instead ([below](#eloquentcolumnmediasource)).
 
-When any usage of a file is hidden, the media library (stored in `media_usages.is_hidden`):
+When any usage of a file is hidden (stored in `media_usages.is_hidden`), or the file is concealed for any other reason ([Showing previews](#showing-previews)), the media library:
 
 - draws a placeholder instead of the thumbnail in the grid, the list, «Ver detalles» and the details panel, does not offer «Abrir original» or «Copiar URL», and titles the details «Imagen oculta» instead of the file name;
 - keeps listing the file, its size, its folder and every usage with the title the source gives: mask the title yourself when it gives the secret away;
-- never offers the file in «Elegir de la biblioteca»; a file chosen there and hidden before the form is saved is refused with «Esta imagen ya no se puede elegir».
+- never offers the file in «Elegir de la biblioteca»; a file chosen there and concealed before the form is saved is refused with «Esta imagen ya no se puede elegir».
 
 A file shared by a shown usage and a hidden one is hidden for both. If a source gives the same usage (file, record and role) twice, it is hidden when any copy is.
 
@@ -177,7 +196,7 @@ Once no code of the module deletes files of its folders by hand, the source impl
 final class TableMediaSource extends EloquentColumnMediaSource implements ReleasesMediaThroughCoreInterface
 ```
 
-Only files whose folder is claimed by an active, visible source with the marker are offered by the picker or accepted when a form is saved. Files of an unmarked source, of a disabled module or of unknown origin are never offered, so a record of another module cannot end up sharing a file this module would delete. Do not add the marker before step 1 is done everywhere in the module.
+Only files whose folder is claimed by an active, visible source with the marker, and that the library shows (`ShowsMediaPreviews`, no hidden usage: [Showing previews](#showing-previews)), are offered by the picker or accepted when a form is saved. The action itself only needs the marker on the field's own folder. Files of an unmarked source, of a disabled module or of unknown origin are never offered, so a record of another module cannot end up sharing a file this module would delete. Do not add the marker before step 1 is done everywhere in the module.
 
 ### 3. Attach the picker to the field
 

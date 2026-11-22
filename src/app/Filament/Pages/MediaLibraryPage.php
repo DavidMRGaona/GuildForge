@@ -87,7 +87,7 @@ final class MediaLibraryPage extends Page implements HasTable
 
     private const int PREVIEW_WIDTH = 1200;
 
-    /** Drawn instead of the image of a file one of whose usages is hidden (core#830) */
+    /** Drawn instead of the image of a file the library conceals (core#830, core#837) */
     private const string HIDDEN_PREVIEW = 'images/media-library/hidden-preview.svg';
 
     /** Refused files listed by name in the notification; the rest are counted */
@@ -249,10 +249,10 @@ final class MediaLibraryPage extends Page implements HasTable
             ->record(fn (array $arguments): ?MediaFileModel => $this->findFile($arguments['file'] ?? null))
             ->visible(fn (?MediaFileModel $record): bool => $record instanceof MediaFileModel)
             ->slideOver()
-            // A file whose image a usage hides is not named by its id either (core#830)
+            // A concealed file is not named by its id either (core#830, core#837)
             ->modalHeading(fn (?MediaFileModel $record): string => match (true) {
                 ! $record instanceof MediaFileModel => '',
-                $record->hasHiddenUsage() => (string) __('filament.media_library.hidden_preview.alt'),
+                $this->library()->conceals($record) => (string) __('filament.media_library.hidden_preview.alt'),
                 default => basename($record->file_id),
             })
             ->modalContent(fn (?MediaFileModel $record): ?View => $record instanceof MediaFileModel
@@ -401,17 +401,18 @@ final class MediaLibraryPage extends Page implements HasTable
     }
 
     /**
-     * The picture of the file, or the placeholder when a usage hides it: then no URL of the file reaches the
-     * page, in the cards, the list or «Ver detalles», which draws this same column.
+     * The picture of the file, or the placeholder when the library conceals it (its source does not show
+     * previews, its origin is unknown or a usage hides it): then no URL of the file reaches the page, in the
+     * cards, the list or «Ver detalles», which draws this same column.
      */
     private function thumbnailColumn(): ImageColumn
     {
         return ImageColumn::make('thumbnail')
-            ->state(fn (MediaFileModel $record): ?string => $record->hasHiddenUsage()
+            ->state(fn (MediaFileModel $record): ?string => $this->library()->conceals($record)
                 ? null
                 : $this->urls()->mediaThumbnail($record->file_id, self::THUMBNAIL_SIZE, $record->format))
-            ->defaultImageUrl(fn (MediaFileModel $record): ?string => $record->hasHiddenUsage() ? self::hiddenPreviewUrl() : null)
-            ->tooltip(fn (MediaFileModel $record): ?string => $record->hasHiddenUsage()
+            ->defaultImageUrl(fn (MediaFileModel $record): ?string => $this->library()->conceals($record) ? self::hiddenPreviewUrl() : null)
+            ->tooltip(fn (MediaFileModel $record): ?string => $this->library()->conceals($record)
                 ? (string) __('filament.media_library.hidden_preview.tooltip')
                 : null);
     }
@@ -422,7 +423,7 @@ final class MediaLibraryPage extends Page implements HasTable
      */
     private function thumbnailAttributes(MediaFileModel $record, array $attributes): array
     {
-        if (! $record->hasHiddenUsage()) {
+        if (! $this->library()->conceals($record)) {
             return $attributes;
         }
 
@@ -522,8 +523,8 @@ final class MediaLibraryPage extends Page implements HasTable
     private function detailsFooterActions(MediaFileModel $file): array
     {
         [$previous, $next] = $this->adjacentFiles($file);
-        // A file whose image a usage hides is neither opened nor its address copied
-        $original = $file->hasHiddenUsage() ? null : $this->urls()->mediaOriginal($file->file_id, $file->resource_type);
+        // A concealed file is neither opened nor its address copied
+        $original = $this->library()->conceals($file) ? null : $this->urls()->mediaOriginal($file->file_id, $file->resource_type);
 
         return array_values(array_filter([
             ReadOnlyActions::allow(Action::make('previous')
@@ -837,7 +838,7 @@ final class MediaLibraryPage extends Page implements HasTable
             })
             ->all();
 
-        $concealed = $file->hasHiddenUsage();
+        $concealed = $this->library()->conceals($file);
 
         return [
             'imageUrl' => $concealed ? null : $this->urls()->mediaPreview($file->file_id, self::PREVIEW_WIDTH, $file->format),

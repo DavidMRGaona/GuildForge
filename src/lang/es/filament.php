@@ -1331,8 +1331,8 @@ return [
         'title_more' => ':title +:count',
         'hidden_preview' => [
             'alt' => 'Imagen oculta',
-            'tooltip' => 'Uno de sus usos oculta la imagen.',
-            'notice' => 'La imagen no se muestra: uno de sus usos la oculta. Sigue contando como en uso.',
+            'tooltip' => 'Su origen no deja mostrar la imagen.',
+            'notice' => 'La imagen no se muestra: su origen no deja enseñarla en la biblioteca o uno de sus usos la oculta. Su estado y el borrado no cambian.',
         ],
         'uploaded_on' => ':origin · subido el :date',
         'select_unused' => 'Seleccionar los sin usar',
