@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Application\Authorization\Services\AssociationMembersAmongInterface;
 use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\MemberRoleServiceInterface;
@@ -28,6 +29,7 @@ use App\Infrastructure\Authorization\Listeners\NotifyTwoFactorRolesPaused;
 use App\Infrastructure\Authorization\Repositories\EloquentPermissionRepository;
 use App\Infrastructure\Authorization\Repositories\EloquentRoleRepository;
 use App\Infrastructure\Authorization\Services\AssociationMemberRoleWarning;
+use App\Infrastructure\Authorization\Services\AssociationMembersAmong;
 use App\Infrastructure\Authorization\Services\AssociationMembershipService;
 use App\Infrastructure\Authorization\Services\AuthorizationCacheVersion;
 use App\Infrastructure\Authorization\Services\AuthorizationService;
@@ -72,6 +74,8 @@ class AuthorizationServiceProvider extends ServiceProvider
         ));
         $this->app->singleton(PermissionSyncRunnerInterface::class, ProcessPermissionSyncRunner::class);
         $this->app->singleton(AssociationMembershipServiceInterface::class, AssociationMembershipService::class);
+        // The batched form (core#824), apart so doubles of the interface above keep working
+        $this->app->bind(AssociationMembersAmongInterface::class, AssociationMembersAmong::class);
         // Per request or job, so a forbidden association member role is logged once per lifecycle
         $this->app->scoped(AssociationMemberRoleWarning::class);
         $this->app->singleton(MemberRoleServiceInterface::class, MemberRoleService::class);

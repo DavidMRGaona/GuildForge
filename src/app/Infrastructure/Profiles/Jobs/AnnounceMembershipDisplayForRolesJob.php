@@ -18,8 +18,9 @@ use Throwable;
 /**
  * The association member role setting changed (core#824): everybody who held the old role stopped being a
  * member and everybody who holds the new one became one, so ProfileMembershipDisplayChanged goes out for
- * every account that holds either (deactivated ones too: they may be restored), in batches. Idempotent: a
- * retry announces the accounts again, and whoever listens asks the reader, which answers the same.
+ * every account that holds either (deactivated ones too: they may be restored), one event per account, read
+ * in batches. A run that is repeated announces the accounts again; whoever listens asks the reader, which
+ * answers the same.
  */
 final class AnnounceMembershipDisplayForRolesJob implements ShouldQueue
 {
@@ -28,8 +29,6 @@ final class AnnounceMembershipDisplayForRolesJob implements ShouldQueue
     use Queueable;
 
     public const int BATCH_SIZE = 500;
-
-    public int $tries = 3;
 
     /**
      * @param  list<string>  $roleNames  the roles held before and after the change; never the same one twice

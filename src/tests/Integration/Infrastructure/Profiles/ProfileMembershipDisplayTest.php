@@ -6,36 +6,31 @@ namespace Tests\Integration\Infrastructure\Profiles;
 
 use App\Application\Authorization\Services\AssociationMembershipServiceInterface;
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
+use App\Application\Profiles\DTOs\ProfileOwnerDTO;
 use App\Application\Profiles\Services\ProfileMembershipDisplayInterface;
+use App\Application\Profiles\Services\ProfileRendererInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Services\UserServiceInterface;
+use App\Application\TwoFactor\Services\TwoFactorStatusReaderInterface;
+use App\Domain\Profiles\Exceptions\ProfileMembershipDisplayUnavailableException;
 use App\Domain\Profiles\ProfileVisibility;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
 use Mockery;
 use RuntimeException;
 use Tests\TestCase;
 
 /**
  * ProfileMembershipDisplayInterface::showsMembership() (core#824): whether the «Socio» badge of an account
- * is shown to the members, in one call, the same for everybody and failing closed.
+ * is shown to the members, in one call and the same for everybody. A failure to read throws: «false» is only an answer.
  */
 final class ProfileMembershipDisplayTest extends TestCase
 {
     use LazilyRefreshDatabase;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        // Each test warns afresh: the marks live in the default cache for a day
-        Cache::flush();
-    }
 
     public function test_a_member_who_shows_the_badge_to_everybody_or_to_members_is_true(): void
     {
@@ -160,41 +155,104 @@ final class ProfileMembershipDisplayTest extends TestCase
         $this->assertLessThanOrEqual(3, $queriesForMany);
     }
 
-    public function test_it_never_throws_and_fails_closed_with_one_warning_a_day(): void
+    public function test_a_failure_to_read_throws_instead_of_answering_false(): void
     {
         $member = $this->shower();
-        $other = $this->shower();
         $membership = Mockery::mock(AssociationMembershipServiceInterface::class);
         $membership->shouldReceive('roleName')->andThrow(new RuntimeException('secret@example.com'));
         $this->app->instance(AssociationMembershipServiceInterface::class, $membership);
-        $log = Log::spy();
 
-        $first = $this->shows([$member->id, $other->id]);
-        $second = $this->shows([$member->id]);
-
-        $this->assertSame([$member->id => false, $other->id => false], $first);
-        $this->assertSame([$member->id => false], $second);
-        $log->shouldHaveReceived('warning')->once()->withArgs(
-            static fn (string $message, array $context): bool => ($context['exception'] ?? null) === RuntimeException::class
-                && ! str_contains(json_encode($context, JSON_THROW_ON_ERROR), 'secret@example.com'),
-        );
+        try {
+            $this->shows([$member->id]);
+            $this->fail('A failure to read must not look like «does not show it».');
+        } catch (ProfileMembershipDisplayUnavailableException $exception) {
+            // Nothing a person can see travels in it, nor the cause
+            $this->assertStringNotContainsString('secret@example.com', $exception->getMessage());
+            $this->assertNull($exception->getPrevious());
+        }
     }
 
-    public function test_more_accounts_than_the_limit_answer_false_beyond_it(): void
+    public function test_a_two_factor_reader_that_fails_throws_when_the_role_needs_it(): void
     {
         $member = $this->shower();
+        RoleModel::query()->where('name', 'socio')->update(['requires_two_factor' => true]);
+        $reader = Mockery::mock(TwoFactorStatusReaderInterface::class);
+        $reader->shouldReceive('enabledAmong')->andThrow(new RuntimeException('broken'));
+        $this->app->instance(TwoFactorStatusReaderInterface::class, $reader);
+
+        $this->expectException(ProfileMembershipDisplayUnavailableException::class);
+
+        $this->shows([$member->id]);
+    }
+
+    public function test_a_two_factor_reader_that_fails_is_not_asked_when_the_role_does_not_need_it(): void
+    {
+        $member = $this->shower();
+        $reader = Mockery::mock(TwoFactorStatusReaderInterface::class);
+        $reader->shouldReceive('enabledAmong')->never();
+        $this->app->instance(TwoFactorStatusReaderInterface::class, $reader);
+
+        $this->assertSame([$member->id => true], $this->shows([$member->id]));
+    }
+
+    public function test_more_accounts_than_the_limit_are_refused_not_cut(): void
+    {
+        $ids = [];
+        for ($i = 0; $i <= ProfileMembershipDisplayInterface::MAX_IDS; $i++) {
+            $ids[] = fake()->uuid();
+        }
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->shows($ids);
+    }
+
+    public function test_exactly_the_limit_is_answered(): void
+    {
         $ids = [];
         for ($i = 0; $i < ProfileMembershipDisplayInterface::MAX_IDS; $i++) {
             $ids[] = fake()->uuid();
         }
-        $ids[] = $member->id;
-        $log = Log::spy();
 
-        $answer = $this->shows($ids);
+        $this->assertCount(ProfileMembershipDisplayInterface::MAX_IDS, $this->shows($ids));
+    }
 
-        $this->assertCount(ProfileMembershipDisplayInterface::MAX_IDS + 1, $answer);
-        $this->assertFalse($answer[$member->id]);
-        $log->shouldHaveReceived('warning')->once();
+    public function test_the_reader_and_the_badge_of_the_profile_page_agree(): void
+    {
+        $accounts = [];
+        foreach ([ProfileVisibility::Public, ProfileVisibility::Members] as $visibility) {
+            $accounts[] = $this->shower($visibility);
+            $notMember = $this->shower($visibility);
+            app(AuthorizationServiceInterface::class)->removeRole($notMember, 'socio');
+            $accounts[] = $notMember;
+            $badgeOff = $this->shower($visibility);
+            UserProfileModel::query()->whereKey($badgeOff->id)->update(['show_membership' => false]);
+            $accounts[] = $badgeOff;
+        }
+        $ids = array_map(static fn (UserModel $user): string => (string) $user->id, $accounts);
+
+        foreach ([false, true] as $requiresTwoFactor) {
+            RoleModel::query()->where('name', 'socio')->update(['requires_two_factor' => $requiresTwoFactor]);
+            // Two-factor on for one account only
+            $reader = Mockery::mock(TwoFactorStatusReaderInterface::class);
+            $reader->shouldReceive('enabledAmong')->andReturn([$ids[0]]);
+            $reader->shouldReceive('isEnabled')->andReturnUsing(static fn (string $id): bool => $id === $ids[0]);
+            $this->app->instance(TwoFactorStatusReaderInterface::class, $reader);
+            app(AuthorizationServiceInterface::class)->invalidateCache();
+
+            $answer = $this->shows($ids);
+            $onThePage = [];
+            foreach ($accounts as $account) {
+                $this->app->forgetScopedInstances();
+                $profile = UserProfileModel::query()->findOrFail($account->id);
+                $header = $this->app->make(ProfileRendererInterface::class)
+                    ->render(new ProfileOwnerDTO((string) $account->id, $profile->handle, $account->display_name), null)->header;
+                // The page also needs the profile to be visible to this viewer: the reader asks for members
+                $onThePage[(string) $account->id] = $header->showsMembership;
+            }
+
+            $this->assertSame($onThePage, $answer, 'two-factor requirement: '.var_export($requiresTwoFactor, true));
+        }
     }
 
     /**

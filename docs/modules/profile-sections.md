@@ -507,11 +507,11 @@ foreach ($members as $member) {
 }
 ```
 
-- `showsMembership(list<string> $userIds): array<string, bool>`: account id in lower case => whether it shows its membership, for every valid id asked (repeated ids and anything that is not an account id are ignored). At most `ProfileMembershipDisplayInterface::MAX_IDS` (500, the size of an activity history page) are asked in one call; the rest answer `false`, with a warning.
-- **True only when everything the badge on the profile page asks holds**: the account has a profile row, is neither deactivated nor anonymized, has a public name, turned the badge on, its profile is visible to any signed-in member (`public` or `members`, never `association` or `hidden`) and it is an association member now (the role `AssociationMembershipServiceInterface::roleName()` names).
+- `showsMembership(list<string> $userIds): array<string, bool>`: account id in lower case => whether it shows its membership, for every valid id asked (repeated ids and anything that is not an account id are ignored). At most `ProfileMembershipDisplayInterface::MAX_IDS` (500, the size of an activity history page) are asked in one call: more throws `InvalidArgumentException`, nothing is cut in silence.
+- **True only when everything the badge on the profile page asks holds**: the account has a profile row, is neither deactivated nor anonymized, has a public name, turned the badge on, its profile is visible to any signed-in member (`public` or `members`, never `association` or `hidden`) and it is an association member now. Membership is decided by `AssociationMembersAmongInterface::among()` (`App\Application\Authorization\Services`), the batched form of `AssociationMembershipServiceInterface::isAssociationMember()` built on the same `ActiveRoleResolver` rule, so the page's badge and this reader never drift apart (a test compares them).
 - **The same for everybody.** There is no viewer, and it never reads the signed-in user, the session or the request: call it from a queued job or a command. The owner does not get a different answer for themselves.
-- **Batched.** A constant number of queries per call (the profile rows with their accounts, the holders of the association role, and nothing else), whatever the number of accounts. Ask once per page or per history batch, never once per account.
-- **Fails closed, never throws.** Whatever cannot be read (the role setting, a query) is `false`, warned about once a day with the exception's class only.
+- **Batched.** A constant number of queries per call (the profile rows with their accounts, the roles of those that pass, and the two-factor reader once only if the association role requires it), whatever the number of accounts. Ask once per page or per history batch, never once per account.
+- **A failure throws; it is never `false`.** `false` means «does not show it», and a consumer that took a failure for it would delete real facts. Whatever cannot be read (the role setting, a query, the two-factor reader when the role needs it) throws `App\Domain\Profiles\Exceptions\ProfileMembershipDisplayUnavailableException`, with no cause and no detail in it. Let it go up: an activity source that throws makes the core's reader mark the answer `Failed`, which never deletes anything kept. Do not catch it to answer «nobody».
 - It is the state of the database now. Keep nothing it answered without listening to the event below.
 
 ### Listening: `ProfileMembershipDisplayChanged`
@@ -523,7 +523,8 @@ It is dispatched after the commit, once per account and transaction, and never w
 - `show_membership`, the profile's visibility or the account's public name changes (the owner's editor, the model, the panel);
 - the account is anonymized, deactivated, restored or deleted for good, or its profile row goes;
 - the account gains or loses the association member role, through any path (`AuthorizationServiceInterface::assignRole()`, `removeRole()`, `syncRoles()`: the user form, the role editor, imports);
-- the association member role setting changes: a queued job then announces every account that held the old role or holds the new one (deactivated ones too), in batches of 500.
+- the association member role is turned on or off for an account by two-factor authentication (`UserActiveRolesChanged` naming it; the role editor does not let the association role require two-factor, so this only covers a mark written by other means);
+- the association member role setting changes **when it is saved from the site settings page**: a queued job then announces every account that held the old role or holds the new one (deactivated ones too), one event per account (the accounts are read in batches of 500). A setting written any other way (tinker, a seeder, SQL) announces nothing, like the authorization cache; whoever does it must republish by hand.
 
 The panel's «Restablecer perfil público» only takes the bio and the banner away, so it announces nothing.
 
@@ -563,7 +564,8 @@ A section or stat never breaks the profile around it:
 | A source answers an account with something that is not a list, or gives something that is not a `ProfileBadgeDTO` | That account's answer (or that item) is left out, warning |
 | A badge breaks a rule of `ProfileBadgeDTO` (key, label, icon, image, link) or repeats a key | That badge is left out, warning |
 | A source gives more than three badges for an account | Only the first three, warning |
-| `showsMembership()` cannot read the role setting or the database, or is asked about more than 500 accounts | `false` for what could not be read or was beyond the limit, warning (once a day, `profiles:warned:`) |
+| `showsMembership()` cannot read the role setting, the database or a two-factor reader it needs | Throws `ProfileMembershipDisplayUnavailableException`; never `false` |
+| `showsMembership()` is asked about more than 500 accounts | Throws `InvalidArgumentException` |
 
 Under php-fpm every web request builds the registries and the renderer again; a queue worker keeps the registries (singletons, holding only classes and what was read from them) for its whole life and gets a fresh renderer, with freshly built sections and stats, for each job. Either way warnings are kept apart for a day in the cache, not in memory (`App\Infrastructure\Support\DailyWarnings`, prefix `profiles:warned:`, the same mechanism as site blocks): the registries' per class and reason (a duplicated key, per key), the renderer's per key and reason, the badges' per source class and reason. Warnings carry the class, the module, the key and the reason; props, counts and exception messages are never logged, and an exception is named only by its class.
 

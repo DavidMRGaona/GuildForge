@@ -286,7 +286,9 @@ final readonly class AuthorizationService implements AuthorizationServiceInterfa
     /**
      * Gaining or losing the association member role changes whether the account shows its membership
      * (core#824). Every path that changes stored roles ends here, so this is the one place that sees them all.
-     * It never costs the role change.
+     * It is called here, inside the change's transaction, and not from a listener of UserRolesChanged (which
+     * only comes after the commit): the announcer then shares one announcement per account with the profile
+     * and account observers of the same transaction. It never costs the role change.
      *
      * @param  list<string>  $before
      * @param  list<string>  $after

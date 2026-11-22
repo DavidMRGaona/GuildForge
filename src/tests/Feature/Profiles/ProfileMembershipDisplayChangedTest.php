@@ -9,6 +9,7 @@ use App\Application\Impersonation\Services\ImpersonationContextInterface;
 use App\Application\Profiles\DTOs\ProfileUpdateDTO;
 use App\Application\Profiles\Services\UserProfileServiceInterface;
 use App\Application\Services\UserServiceInterface;
+use App\Domain\Events\UserActiveRolesChanged;
 use App\Domain\Profiles\Events\ProfileMembershipDisplayChanged;
 use App\Domain\Profiles\ProfileVisibility;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
@@ -98,6 +99,30 @@ final class ProfileMembershipDisplayChangedTest extends TestCase
             ProfileMembershipDisplayChanged::class,
             static fn (ProfileMembershipDisplayChanged $event): bool => $event->userId === (string) $user->id,
         );
+    }
+
+    public function test_the_association_role_turning_on_or_off_with_two_factor_announces_the_account(): void
+    {
+        $user = $this->member();
+        Event::fake([ProfileMembershipDisplayChanged::class]);
+
+        // What FollowTwoFactorChanges dispatches when two-factor goes on or off
+        event(new UserActiveRolesChanged((string) $user->id, ['socio'], []));
+        $this->assertAnnouncedOnce((string) $user->id);
+
+        Event::fake([ProfileMembershipDisplayChanged::class]);
+        event(new UserActiveRolesChanged((string) $user->id, [], ['socio']));
+        $this->assertAnnouncedOnce((string) $user->id);
+    }
+
+    public function test_other_roles_turning_on_or_off_announce_nothing(): void
+    {
+        $user = $this->member();
+        Event::fake([ProfileMembershipDisplayChanged::class]);
+
+        event(new UserActiveRolesChanged((string) $user->id, ['junta'], ['moderacion']));
+
+        Event::assertNotDispatched(ProfileMembershipDisplayChanged::class);
     }
 
     public function test_restoring_an_account_announces_it(): void

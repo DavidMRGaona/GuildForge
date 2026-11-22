@@ -16,8 +16,10 @@ use App\Application\Profiles\Services\ProfileStatRegistryInterface;
 use App\Application\Profiles\Services\ProfileSummaryRendererInterface;
 use App\Application\Profiles\Services\PublicProfileServiceInterface;
 use App\Application\Profiles\Services\UserProfileServiceInterface;
+use App\Domain\Events\UserActiveRolesChanged;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
+use App\Infrastructure\Profiles\Listeners\AnnounceMembershipDisplayOnActiveRolesChanged;
 use App\Infrastructure\Profiles\Observers\AccountMembershipDisplayObserver;
 use App\Infrastructure\Profiles\Observers\ProfileMembershipDisplayObserver;
 use App\Infrastructure\Profiles\Observers\UserProfileObserver;
@@ -37,6 +39,7 @@ use App\Infrastructure\Profiles\Services\PublicProfileService;
 use App\Infrastructure\Profiles\Services\UserProfileService;
 use App\Infrastructure\Profiles\StoredProfiles;
 use Illuminate\Contracts\Cache\Repository as Cache;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -92,5 +95,6 @@ final class ProfilesServiceProvider extends ServiceProvider
         // What can change whether an account shows its membership (core#824)
         UserModel::observe(AccountMembershipDisplayObserver::class);
         UserProfileModel::observe(ProfileMembershipDisplayObserver::class);
+        Event::listen(UserActiveRolesChanged::class, [AnnounceMembershipDisplayOnActiveRolesChanged::class, 'handle']);
     }
 }
