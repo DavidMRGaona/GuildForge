@@ -47,6 +47,8 @@ A module that runs things people take part in (tables, tournaments, events, foru
 
 When in doubt, leave it out. Something restricted is never reported, not even «just for the owner»: the consumer does not know who will see what it builds.
 
+**One accepted exception: who played.** Who played a table, a campaign session, a campaign or a tournament is not public: the pages show counts only. Sources still report the `player` role, so a consumer can count games played. In exchange, a consumer may only ever show others **totals** built from those facts («played 12 tables»), never a specific subject to somebody its `describe()` would not show it to, and people can hide their achievements. Every other role and kind follows the rule above strictly: a hidden director, a membership that is not shown, a proposer who is not shown and a hidden profile are never reported.
+
 **The same answer for everybody.** `facts()` and `history()` never read the signed-in user, the session or the request: they run in queued jobs and commands, where nobody is signed in. Never reuse a query scoped to «what the current user may see»: in a job it answers nothing, and the consumer would delete real facts. Decide with the any-signed-in-member rule above, written as a query of its own.
 
 A subject that **stops counting** (a post hidden or deleted, a table made private, a player removed from it) is reported again: `facts()` returns what is true now (maybe nothing) and the module publishes the change (see [Publishing changes](#publishing-changes)), so whoever keeps a record corrects it.
