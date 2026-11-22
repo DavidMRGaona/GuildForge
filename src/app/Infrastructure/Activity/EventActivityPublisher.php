@@ -133,7 +133,7 @@ final readonly class EventActivityPublisher implements ActivityPublisherInterfac
         $name = $connection->getName();
         $record = $applicable->last(static fn (DatabaseTransactionRecord $record): bool => $record->connection === $name);
 
-        while ($record instanceof DatabaseTransactionRecord && $record->parent instanceof DatabaseTransactionRecord && $applicable->contains($record->parent)) {
+        while ($record instanceof DatabaseTransactionRecord && $record->parent instanceof DatabaseTransactionRecord && $applicable->contains(static fn (DatabaseTransactionRecord $candidate): bool => $candidate === $record->parent)) {
             $record = $record->parent;
         }
 

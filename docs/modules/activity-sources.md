@@ -42,7 +42,7 @@ A module that runs things people take part in (tables, tournaments, events, foru
 
 - published tables and campaigns, never private or draft ones;
 - posts and discussions in categories every member sees, never hidden, deleted or moderated ones;
-- answers to surveys that are not anonymous, never to anonymous ones;
+- answers to surveys that are not anonymous, never to anonymous ones.
 
 When in doubt, leave it out. Something restricted is never reported, not even «just for the owner»: the consumer does not know who will see what it builds.
 

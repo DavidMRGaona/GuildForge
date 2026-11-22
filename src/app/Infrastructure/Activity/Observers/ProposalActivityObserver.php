@@ -16,10 +16,10 @@ use Throwable;
 /**
  * Tells the activity contract (core#777) when a proposed event or article starts or stops counting:
  * approved (by a reviewer or by publishing directly), unpublished or published again in the panel
- * while approved, its proposer or, for an article, the byline changed (the proposer counts only while shown), or deleted. The status lives on the content, so watching its
- * row covers every path. Only an approved proposal counts, so a row publishes only when it is, or
- * was, approved: submitting, returning or rejecting one publish nothing. Each publication runs in a
- * savepoint and never fails the save.
+ * while approved, its proposer or, for an article, the byline changed (the proposer counts only
+ * while shown), or deleted. The status lives on the content, so watching its row covers every
+ * path. Only an approved proposal counts, so a row publishes only when it is, or was, approved:
+ * submitting, returning or rejecting one publish nothing. A failure never fails the save.
  */
 final readonly class ProposalActivityObserver
 {

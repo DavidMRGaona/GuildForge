@@ -29,9 +29,12 @@ use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use DateTimeImmutable;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\Support\Activity\ActivitySourceContractTests;
@@ -547,6 +550,32 @@ final class ProposalActivitySourceTest extends TestCase
 
         $this->assertArrayHasKey('events:'.$event->id, $accountWasThere);
         $this->assertFalse($accountWasThere['events:'.$event->id], 'It was announced before the account was deleted.');
+    }
+
+    public function test_a_failing_read_of_the_proposals_never_breaks_anonymizing_deleting_or_restoring_an_account(): void
+    {
+        $anonymized = UserModel::factory()->create();
+        $deactivated = UserModel::factory()->create();
+        EventModel::factory()->proposal(ProposalStatus::Approved, $anonymized)->create();
+        EventModel::factory()->proposal(ProposalStatus::Approved, $deactivated)->create();
+        Log::spy();
+        $this->fakeActivityEvents();
+        DB::listen(static function (QueryExecuted $query): void {
+            if (str_contains($query->sql, 'select "id" from') && str_contains($query->sql, 'proposal_status')) {
+                throw new RuntimeException('The proposals cannot be read.');
+            }
+        });
+
+        $this->app->make(UserServiceInterface::class)->anonymize((string) $anonymized->id);
+        $deactivated->delete();
+        $deactivated->restore();
+
+        $this->assertNotNull(UserModel::query()->findOrFail($anonymized->id)->anonymized_at);
+        $this->assertNull(UserModel::query()->findOrFail($deactivated->id)->deleted_at);
+        // What does not depend on the failing read still goes out
+        $this->assertActivityPublished('core.account', (string) $anonymized->id);
+        $this->assertActivityPublished('core.account', (string) $deactivated->id);
+        Log::shouldHaveReceived('warning')->withArgs(static fn (string $message, array $context): bool => str_contains($message, 'could not be published') && $context['exception'] === RuntimeException::class)->atLeast()->once();
     }
 
     private function assertSubjectPublished(string $subjectId): void

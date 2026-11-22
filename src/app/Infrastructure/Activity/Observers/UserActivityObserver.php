@@ -53,7 +53,7 @@ final class UserActivityObserver
     public function updated(UserModel $user): void
     {
         if ($user->wasChanged('anonymized_at')) {
-            $this->everythingOf($user, $this->approvedProposalsOf((string) $user->getKey()));
+            $this->everythingOf($user, readProposals: true);
 
             return;
         }
@@ -104,24 +104,32 @@ final class UserActivityObserver
     public function deleted(UserModel $user): void
     {
         // A permanent deletion has no proposals left to read: forceDeleted announces what forceDeleting read
-        $this->everythingOf($user, $user->isForceDeleting() ? [] : $this->approvedProposalsOf((string) $user->getKey()));
+        $this->everythingOf($user, readProposals: ! $user->isForceDeleting());
     }
 
     public function restored(UserModel $user): void
     {
-        $this->everythingOf($user, $this->approvedProposalsOf((string) $user->getKey()));
+        $this->everythingOf($user, readProposals: true);
     }
 
     /**
-     * @param  list<string>  $proposals  the subject ids of the account's approved proposals
+     * The account, its profile and, unless $readProposals is false, its approved proposals. Each part
+     * is guarded on its own, and the proposals are read inside the guard: a read that fails loses
+     * only their publication, never the anonymizing, deletion or restoration being observed.
      */
-    private function everythingOf(UserModel $user, array $proposals): void
+    private function everythingOf(UserModel $user, bool $readProposals): void
     {
-        $this->safely($user, function () use ($user, $proposals): void {
+        $this->safely($user, function () use ($user): void {
             $this->activity->recorded(AccountActivitySource::TYPE, $this->id($user));
             $this->completion->refresh((string) $user->getKey(), publish: true);
+        });
 
-            foreach ($proposals as $subjectId) {
+        if (! $readProposals) {
+            return;
+        }
+
+        $this->safely($user, function () use ($user): void {
+            foreach ($this->approvedProposalsOf((string) $user->getKey()) as $subjectId) {
                 $this->activity->recorded(ProposalActivitySource::TYPE, $subjectId);
             }
         });
