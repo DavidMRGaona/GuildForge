@@ -12,7 +12,9 @@ use App\Application\Activity\DTOs\ActivitySubjectFactsDTO;
 use App\Application\Profiles\DTOs\PublicProfileDTO;
 use App\Application\Profiles\Services\ProfileAccessRule;
 use App\Domain\Activity\ActivityRole;
+use App\Domain\Profiles\ProfileVisibility;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
 use App\Infrastructure\Profiles\Services\PublicProfileService;
 use App\Infrastructure\Profiles\StoredProfiles;
 use DateTimeImmutable;
@@ -25,11 +27,13 @@ use InvalidArgumentException;
 /**
  * What the core's account sources share (core#777): the subject is an account (its UUID), the one
  * fact is the account as `owner`, and an account counts only while it is active (neither
- * deactivated nor anonymized). The sources differ in which accounts count and when it happened.
+ * deactivated nor anonymized) with a public name and a profile every signed-in member may see
+ * (public or members). The sources differ in what else counts and when it happened.
  *
  * A deactivated account's profile cannot be seen by anybody (ProfileAccessRule), so what a member
  * could know about it is nothing: it does not count until it is restored, and an anonymized one
- * never does. The answer never depends on who is signed in.
+ * never does. A profile only the association or its owner may see does not count either. The
+ * answer never depends on who is signed in.
  */
 abstract class AccountBasedActivitySource implements ActivitySourceInterface
 {
@@ -39,11 +43,39 @@ abstract class AccountBasedActivitySource implements ActivitySourceInterface
     ) {}
 
     /**
-     * The accounts that count, ordered by id. Soft deleted ones are left out by the model.
+     * What else a profile needs for its account to count, besides being seen by every member.
+     *
+     * @param  Builder<UserProfileModel>  $profiles
+     * @return Builder<UserProfileModel>
+     */
+    protected function narrowProfiles(Builder $profiles): Builder
+    {
+        return $profiles;
+    }
+
+    /**
+     * The accounts that count, ordered by id: active (soft deleted ones are left out by the model),
+     * with a public name and a profile every signed-in member may see (core#777): what a member
+     * could not know exists is never reported, since a badge built on a fact is shown to others.
      *
      * @return Builder<UserModel>
      */
-    abstract protected function counted(): Builder;
+    protected function counted(): Builder
+    {
+        $visibleProfiles = UserProfileModel::query()
+            ->select('user_id')
+            ->whereIn('visibility', array_map(
+                static fn (ProfileVisibility $visibility): string => $visibility->value,
+                array_filter(ProfileVisibility::cases(), static fn (ProfileVisibility $visibility): bool => $visibility->isSeenByEveryMember()),
+            ));
+
+        return UserModel::query()
+            ->whereNull('anonymized_at')
+            ->whereNotNull('display_name')
+            ->whereRaw("trim(display_name) <> ''")
+            ->whereIn('users.id', $this->narrowProfiles($visibleProfiles))
+            ->orderBy('users.id');
+    }
 
     /**
      * When each account's fact happened.

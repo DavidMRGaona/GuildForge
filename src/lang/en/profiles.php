@@ -12,6 +12,11 @@ return [
         'would_fail' => '{1} :count account would be left without a free address|[0,*] :count accounts would be left without a free address',
         'dry_run_note' => 'Dry run: nothing was written. A clash with another write is only seen by a real run.',
     ],
+    'stamp_completed' => [
+        'stamped' => '{1} :count complete profile stamped|[0,*] :count complete profiles stamped',
+        'would_stamp' => '{1} :count complete profile would be stamped|[0,*] :count complete profiles would be stamped',
+        'dry_run_note' => 'Dry run: nothing was written.',
+    ],
     'sections' => [
         'about' => [
             'label' => 'About me',

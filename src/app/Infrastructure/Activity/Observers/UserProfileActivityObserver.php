@@ -6,52 +6,61 @@ namespace App\Infrastructure\Activity\Observers;
 
 use App\Application\Activity\Services\ActivityPublisherInterface;
 use App\Infrastructure\Activity\ProfileCompletion;
+use App\Infrastructure\Activity\Sources\AccountActivitySource;
 use App\Infrastructure\Activity\Sources\ProfileCompletedActivitySource;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
-use Illuminate\Contracts\Container\Container;
+use Closure;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * A public profile whose «Sobre mí» changes, or that is deleted (core#777), may start or stop being
- * complete. Never fails the save.
+ * What a public profile's changes do to what the core reports (core#777): a «Sobre mí» that changes
+ * may complete the profile or not, a visibility that changes decides whether the account and its
+ * profile are something every member can know exists, and a deleted profile counts no more. Each
+ * publication runs in a savepoint and never fails the save.
  */
 final readonly class UserProfileActivityObserver
 {
-    /** The container: an observer lives as long as the process, the publisher is scoped */
+    /** Laravel builds an observer for every event it handles, so it gets the publisher of the request or job at hand */
     public function __construct(
-        private Container $container,
+        private ActivityPublisherInterface $activity,
+        private ProfileCompletion $completion,
     ) {}
 
     public function created(UserProfileModel $profile): void
     {
         // Almost always without a «Sobre mí», but a seeder or an import may give one
         if (filled($profile->bio)) {
-            $this->refresh($profile);
+            $this->safely($profile, fn () => $this->completion->refresh((string) $profile->user_id));
         }
     }
 
     public function updated(UserProfileModel $profile): void
     {
         if ($profile->wasChanged('bio')) {
-            $this->refresh($profile);
+            $this->safely($profile, fn () => $this->completion->refresh((string) $profile->user_id));
         }
-    }
 
-    private function refresh(UserProfileModel $profile): void
-    {
-        $this->safely($profile, fn () => $this->container->make(ProfileCompletion::class)->refresh((string) $profile->user_id));
+        if ($profile->wasChanged('visibility')) {
+            $this->safely($profile, function () use ($profile): void {
+                $userId = strtolower((string) $profile->user_id);
+
+                $this->activity->recorded(AccountActivitySource::TYPE, $userId);
+                $this->activity->recorded(ProfileCompletedActivitySource::TYPE, $userId);
+            });
+        }
     }
 
     public function deleted(UserProfileModel $profile): void
     {
-        $this->safely($profile, fn () => $this->container->make(ActivityPublisherInterface::class)->recorded(ProfileCompletedActivitySource::TYPE, strtolower((string) $profile->user_id)));
+        $this->safely($profile, fn () => $this->activity->recorded(ProfileCompletedActivitySource::TYPE, strtolower((string) $profile->user_id)));
     }
 
-    private function safely(UserProfileModel $profile, callable $publish): void
+    private function safely(UserProfileModel $profile, Closure $publish): void
     {
         try {
-            $publish();
+            DB::transaction(static fn (): mixed => $publish());
         } catch (Throwable $exception) {
             Log::warning('The profile activity of an account could not be published.', [
                 'user_id' => (string) $profile->user_id,

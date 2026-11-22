@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature\Activity;
 
 use App\Application\Activity\Contracts\ActivitySourceInterface;
+use App\Application\Profiles\DTOs\ProfileUpdateDTO;
+use App\Application\Profiles\Services\UserProfileServiceInterface;
+use App\Application\Services\AuthServiceInterface;
 use App\Application\Services\UserServiceInterface;
 use App\Domain\Activity\ActivityKind;
 use App\Domain\Activity\ActivityRole;
@@ -101,6 +104,7 @@ final class ProfileCompletedActivitySourceTest extends TestCase
             'no avatar' => [['display_name' => 'Ana', 'avatar_public_id' => null], 'Hola'],
             'no about me' => [['display_name' => 'Ana', 'avatar_public_id' => 'a.png'], null],
             'blank about me' => [['display_name' => 'Ana', 'avatar_public_id' => 'a.png'], '   '],
+            'about me of spaces, tabs and breaks' => [['display_name' => 'Ana', 'avatar_public_id' => 'a.png'], " \n\t "],
         ];
     }
 
@@ -159,20 +163,67 @@ final class ProfileCompletedActivitySourceTest extends TestCase
         $this->assertEquals($guest, $this->activitySource()->facts((string) $user->id));
     }
 
-    public function test_a_hidden_profile_still_counts_but_is_described_without_a_link_or_name(): void
+    /**
+     * @return array<string, array{ProfileVisibility, bool}>
+     */
+    public static function visibilities(): array
+    {
+        return [
+            'public' => [ProfileVisibility::Public, true],
+            'members' => [ProfileVisibility::Members, true],
+            'association' => [ProfileVisibility::Association, false],
+            'hidden' => [ProfileVisibility::Hidden, false],
+        ];
+    }
+
+    /**
+     * Only what any signed-in member can know exists: a profile only the association or its owner may see is left out
+     */
+    #[DataProvider('visibilities')]
+    public function test_only_a_profile_every_member_may_see_counts(ProfileVisibility $visibility, bool $counts): void
     {
         $user = $this->completeAccount();
-        UserProfileModel::query()->whereKey($user->id)->update(['visibility' => ProfileVisibility::Hidden]);
+        UserProfileModel::query()->whereKey($user->id)->update(['visibility' => $visibility]);
+
+        $this->assertSame($counts, $this->activitySource()->facts((string) $user->id) !== []);
+        $this->assertSame($counts, in_array((string) $user->id, $this->listedSubjects(), true));
+    }
+
+    public function test_changing_the_visibility_publishes_the_profile_and_the_account(): void
+    {
+        $user = $this->completeAccount();
+        $this->fakeActivityEvents();
+
+        UserProfileModel::query()->findOrFail($user->id)->update(['visibility' => ProfileVisibility::Hidden]);
+
+        $this->assertActivityPublished('core.profile-completed', (string) $user->id);
+        $this->assertActivityPublished('core.account', (string) $user->id);
+    }
+
+    public function test_it_is_described_for_the_viewer_without_naming_a_person_who_hides(): void
+    {
+        $user = $this->completeAccount();
         $viewer = UserModel::factory()->create();
 
-        $this->assertCount(1, $this->activitySource()->facts((string) $user->id));
+        $asMember = $this->activitySource()->describe([(string) $user->id], $viewer)[(string) $user->id];
+        $this->assertStringContainsString('Ana', $asMember->title);
+        $this->assertNotNull($asMember->url);
 
-        $described = $this->activitySource()->describe([(string) $user->id], $viewer)[(string) $user->id];
-        $this->assertNull($described->url);
-        $this->assertStringNotContainsString('Ana', $described->title);
+        $asGuest = $this->activitySource()->describe([(string) $user->id], null)[(string) $user->id];
+        $this->assertNull($asGuest->url);
+        $this->assertStringNotContainsString('Ana', $asGuest->title);
 
-        $own = $this->activitySource()->describe([(string) $user->id], $user)[(string) $user->id];
-        $this->assertNotNull($own->url);
+        UserProfileModel::query()->whereKey($user->id)->update(['visibility' => ProfileVisibility::Hidden]);
+        $this->assertSame([], $this->activitySource()->describe([(string) $user->id], $user));
+    }
+
+    public function test_a_complete_profile_nobody_stamped_does_not_count_until_it_is(): void
+    {
+        $user = $this->completeAccount();
+        UserProfileModel::query()->whereKey($user->id)->toBase()->update(['completed_at' => null]);
+
+        $this->assertSame([], $this->activitySource()->facts((string) $user->id));
+        $this->assertNotContains((string) $user->id, $this->listedSubjects());
     }
 
     public function test_history_pages_have_a_stable_order_and_an_opaque_cursor(): void
@@ -197,9 +248,9 @@ final class ProfileCompletedActivitySourceTest extends TestCase
         $this->activitySource()->history('not a cursor', 10);
     }
 
-    public function test_saving_the_about_me_publishes_the_profile(): void
+    public function test_saving_the_about_me_that_completes_the_profile_publishes_it(): void
     {
-        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+        $user = UserModel::factory()->create(['display_name' => 'Ana', 'avatar_public_id' => 'avatars/ana.png']);
         $this->fakeActivityEvents();
 
         $this->writeBio($user, 'Hola.');
@@ -207,9 +258,10 @@ final class ProfileCompletedActivitySourceTest extends TestCase
         $this->assertProfilePublished($user);
     }
 
-    public function test_changing_the_avatar_publishes_the_profile(): void
+    public function test_changing_the_avatar_that_completes_the_profile_publishes_it(): void
     {
         $user = UserModel::factory()->create(['display_name' => 'Ana']);
+        $this->writeBio($user, 'Hola.');
         $this->fakeActivityEvents();
 
         $user->update(['avatar_public_id' => 'avatars/ana.png']);
@@ -217,14 +269,84 @@ final class ProfileCompletedActivitySourceTest extends TestCase
         $this->assertProfilePublished($user);
     }
 
-    public function test_changing_the_public_name_publishes_the_profile(): void
+    public function test_setting_the_public_name_publishes_the_profile_and_the_account(): void
     {
-        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+        $user = UserModel::factory()->create(['display_name' => null, 'avatar_public_id' => 'avatars/ana.png']);
+        $this->writeBio($user, 'Hola.');
         $this->fakeActivityEvents();
 
-        $user->update(['display_name' => 'Ana María']);
+        $user->update(['display_name' => 'Ana']);
 
         $this->assertProfilePublished($user);
+        $this->assertActivityPublished('core.account', (string) $user->id);
+    }
+
+    public function test_clearing_the_public_name_publishes_the_profile_and_the_account(): void
+    {
+        $user = $this->completeAccount();
+        $this->fakeActivityEvents();
+
+        $user->update(['display_name' => null]);
+
+        $this->assertProfilePublished($user);
+        $this->assertActivityPublished('core.account', (string) $user->id);
+        $this->assertSame([], $this->activitySource()->facts((string) $user->id));
+    }
+
+    public function test_a_change_that_leaves_the_profile_as_it_was_publishes_nothing(): void
+    {
+        $user = $this->completeAccount();
+        $this->fakeActivityEvents();
+
+        $this->writeBio($user, 'Otro texto, también completo.');
+        $user->update(['display_name' => 'Ana María']);
+        $user->update(['avatar_public_id' => 'avatars/2026/11/other.png']);
+
+        $this->assertNoActivityPublished();
+    }
+
+    public function test_the_profile_service_saves_publish_the_profile(): void
+    {
+        $user = UserModel::factory()->create(['display_name' => 'Ana', 'avatar_public_id' => 'avatars/ana.png']);
+        $profile = UserProfileModel::query()->findOrFail($user->id);
+        $this->fakeActivityEvents();
+
+        $this->app->make(UserProfileServiceInterface::class)->update((string) $user->id, new ProfileUpdateDTO(
+            handle: $profile->handle,
+            visibility: ProfileVisibility::Public,
+            bio: 'Escrito desde el editor.',
+            showMembership: false,
+            sections: [],
+            stats: [],
+            offeredSections: [],
+            offeredStats: [],
+        ));
+
+        $this->assertProfilePublished($user);
+        $this->assertCount(1, $this->activitySource()->facts((string) $user->id));
+    }
+
+    public function test_moderation_taking_the_about_me_away_stops_the_profile_counting(): void
+    {
+        $user = $this->completeAccount();
+        $this->fakeActivityEvents();
+
+        $this->assertTrue($this->app->make(UserProfileServiceInterface::class)->resetContent((string) $user->id));
+
+        $this->assertProfilePublished($user);
+        $this->assertSame([], $this->activitySource()->facts((string) $user->id));
+    }
+
+    public function test_the_avatar_saved_through_the_auth_service_publishes_the_profile(): void
+    {
+        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+        $this->writeBio($user, 'Hola.');
+        $this->fakeActivityEvents();
+
+        $this->app->make(AuthServiceInterface::class)->updateAvatar((string) $user->id, 'avatars/2026/11/ana.png');
+
+        $this->assertProfilePublished($user);
+        $this->assertCount(1, $this->activitySource()->facts((string) $user->id));
     }
 
     private function assertProfilePublished(UserModel $user): void

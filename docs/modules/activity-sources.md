@@ -235,7 +235,7 @@ Test the privacy rule yourself, beyond the contract: a private table, a hidden c
 
 ## The core's own sources
 
-The core reports three things only it knows (core#777), registered under `core.` in `ActivityServiceProvider::CORE_SOURCES`, before any module's. A consumer reads them like any other source, through `ActivityReaderInterface`. None of them depends on who is signed in, and none reports an anonymized or deactivated account (a deactivated profile cannot be seen by anybody, so it counts again only once restored).
+The core reports three things only it knows (core#777), registered under `core.` in `ActivityServiceProvider::CORE_SOURCES`, before any module's. A consumer reads them like any other source, through `ActivityReaderInterface`. None of them depends on who is signed in.
 
 | Type | Kind | Role | Attributes | Subject id | Date (`occurredAt`) |
 |---|---|---|---|---|---|
@@ -243,22 +243,27 @@ The core reports three things only it knows (core#777), registered under `core.`
 | `core.profile-completed` | `profile_completed` | `owner` | none | the account's UUID | when the profile became complete |
 | `core.proposal` | `proposal` | `proposer` | `content_type`: `event` or `article` | `events:<uuid>` or `articles:<uuid>` | when a reviewer approved it |
 
-- **`core.account`**: one subject per active account, the account age. The consumer decides what seniority means from `occurredAt`.
-- **`core.profile-completed`**: the account has a public name, an avatar and a «Sobre mí» (`ProfileCompletenessRule`, written as a query in the source). The date is `user_profiles.completed_at`: `ProfileCompletion` sets it the first time all three are there and clears it when one goes, so changing something unrelated (visibility, banner, the text of «Sobre mí») never moves it. A profile that was already complete when the column was added has its last change as the date. If the profile stops being complete, `facts()` is empty; if it is completed again it counts again with the new date. What a consumer already granted is the consumer's business.
-- **`core.proposal`**: an event or article proposed from the web (core#570) that was approved, is still published and whose proposer's account is active. Content created in the panel is not a proposal. Unpublishing it in the panel, deleting it or deactivating or anonymizing the proposer stops it counting. The history goes through events first, then articles, each by id.
+**What counts is only what any signed-in member can know exists** (see [What a source may report](#what-a-source-may-report)):
+
+- **Accounts and profiles** count only while the account is active (neither deactivated nor anonymized), has a public name and its profile is visible to every signed-in member (`public` or `members`). A profile only the association (`association`) or its owner (`hidden`) may see is left out, as is an account without a public name. A deactivated account counts again once restored. Changing the visibility, setting or clearing the public name, or deactivating, restoring or anonymizing the account publishes both subjects.
+- **`core.account`**: one subject per such account, the account age. The consumer decides what seniority means from `occurredAt`.
+- **`core.profile-completed`**: the account has a public name, an avatar and a «Sobre mí» (`ProfileCompletenessRule`). It counts by `user_profiles.completed_at`, a column written only through that PHP rule (`ProfileCompletion`), so SQL never disagrees with it. The date is set the first time all three are there and cleared when one goes, so changing something unrelated (visibility, banner, the text of «Sobre mí») never moves it. If the profile stops being complete, `facts()` is empty; if it is completed again it counts again with the new date. What a consumer already granted is the consumer's business. **A site that had complete profiles before the column existed runs `php artisan profiles:stamp-completed [--dry-run] [--chunk=500]` once after deploying**: it stamps them with their last change as the date and publishes them. It is idempotent and never runs on a request; until it runs those profiles do not count.
+- **`core.proposal`**: an event or article proposed from the web (core#570) that was approved, is still published and whose proposer's account is active. Content created in the panel is not a proposal. Unpublishing it in the panel, deleting it or deactivating or anonymizing the proposer stops it counting. **Event proposals count only while the site shows who proposed them** (the events proposals setting «Mostrar quién propone», off by default): a member could not know who proposed one otherwise. Articles always count, since the proposer is the author the site shows. Changing that setting queues `PublishApprovedEventProposalsJob`, which publishes every approved event proposal in batches. The history goes through events first (when they count), then articles, each by id.
 
 **When they are published.** The core publishes through model observers, so any path counts: registration, the panel, a command, a seeder.
 
 | Change | Published |
 |---|---|
-| An account is created | `core.account`, `core.profile-completed` |
+| An account is created | `core.account` |
+| The public name is set or cleared | `core.account`, and `core.profile-completed` when it completes or breaks the profile |
+| The avatar or «Sobre mí» changes | `core.profile-completed`, only when that completes the profile or breaks it |
+| The profile's visibility changes | `core.account`, `core.profile-completed` |
 | An account is anonymized, deactivated, restored or deleted | `core.account`, `core.profile-completed` and each of its approved proposals |
-| The public name or the avatar changes | `core.profile-completed` |
-| «Sobre mí» changes or the profile row is deleted | `core.profile-completed` |
 | A proposal is approved (reviewer or publishing directly), or an approved one is unpublished, published again, reassigned or deleted | `core.proposal` |
+| The events «Mostrar quién propone» setting changes | every approved event proposal, queued |
 
-Changes made with a query builder or a mass `update()` raise no model event and are not published; the consumer's recalculation (`history()`) corrects them.
+Submitting, returning or rejecting a proposal publishes nothing: only an approved one counts. Changes made with a query builder or a mass `update()` raise no model event and are not published; the consumer's recalculation (`history()`) corrects them.
 
-**Describing them.** `describe()` of an account or a profile names the person and links `/miembros/<handle>` only when the viewer may see the profile (`ProfileAccessRule`: the owner always, a hidden profile or a deactivated account nobody else); for anybody else the title names nobody («Cuenta de una persona») and there is no link. A proposal gives the title of the published event or article and its public link (`/eventos/<slug>`, `/articulos/<slug>`): counting already means published, which any guest can open.
+**Describing them.** `describe()` of an account or a profile names the person and links `/miembros/<handle>` only when the viewer may see the profile (`ProfileAccessRule`); for anybody else (a guest, for instance) the title names nobody («Cuenta de una persona») and there is no link. An account that does not count is not described at all, not even to its owner. A proposal gives the title of the published event or article and its public link (`/eventos/<slug>`, `/articulos/<slug>`): counting already means published, which any guest can open.
 
-**Testing a core source** uses the trait directly (it is not a module): `use ActivitySourceContractTests;`, `activitySourceOwner()` returns `core`, and the test class has the database (`LazilyRefreshDatabase`). `Tests\Support\Activity\FakesActivityEvents` drops the scoped publisher when it fakes `ActivityRecorded`, so a publisher built before the fake does not dispatch for real. Observers resolve the publisher from the container on every call for the same reason: an observer lives as long as the process and the publisher is scoped.
+**Testing a core source** uses the trait directly (it is not a module): `use ActivitySourceContractTests;`, `activitySourceOwner()` returns `core`, and the test class has the database (`LazilyRefreshDatabase`). `Tests\Support\Activity\FakesActivityEvents` drops the scoped publisher when it fakes `ActivityRecorded`, so a publisher built before the fake does not dispatch for real. Laravel builds an observer for every event it handles, so an observer cannot keep state between events: read what it needs in the event it handles (a permanent deletion empties the proposals' proposer, so `forceDeleting` publishes them while the account still has them; the announcement itself waits for the commit).

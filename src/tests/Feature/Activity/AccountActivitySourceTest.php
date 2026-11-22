@@ -6,6 +6,8 @@ namespace Tests\Feature\Activity;
 
 use App\Application\Activity\Contracts\ActivitySourceInterface;
 use App\Application\Activity\Services\ActivityReaderInterface;
+use App\Application\Profiles\DTOs\ProfileUpdateDTO;
+use App\Application\Profiles\Services\UserProfileServiceInterface;
 use App\Application\Services\UserServiceInterface;
 use App\Domain\Activity\ActivityKind;
 use App\Domain\Activity\ActivityRole;
@@ -14,6 +16,7 @@ use App\Infrastructure\Activity\Sources\AccountActivitySource;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\Activity\ActivitySourceContractTests;
 use Tests\Support\Activity\FakesActivityEvents;
 use Tests\TestCase;
@@ -137,20 +140,102 @@ final class AccountActivitySourceTest extends TestCase
         $this->assertStringNotContainsString('Ana', $asGuest->title);
     }
 
-    public function test_describe_never_reveals_a_hidden_profile_but_gives_it_to_its_owner(): void
+    public function test_describe_leaves_out_an_account_that_does_not_count_even_for_its_owner(): void
     {
         $owner = UserModel::factory()->create(['display_name' => 'Ana']);
         UserProfileModel::query()->whereKey($owner->id)->update(['visibility' => ProfileVisibility::Hidden]);
-        $viewer = UserModel::factory()->create();
-        $source = $this->activitySource();
 
-        $asOther = $source->describe([(string) $owner->id], $viewer)[(string) $owner->id];
-        $this->assertNull($asOther->url);
-        $this->assertStringNotContainsString('Ana', $asOther->title);
+        $this->assertSame([], $this->activitySource()->describe([(string) $owner->id], $owner));
+        $this->assertSame([], $this->activitySource()->describe([(string) $owner->id], UserModel::factory()->create()));
+    }
 
-        $asOwner = $source->describe([(string) $owner->id], $owner)[(string) $owner->id];
-        $this->assertStringContainsString('Ana', $asOwner->title);
-        $this->assertNotNull($asOwner->url);
+    /**
+     * @return array<string, array{ProfileVisibility, bool}>
+     */
+    public static function visibilities(): array
+    {
+        return [
+            'public' => [ProfileVisibility::Public, true],
+            'members' => [ProfileVisibility::Members, true],
+            'association' => [ProfileVisibility::Association, false],
+            'hidden' => [ProfileVisibility::Hidden, false],
+        ];
+    }
+
+    /**
+     * Only what any signed-in member can know exists: an account whose profile only the association or its owner may see is left out
+     */
+    #[DataProvider('visibilities')]
+    public function test_only_an_account_every_member_may_see_counts(ProfileVisibility $visibility, bool $counts): void
+    {
+        $user = UserModel::factory()->create();
+        UserProfileModel::query()->whereKey($user->id)->update(['visibility' => $visibility]);
+
+        $this->assertSame($counts, $this->activitySource()->facts((string) $user->id) !== []);
+        $this->assertSame($counts, in_array((string) $user->id, $this->listedSubjects(), true));
+    }
+
+    public function test_an_account_without_a_public_name_does_not_count(): void
+    {
+        $user = UserModel::factory()->create(['display_name' => null]);
+
+        $this->assertSame([], $this->activitySource()->facts((string) $user->id));
+        $this->assertNotContains((string) $user->id, $this->listedSubjects());
+    }
+
+    public function test_changing_the_visibility_publishes_the_account(): void
+    {
+        $user = UserModel::factory()->create();
+        $this->fakeActivityEvents();
+
+        UserProfileModel::query()->findOrFail($user->id)->update(['visibility' => ProfileVisibility::Hidden]);
+
+        $this->assertActivityPublished('core.account', (string) $user->id);
+        $this->assertActivityPublished('core.profile-completed', (string) $user->id);
+    }
+
+    public function test_the_profile_service_changing_the_visibility_publishes_the_account(): void
+    {
+        $user = UserModel::factory()->create();
+        $profile = UserProfileModel::query()->findOrFail($user->id);
+        $this->fakeActivityEvents();
+
+        $this->app->make(UserProfileServiceInterface::class)->update((string) $user->id, new ProfileUpdateDTO(
+            handle: $profile->handle,
+            visibility: ProfileVisibility::Association,
+            bio: null,
+            showMembership: false,
+            sections: [],
+            stats: [],
+            offeredSections: [],
+            offeredStats: [],
+        ));
+
+        $this->assertActivityPublished('core.account', (string) $user->id);
+        $this->assertSame([], $this->activitySource()->facts((string) $user->id));
+    }
+
+    public function test_setting_and_clearing_the_public_name_publish_the_account(): void
+    {
+        $user = UserModel::factory()->create(['display_name' => null]);
+        $this->fakeActivityEvents();
+
+        $user->update(['display_name' => 'Ana']);
+        $this->assertActivityPublished('core.account', (string) $user->id);
+
+        $this->fakeActivityEvents();
+        $user->update(['display_name' => null]);
+        $this->assertActivityPublished('core.account', (string) $user->id);
+    }
+
+    public function test_renaming_publishes_nothing_about_the_account(): void
+    {
+        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+        $this->fakeActivityEvents();
+
+        $user->update(['display_name' => 'Ana María']);
+
+        $this->assertNoActivityPublished();
     }
 
     public function test_creating_an_account_publishes_it(): void

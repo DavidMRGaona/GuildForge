@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace App\Infrastructure\Activity\Sources;
 
 use App\Domain\Activity\ActivityKind;
-use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use DateTimeImmutable;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
- * Account age (core#777): one subject per active account, the account as `owner`, dated when it was
- * created. Never an anonymized account, never a deactivated one until it is restored.
+ * Account age (core#777): one subject per active account with a public name and a profile every
+ * member may see, the account as `owner`, dated when it was created. Never an anonymized account,
+ * never a deactivated one until it is restored.
  *
  * A module's `years of membership` style rules count from `occurredAt`; the consumer decides what
  * seniority means.
@@ -34,11 +33,6 @@ final class AccountActivitySource extends AccountBasedActivitySource
     public function label(): string
     {
         return __('activity.account.label');
-    }
-
-    protected function counted(): Builder
-    {
-        return UserModel::query()->whereNull('anonymized_at')->orderBy('users.id');
     }
 
     protected function occurredAt(Collection $users): array
