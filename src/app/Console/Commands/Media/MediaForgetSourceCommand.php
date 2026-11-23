@@ -50,8 +50,8 @@ final class MediaForgetSourceCommand extends Command
 
         $count = MediaUsageModel::query()->where('source_type', $type)->count();
 
+        // Without rows nothing tells whose type it is: its failure is kept, so it fails closed
         if ($count === 0) {
-            $syncState->forgetRefreshFailure($type);
             $this->info(sprintf('No usage rows of type "%s".', $type));
 
             return self::SUCCESS;

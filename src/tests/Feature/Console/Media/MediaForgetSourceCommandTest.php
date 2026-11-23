@@ -107,6 +107,7 @@ final class MediaForgetSourceCommandTest extends TestCase
         $this->artisanCommand('media:forget-source', ['type' => 'gametables.tables', '--force' => true])->assertSuccessful();
         $this->artisanCommand('media:forget-source', ['type' => 'nothing.here', '--force' => true])->assertSuccessful();
 
-        $this->assertSame(['events'], array_keys($state->refreshFailures() ?? []));
+        // A type without rows keeps it: nothing tells whether its module is still installed
+        $this->assertSame(['events', 'nothing.here'], array_keys($state->refreshFailures() ?? []));
     }
 }
