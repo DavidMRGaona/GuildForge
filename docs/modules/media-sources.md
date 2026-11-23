@@ -42,7 +42,7 @@ The library hides every image unless whoever knows where it comes from says it m
 3. none of its usages is hidden ([Hiding one usage](#hiding-one-usage));
 4. the index is up to date with every source that claims the file **and** every source that has a usage of it (one without folders, such as `RichTextMediaSource`, included): its last sync did not fail, and it ran with the source as it is now. «As it is now» is a fingerprint of the class, the marker and the version of its code: the module's installed version, or the core's (`VERSION`) for core sources. A usage whose type has no active source now (a disabled module) is never up to date.
 
-Anything else is **concealed**, with the same placeholder as a hidden usage (below): files of unknown origin, files a source without the marker claims, files of a source whose `hidden()` throws, and files with a claiming source or a usage whose source is not up to date. Whether a source shows its previews is decided per claiming source, not per usage, so the unused files of a shown folder keep their thumbnail: they are what gets reviewed before deleting. It is worked out when the page is read, from the sources active now and the outcome of each one's last sync (`MediaSourceSyncState`, setting `media_library_source_syncs`): a new release of a source, with the same class or another, conceals its files until its rows have been written by that release.
+Anything else is **concealed**, with the same placeholder as a hidden usage (below): files of unknown origin, files a source without the marker claims, files of a source whose `hidden()` throws, and files with a claiming source or a usage whose source is not up to date. Whether a source shows its previews is decided per claiming source, not per usage, so the unused files of a shown folder keep their thumbnail: they are what gets reviewed before deleting (unless a claiming source conceals them: [Concealing unused files](#concealing-unused-files)). It is worked out when the page is read, from the sources active now and the outcome of each one's last sync (`MediaSourceSyncState`, setting `media_library_source_syncs`): a new release of a source, with the same class or another, conceals its files until its rows have been written by that release.
 
 **A new release takes effect only after the next sync.** Rows indexed by an older release carry its `hidden` flags, so until the source is synced again its images stay concealed: right after declaring the marker, or after any update. A sync during which the module's version changes does not count. Enabling or updating a module queues a sync (`SyncMediaLibraryOnModuleChange`); if one is already running the new one is dropped, so the files stay concealed until the next (by hand with «Actualizar», or the daily one). After deploying a new core version, run `php artisan media:sync` ([Deployment guide](../deployment-guide.md)). Declare the marker and hide the private usages in the same release: the first sync with the marker must already hide them.
 
@@ -58,6 +58,25 @@ Do not declare it on a source that also stores private images (hidden or pending
 - `ProfileBannerMediaSource` hides the banner of a profile not every member may see (visibility `association` or `hidden`, no public name, deactivated account).
 
 `RichTextMediaSource` declares the marker too, but it claims no folder, so it decides nothing but its own hidden usages.
+
+### Concealing unused files
+
+Hiding usages covers a file while a private record uses it. Once its last usage is gone, the file is unused, and unused files of a shown folder keep their thumbnail. For some sources an unused file may still be private (core ≥ the release with #843). The forum is the example:
+
+- the images of a thread deleted from a members-only category, or from a campaign's cast, lose their usages as soon as it is deleted;
+- so do those of a message deleted and purged after 30 days;
+- images uploaded while writing a message in a private category that is never sent never had a usage;
+- the replaced portrait of a non-player character with a spoiler, or that of a deleted character, is left behind.
+
+Such a source also implements the marker interface `App\Application\Media\Contracts\ConcealsUnusedMediaFiles` (no methods), beside `ShowsMediaPreviews`:
+
+```php
+final class PostMediaSource implements MediaUsageSourceInterface, ReleasesMediaThroughCoreInterface, ShowsMediaPreviews, ConcealsUnusedMediaFiles
+```
+
+When **any** visible, active source claiming a file implements it (winning the folder or not, as for `ShowsMediaPreviews`), a file of that folder **without any usage** in the index is concealed (the placeholder, «Imagen oculta») and never offered in «Elegir de la biblioteca». Files with usages follow [Showing previews](#showing-previews) and [Hiding one usage](#hiding-one-usage) as before. Nothing else changes: an unused file is still listed, counted, selectable and deleted once the 7-day grace period is over. It is worked out when the page is read (`EloquentMediaLibraryQuery::conceals()` and `applyReusable()`), so it needs no sync of its own.
+
+Do not declare it on sources whose unused files are reviewed before deleting and may be seen (events, galleries, hero slides): the library would stop showing what it is there to show. No core source declares it.
 
 ### Hiding one usage
 

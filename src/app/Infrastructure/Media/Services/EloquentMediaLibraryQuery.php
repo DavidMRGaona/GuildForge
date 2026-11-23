@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Media\Services;
 
+use App\Application\Media\Contracts\ConcealsUnusedMediaFiles;
 use App\Application\Media\Contracts\MediaUsageSourceInterface;
 use App\Application\Media\Contracts\ReleasesMediaThroughCoreInterface;
 use App\Application\Media\Contracts\ShowsMediaPreviews;
@@ -28,9 +29,12 @@ use Throwable;
  * the last sync of each (MediaSourceSyncState), rather than stored in the index: a module enabled, disabled
  * or updated changes it at once, and a source whose rows may be stale shows nothing until it is synced.
  *
+ * Unused files of a folder whose sources show their previews are shown, since they are what gets reviewed
+ * before deleting, unless a visible source claiming them conceals its unused files (core#843).
+ *
  * Claims are read once per instance: the panel keeps one instance while it draws a page.
  *
- * @phpstan-type Claim array{type: string, hidden: bool, releasesThroughCore: bool, showsPreviews: bool, folder: string, excluded: list<string>}
+ * @phpstan-type Claim array{type: string, hidden: bool, releasesThroughCore: bool, showsPreviews: bool, concealsUnused: bool, folder: string, excluded: list<string>}
  */
 final class EloquentMediaLibraryQuery implements MediaLibraryQueryInterface
 {
@@ -105,6 +109,7 @@ final class EloquentMediaLibraryQuery implements MediaLibraryQueryInterface
         // The picker shows thumbnails: only images the library would show are offered (core#837)
         $reusable = array_filter($visible, static fn (array $claim): bool => $claim['releasesThroughCore'] && $claim['showsPreviews']);
         $concealing = array_filter($visible, static fn (array $claim): bool => ! $claim['showsPreviews']);
+        $concealingUnused = array_filter($visible, static fn (array $claim): bool => $claim['concealsUnused']);
 
         $query->where('media_files.resource_type', 'image')
             ->whereNotNull('media_files.format')
@@ -114,6 +119,11 @@ final class EloquentMediaLibraryQuery implements MediaLibraryQueryInterface
         foreach ($concealing as $claim) {
             // Nor one that any visible source claiming it would not show, winning the folder or not
             $query->whereNot(fn (Builder $claimed): Builder => $this->whereMatches($claimed, $claim));
+        }
+
+        foreach ($concealingUnused as $claim) {
+            // Nor an unused one that any visible source claiming it keeps out of sight (core#843)
+            $query->whereNot(fn (Builder $claimed): Builder => $this->whereMatches($claimed, $claim)->whereDoesntHave('usages'));
         }
 
         return $this->whereClaimed($query, $reusable, $claims, negate: false);
@@ -149,10 +159,18 @@ final class EloquentMediaLibraryQuery implements MediaLibraryQueryInterface
         }
 
         // Every visible source that claims the file must show it, not only the one that wins its folder
-        foreach ($this->visible($this->claims()) as $claim) {
-            if (! $claim['showsPreviews'] && $this->claimsFile($claim, $file->file_id)) {
-                return true;
-            }
+        $claiming = array_filter(
+            $this->visible($this->claims()),
+            fn (array $claim): bool => $this->claimsFile($claim, $file->file_id),
+        );
+
+        if (array_any($claiming, static fn (array $claim): bool => ! $claim['showsPreviews'])) {
+            return true;
+        }
+
+        // An unused file may be private where any of them says so (core#843)
+        if (array_any($claiming, static fn (array $claim): bool => $claim['concealsUnused']) && ! $this->hasUsages($file)) {
+            return true;
         }
 
         return $this->hasConcealingUsage($file);
@@ -308,6 +326,7 @@ final class EloquentMediaLibraryQuery implements MediaLibraryQueryInterface
                         'hidden' => $hidden,
                         'releasesThroughCore' => $source instanceof ReleasesMediaThroughCoreInterface,
                         'showsPreviews' => $source instanceof ShowsMediaPreviews && in_array($type, $upToDate, true),
+                        'concealsUnused' => $source instanceof ConcealsUnusedMediaFiles,
                         'folder' => $folder,
                         'excluded' => $excluded,
                     ];

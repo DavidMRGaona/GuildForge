@@ -36,6 +36,7 @@ use Illuminate\Support\Facades\Queue;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
+use Tests\Support\Media\FakeConcealingUnusedMediaSource;
 use Tests\Support\Media\FakeMediaSource;
 use Tests\Support\Media\InMemoryMediaCatalog;
 use Tests\Support\Media\MarksMediaSourcesSynced;
@@ -411,6 +412,23 @@ final class MediaLibraryPageTest extends TestCase
         $this->actingAs($this->viewer());
 
         $this->assertConcealed($file, 'forum/post');
+    }
+
+    public function test_an_unused_file_of_a_source_that_conceals_unused_files_is_concealed_and_can_be_deleted(): void
+    {
+        // A forum image left behind by a deleted thread may be private (core#843)
+        $this->register(new FakeConcealingUnusedMediaSource('forum', ['forum/']));
+        $file = $this->file('forum/orphan');
+        $this->actingAs($this->viewer());
+
+        $this->assertConcealed($file, 'forum/orphan');
+
+        $this->actingAs($this->deleter());
+        $this->listPage()
+            ->callTableAction('delete', $file, ['confirmation' => true])
+            ->assertHasNoTableActionErrors();
+        $this->assertArrayNotHasKey('forum/orphan', $this->catalog->assets);
+        $this->assertNull($file->fresh());
     }
 
     public function test_a_file_of_unknown_origin_is_concealed(): void

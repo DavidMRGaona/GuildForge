@@ -45,10 +45,11 @@ Una imagen sale oculta por una de estas razones:
 - **Es de origen desconocido.** No se sabe de dónde viene, así que no se enseña.
 - **La biblioteca no está al día con su origen.** Pasa justo después de actualizar la web o un módulo, o si la última actualización de ese origen falló. Se arregla sola con la siguiente actualización; también puedes pulsar **Actualizar**.
 - **Uno de sus usos la oculta**, como la insignia de un logro secreto, la imagen de una propuesta que su autor aún no ha enviado o el banner de un perfil que no ven todas las personas registradas. Si un archivo lo comparten un registro visible y uno oculto, se oculta para los dos.
+- **Ya no la usa nadie y su origen puede guardar imágenes privadas.** Pasa, por ejemplo, con las imágenes del foro: las de un tema borrado de una categoría para socios, o las que se subieron para un mensaje que nunca se envió, se quedan sin uso y podrían ser privadas.
 
 Una imagen oculta tampoco se nombra por su archivo: el aviso de borrado la llama «Imagen oculta».
 
-Los archivos sin usar de un origen que sí se ve conservan su miniatura, para que puedas revisarlos antes de borrarlos.
+Los archivos sin usar de los demás orígenes que se ven conservan su miniatura, para que puedas revisarlos antes de borrarlos. Los sin usar que salen ocultos se borran igual que los demás: pasados 7 días desde que se subieron, con **Borrar**.
 
 Sirve para que quien gestiona la biblioteca no vea por descuido una imagen privada o una sorpresa, no para guardar un secreto: la imagen sigue siendo pública en Cloudinary.
 
