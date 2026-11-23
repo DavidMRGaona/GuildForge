@@ -15,9 +15,10 @@ Requires core ≥ the release with #742; set `requires.core` to it.
 7. [Profile card](#profile-card)
 8. [Badges](#badges)
 9. [Membership display](#membership-display)
-10. [Failing closed](#failing-closed)
-11. [The core's section](#the-cores-section)
-12. [Testing](#testing)
+10. [Visible profiles](#visible-profiles)
+11. [Failing closed](#failing-closed)
+12. [The core's section](#the-cores-section)
+13. [Testing](#testing)
 
 ## Offering a section
 
@@ -542,6 +543,41 @@ final class RepublishMembershipYears implements ShouldQueue
 }
 ```
 
+## Visible profiles
+
+A module that lists people (a leaderboard, the participants of something) must name or link only those whose profile the person viewing may see, decided exactly as the profile page decides. It asks the core once for the whole list, never reads profile rows or accounts itself and never copies the core's internals (`StoredProfiles`, `PublicProfileService::describe()`). Requires core ≥ the release with #840.
+
+### Asking: `VisibleProfilesInterface::among()`
+
+```php
+use App\Application\Profiles\DTOs\VisibleProfileDTO;
+use App\Application\Profiles\Services\VisibleProfilesInterface;
+
+// VisibleProfilesInterface $profiles, injected anywhere (it asks for the request's rows on each call)
+$visible = [];
+foreach (array_chunk($candidateIds, VisibleProfilesInterface::MAX_IDS) as $chunk) {
+    foreach ($this->profiles->among($chunk, $request->user()) as $profile) {
+        $visible[$profile->userId] = $profile;   // in the order of the ids
+    }
+}
+
+$rows = array_map(static fn (VisibleProfileDTO $profile): array => [
+    'name' => $profile->publicName,
+    'url' => '/miembros/'.$profile->handle,
+    'avatarPublicId' => $profile->avatarPublicId,
+], array_values($visible));
+```
+
+- `among(list<string> $userIds, ?Authenticatable $viewer): list<VisibleProfileDTO>`: only the profiles the viewer may see, in the order of the ids, each once. Ids are read in lower case; repeated ids and anything that is not an account id are ignored (never looked up). The viewer is the person who will see the list (the request's user, or `null` for a guest).
+- **Decided by the profile page's rule** (`ProfileAccessRule::visibleAmong()`): never a profile hidden from the viewer, deactivated, anonymized or without a profile row; a profile without a public name only for its owner. The owner always sees their own, whatever its visibility.
+- **Batched.** The profile rows and their accounts are read with one query each and the rule asks about the viewer (email verification, membership) at most once, whatever the number of accounts.
+- At most `VisibleProfilesInterface::MAX_IDS` (500) accounts in one call: more throws `InvalidArgumentException` before anything is read, nothing is cut in silence. Ask a longer list in chunks, as above.
+- **Fails closed.** Any other failure (a query, a stored row the page would not answer) gives an empty list and a warning with the exception's class only; it never throws. An access check that throws hides the profiles that need it, as on the page.
+- `VisibleProfileDTO` (`App\Application\Profiles\DTOs`) carries what the page shows that person and nothing else: `userId` (lower case), `handle` (the page is `/miembros/<handle>`), `publicName` (as the page shows it; `null` only on the owner's own profile while they have none) and `avatarPublicId` (the avatar's Cloudinary public id, drawn like the page's; `null` without one). Never the account name, the email or the roles. It is checked when built and throws `InvalidArgumentException` on an id that is not a UUID, an address without the form of one, a blank public name or one with blanks around it, or a blank avatar.
+- An interface of its own, apart from `PublicProfileServiceInterface` and `ProfileCardServiceInterface`, so a module's test doubles of those keep working.
+- It answers for one viewer: what it gave is for that person only. Never keep it in a cache shared between viewers.
+- It only says who may be named. Whether showing that an account did something is allowed (an NPC author, a private sign-up, an owner who opted out of a list) is still the module's own rule.
+
 ## Failing closed
 
 A section or stat never breaks the profile around it:
@@ -566,6 +602,8 @@ A section or stat never breaks the profile around it:
 | A source gives more than three badges for an account | Only the first three, warning |
 | `showsMembership()` cannot read the role setting, the database or a two-factor reader it needs | Throws `ProfileMembershipDisplayUnavailableException`; never `false` |
 | `showsMembership()` is asked about more than 500 accounts | Throws `InvalidArgumentException` |
+| `among()` is asked about more than 500 accounts | Throws `InvalidArgumentException`, nothing read |
+| `among()` cannot read the profile rows or the accounts, or a stored row breaks a rule of `VisibleProfileDTO` | No profile, warning with the exception's class |
 
 Under php-fpm every web request builds the registries and the renderer again; a queue worker keeps the registries (singletons, holding only classes and what was read from them) for its whole life and gets a fresh renderer, with freshly built sections and stats, for each job. Either way warnings are kept apart for a day in the cache, not in memory (`App\Infrastructure\Support\DailyWarnings`, prefix `profiles:warned:`, the same mechanism as site blocks): the registries' per class and reason (a duplicated key, per key), the renderer's per key and reason, the badges' per source class and reason. Warnings carry the class, the module, the key and the reason; props, counts and exception messages are never logged, and an exception is named only by its class.
 
@@ -597,4 +635,12 @@ $badges = $this->app->make(ProfileBadgesInterface::class)->forAuthors([$ana->id,
 
 $this->assertSame(['achievements.first-game'], array_map(fn (ProfileBadgeDTO $badge) => $badge->key, $badges[$ana->id]));
 $this->assertTrue(ProfileBadgeIcons::isKnown($badges[$ana->id][0]->icon));
+```
+
+- Lists of people: the core's `VisibleProfilesInterface` works in a module's tests as it is (create the accounts, set each profile's visibility). Where only the module's own logic matters, bind the double `Tests\Support\Profiles\FakeVisibleProfiles`: it reads the ids as the core does (lower case, each once, more than 500 refused), answers the profiles it was given in the order asked, optionally filtered by a closure per viewer, and remembers every call.
+
+```php
+$this->app->instance(VisibleProfilesInterface::class, new FakeVisibleProfiles([
+    FakeVisibleProfiles::profile($ana->id, 'ana-garcia', 'Ana García'),
+]));
 ```

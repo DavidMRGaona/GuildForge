@@ -16,6 +16,7 @@ use App\Application\Profiles\Services\ProfileStatRegistryInterface;
 use App\Application\Profiles\Services\ProfileSummaryRendererInterface;
 use App\Application\Profiles\Services\PublicProfileServiceInterface;
 use App\Application\Profiles\Services\UserProfileServiceInterface;
+use App\Application\Profiles\Services\VisibleProfilesInterface;
 use App\Domain\Events\UserActiveRolesChanged;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
@@ -37,6 +38,7 @@ use App\Infrastructure\Profiles\Services\ProfileMembershipDisplay;
 use App\Infrastructure\Profiles\Services\ProfileMembershipDisplayAnnouncer;
 use App\Infrastructure\Profiles\Services\PublicProfileService;
 use App\Infrastructure\Profiles\Services\UserProfileService;
+use App\Infrastructure\Profiles\Services\VisibleProfiles;
 use App\Infrastructure\Profiles\StoredProfiles;
 use Illuminate\Contracts\Cache\Repository as Cache;
 use Illuminate\Support\Facades\Event;
@@ -81,6 +83,8 @@ final class ProfilesServiceProvider extends ServiceProvider
         $this->app->scoped(ProfileSummaryRendererInterface::class, static fn ($app): ProfileRenderer => $app->make(ProfileRenderer::class));
         $this->app->bind(PublicProfileServiceInterface::class, PublicProfileService::class);
         $this->app->bind(ProfileCardServiceInterface::class, ProfileCardService::class);
+        // Which of many profiles a person may see (core#840), for modules that list people
+        $this->app->bind(VisibleProfilesInterface::class, VisibleProfiles::class);
         // The owner's editor (core#743): what it offers is read once per request, like the renderer
         $this->app->scoped(ProfileLayoutOptionsInterface::class, ProfileLayoutOptions::class);
         $this->app->bind(ProfileEditorInterface::class, ProfileEditor::class);
