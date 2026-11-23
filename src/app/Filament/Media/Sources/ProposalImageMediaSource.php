@@ -23,16 +23,8 @@ final readonly class ProposalImageMediaSource implements ConcealsUnusedMediaFile
 {
     public const string TYPE = 'core.proposal-images';
 
-    /** Subfolder of each type's folder, with its trailing slash */
-    public const string SUBFOLDER = 'proposals/';
-
-    /**
-     * Where the web form of a type stores its images (e.g. `events/proposals/`).
-     */
-    public static function folderOf(ProposalType $type): string
-    {
-        return $type->value.'/'.self::SUBFOLDER;
-    }
+    /** Subfolder of each type's folder, with its trailing slash (ProposalType::imageFolder()) */
+    public const string SUBFOLDER = ProposalType::IMAGE_SUBFOLDER;
 
     public function type(): string
     {
@@ -46,7 +38,7 @@ final readonly class ProposalImageMediaSource implements ConcealsUnusedMediaFile
 
     public function folders(): array
     {
-        return array_map(self::folderOf(...), ProposalType::cases());
+        return array_map(static fn (ProposalType $type): string => $type->imageFolder(), ProposalType::cases());
     }
 
     public function excludedSubfolders(): array

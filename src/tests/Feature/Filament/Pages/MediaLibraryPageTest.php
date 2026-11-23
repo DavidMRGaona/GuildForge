@@ -924,6 +924,7 @@ final class MediaLibraryPageTest extends TestCase
     {
         // A draft's image, say: the library did not name it, so its deletion does not either (core#841)
         $deleter = $this->deleter();
+        $author = UserModel::factory()->create(['name' => 'Autora del borrador']);
         MediaDeletionModel::query()->create([
             'file_id' => 'events/proposals/2026/11/secret-draft',
             'resource_type' => 'image',
@@ -932,7 +933,8 @@ final class MediaLibraryPageTest extends TestCase
             'outcome' => 'deleted',
             'kind' => 'automatic',
             'is_hidden' => true,
-            'deleted_by' => null,
+            // Nor who deleted it: that would tell who held the draft
+            'deleted_by' => $author->id,
             'deleted_at' => CarbonImmutable::now()->subHour(),
         ]);
         MediaDeletionModel::query()->create([
@@ -952,6 +954,8 @@ final class MediaLibraryPageTest extends TestCase
         $html = $content->render();
 
         $this->assertStringNotContainsString('secret-draft', $html);
+        $this->assertStringNotContainsString('Autora del borrador', $html);
+        $this->assertStringContainsString('Por —', $html);
         $this->assertStringContainsString('Imagen oculta', $html);
         $this->assertStringContainsString('events/2026/11/visible-cover', $html);
     }

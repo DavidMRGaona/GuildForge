@@ -18,6 +18,16 @@ final class EventMediaSourceTest extends TestCase
     use ColumnSourceContractTests;
     use LazilyRefreshDatabase;
 
+    /**
+     * The web proposal forms' folder too, claimed by ProposalImageMediaSource (core#841).
+     *
+     * @return list<string>
+     */
+    protected function excludedSubfolders(): array
+    {
+        return ['content/', 'proposals/'];
+    }
+
     protected function source(): MediaUsageSourceInterface
     {
         return app(EventMediaSource::class);

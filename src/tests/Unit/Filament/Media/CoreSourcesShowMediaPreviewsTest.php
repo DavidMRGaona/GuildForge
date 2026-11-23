@@ -10,6 +10,7 @@ use App\Filament\Media\Sources\EventMediaSource;
 use App\Filament\Media\Sources\FooterMediaSource;
 use App\Filament\Media\Sources\GalleryPhotoMediaSource;
 use App\Filament\Media\Sources\HeroSlideMediaSource;
+use App\Filament\Media\Sources\ProposalImageMediaSource;
 use App\Filament\Media\Sources\RichTextMediaSource;
 use App\Filament\Media\Sources\SiteSettingsMediaSource;
 use App\Infrastructure\Media\Sources\AvatarMediaSource;
@@ -32,6 +33,7 @@ final class CoreSourcesShowMediaPreviewsTest extends TestCase
             RichTextMediaSource::class,
             SiteSettingsMediaSource::class,
             ProfileBannerMediaSource::class,
+            ProposalImageMediaSource::class,
         ] as $source) {
             $this->assertContains(ShowsMediaPreviews::class, (array) class_implements($source), $source);
         }

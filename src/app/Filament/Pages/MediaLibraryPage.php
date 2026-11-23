@@ -915,6 +915,8 @@ final class MediaLibraryPage extends Page implements HasTable
                 // The account may have been deleted since (the key is set to null then); a file released
                 // while nobody was signed in (a command) was never deleted by anyone
                 'deletedBy' => match (true) {
+                    // Who deleted it would tell who held the draft, which the panel never sees (core#841)
+                    $row->is_hidden => '—',
                     $row->deletedBy instanceof UserModel => $row->deletedBy->name,
                     $row->kind === MediaDeletionKind::Automatic && $row->getRawOriginal('deleted_by') === null => null,
                     default => (string) __('filament.media_library.deletions.removed_account'),

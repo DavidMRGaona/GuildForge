@@ -20,7 +20,6 @@ use App\Domain\Proposals\Exceptions\ProposalException;
 use App\Domain\Proposals\Exceptions\ProposalNotAllowedException;
 use App\Domain\Proposals\Exceptions\ProposalNotFoundException;
 use App\Filament\Forms\RichEditor\EditorImages;
-use App\Filament\Media\Sources\ProposalImageMediaSource;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OwnProposalResource;
 use App\Http\Resources\TagResource;
@@ -160,7 +159,7 @@ abstract class ProposalFormController extends Controller
         }
 
         $path = Storage::disk(EditorImages::DISK)->putFileAs(
-            ProposalImageMediaSource::folderOf($this->type()).now()->format('Y/m'),
+            $this->type()->imageFolder().now()->format('Y/m'),
             $file,
             Str::uuid()->toString().'.'.($file->guessExtension() ?? 'jpg'),
             ['visibility' => 'public', 'mimetype' => $file->getMimeType()],

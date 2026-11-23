@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Media;
 
+use App\Application\Impersonation\Services\ImpersonationServiceInterface;
 use App\Application\Media\Services\MediaCatalogInterface;
 use App\Application\Media\Services\MediaFileIdResolverInterface;
 use App\Application\Media\Services\MediaFileReleaserInterface;
@@ -12,6 +13,7 @@ use App\Application\Proposals\DTOs\ProposalSettingsDTO;
 use App\Application\Proposals\DTOs\ProposalTypeSettingsDTO;
 use App\Application\Proposals\Services\ProposalServiceInterface;
 use App\Application\Proposals\Services\ProposalSettingsServiceInterface;
+use App\Domain\Impersonation\Enums\ImpersonationMode;
 use App\Domain\Proposals\Enums\ProposalStatus;
 use App\Domain\Proposals\Exceptions\InvalidProposalDataException;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaDeletionModel;
@@ -26,6 +28,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Mockery;
 use Mockery\MockInterface;
+use RuntimeException;
 use Tests\Support\Media\InMemoryMediaCatalog;
 use Tests\TestCase;
 
@@ -111,6 +114,58 @@ final class ProposalImageMediaTest extends TestCase
         $releaser->shouldNotHaveReceived('release');
         $path = (string) EventModel::query()->includingUnsubmittedProposals()->sole()->image_public_id;
         Storage::disk('images')->assertExists($path);
+    }
+
+    public function test_a_save_that_throws_after_storing_the_record_keeps_its_image(): void
+    {
+        // The release only deletes what a live check finds unused: the stored draft still uses it
+        $user = UserModel::factory()->create();
+        $this->mock(ProposalServiceInterface::class, static function (MockInterface $service) use ($user): void {
+            $service->shouldReceive('createEvent')->andReturnUsing(static function (string $userId, $data) use ($user): string {
+                EventModel::factory()->proposal(ProposalStatus::Draft, $user)->create(['image_public_id' => $data->imagePublicId]);
+
+                throw new RuntimeException('failed after saving');
+            });
+        });
+
+        $this->actingAs($user)
+            ->post('/propuestas/eventos', $this->eventForm(['image' => UploadedFile::fake()->image('cartel.png')]))
+            ->assertServerError();
+
+        $this->assertSame(0, MediaDeletionModel::query()->count());
+        Storage::disk('images')->assertExists((string) EventModel::query()->includingUnsubmittedProposals()->sole()->image_public_id);
+    }
+
+    public function test_a_refused_proposal_while_simulating_an_account_releases_nothing(): void
+    {
+        // The safety net rolls the request back and neutralises the queue: nothing is queued nor deleted
+        $this->configure(maxDrafts: 1);
+        $admin = UserModel::factory()->admin()->create();
+        $target = UserModel::factory()->create();
+        EventModel::factory()->proposal(ProposalStatus::Draft, $target)->create();
+        $this->actingAs($admin);
+        $this->app->make(ImpersonationServiceInterface::class)->start($admin, $target, ImpersonationMode::Simulate);
+
+        $this->from('/propuestas/eventos/nuevo')
+            ->post('/propuestas/eventos', $this->eventForm(['image' => UploadedFile::fake()->image('cartel.png')]))
+            ->assertSessionHas('error');
+
+        $this->assertSame(0, MediaDeletionModel::query()->count());
+        $this->assertSame([], $this->catalog->lookups);
+    }
+
+    public function test_a_deletion_whose_concealment_cannot_be_told_is_recorded_hidden(): void
+    {
+        // Any doubt conceals it: the log never names a file that may be private
+        $this->catalog->add('events/2026/11/replaced', uploadedAt: '2026-01-01 10:00:00');
+        $this->sync();
+        $this->mock(MediaLibraryQueryInterface::class, static function (MockInterface $library): void {
+            $library->shouldReceive('conceals')->andThrow(new RuntimeException('unreadable'));
+        });
+
+        app(MediaFileReleaserInterface::class)->release('events/2026/11/replaced.jpg');
+
+        $this->assertTrue(MediaDeletionModel::query()->sole()->is_hidden);
     }
 
     public function test_an_unused_proposal_image_is_concealed_while_an_unused_panel_image_shows(): void
