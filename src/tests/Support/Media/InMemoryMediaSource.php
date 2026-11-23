@@ -20,6 +20,9 @@ final class InMemoryMediaSource implements MediaUsageSourceInterface
     /** usages() throws after yielding what it has */
     public bool $failing = false;
 
+    /** usagesFor() throws, as a source that cannot read one record would */
+    public bool $failingForRecords = false;
+
     /**
      * @param  list<string>  $folders
      */
@@ -77,6 +80,10 @@ final class InMemoryMediaSource implements MediaUsageSourceInterface
      */
     public function usagesFor(string $recordId): array
     {
+        if ($this->failingForRecords) {
+            throw new RuntimeException('record could not be read');
+        }
+
         return array_values(array_filter(
             $this->usages,
             static fn (MediaUsageDTO $usage): bool => $usage->recordId === $recordId,

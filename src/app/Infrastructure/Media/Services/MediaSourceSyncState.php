@@ -11,6 +11,10 @@ use App\Application\Modules\Services\ModuleManagerServiceInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Domain\Modules\Entities\Module;
+use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaSourceRefreshFailureModel;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -20,6 +24,10 @@ use Throwable;
  * sources. The library shows a file's image only while every source that claims it, and every source with a
  * usage of it, is up to date, so rows written by older code (which may hide less) are never trusted, and a
  * source whose last sync failed shows nothing. Anything unreadable counts as never synced: it fails closed.
+ *
+ * A failed refresh of one record (core#844) leaves its type out too, in a table of its own so failures written
+ * at once never lose each other: the row may still say what the source no longer says (a usage now hidden).
+ * Only a sync that read the source completely brings it back, and only if no refresh failed while it ran.
  */
 final readonly class MediaSourceSyncState
 {
@@ -71,20 +79,65 @@ final readonly class MediaSourceSyncState
     }
 
     /**
-     * The types of the given sources whose last sync ran with the source as it is now and did not fail.
+     * The types of the given sources whose last sync ran with the source as it is now and did not fail, and
+     * whose records were all refreshed since without failing.
      *
      * @param  iterable<MediaUsageSourceInterface>  $sources
      * @return list<string>
      */
     public function upToDate(iterable $sources): array
     {
+        $failures = $this->refreshFailures();
+
+        if ($failures === null) {
+            return [];
+        }
+
         $synced = $this->all();
 
         return array_keys(array_filter(
             $this->fingerprints($sources),
-            static fn (string $fingerprint, string $type): bool => ($synced[$type] ?? null) === $fingerprint,
+            static fn (string $fingerprint, string $type): bool => ($synced[$type] ?? null) === $fingerprint
+                && ! array_key_exists($type, $failures),
             ARRAY_FILTER_USE_BOTH,
         ));
+    }
+
+    /**
+     * Leaves a type out of date after a refresh of one of its records failed or could not be queued. Never
+     * throws: a failure that cannot be written is logged, since nothing else can conceal the type then.
+     */
+    public function markRefreshFailed(string $type): void
+    {
+        try {
+            MediaSourceRefreshFailureModel::query()->upsert(
+                [[
+                    'source_type' => $type,
+                    'token' => (string) Str::uuid(),
+                    'failed_at' => (new MediaSourceRefreshFailureModel)->fromDateTime(CarbonImmutable::now()),
+                ]],
+                ['source_type'],
+                ['token', 'failed_at'],
+            );
+        } catch (Throwable $e) {
+            Log::error('[Media] A failed media refresh could not be recorded; the library may show its files until the next sync.', [
+                'type' => $type,
+                'exception' => $e,
+            ]);
+        }
+    }
+
+    /**
+     * @return array<string, string>|null the token of each type's refresh failure, null when unreadable
+     */
+    public function refreshFailures(): ?array
+    {
+        try {
+            /** @var array<string, string> */
+            return MediaSourceRefreshFailureModel::query()->pluck('token', 'source_type')->all();
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     /**
@@ -117,12 +170,14 @@ final readonly class MediaSourceSyncState
     /**
      * Records the outcome of a sync: synced types take the given fingerprint, failed ones lose theirs. Types
      * of sources not read this time (a disabled module) are kept: they come back up to date only if they did
-     * not change meanwhile.
+     * not change meanwhile. A synced type's refresh failure is cleared only when it is the one read before
+     * the sync read the source: one written meanwhile has another token and stays.
      *
      * @param  array<string, string>  $synced  fingerprint by type
      * @param  list<string>  $failed  types
+     * @param  array<string, string>  $refreshFailuresBefore  token by type, as refreshFailures() gave them
      */
-    public function record(array $synced, array $failed): void
+    public function record(array $synced, array $failed, array $refreshFailuresBefore = []): void
     {
         $state = [...$this->all(), ...$synced];
 
@@ -132,6 +187,28 @@ final readonly class MediaSourceSyncState
 
         ksort($state);
         $this->settings->set(self::KEY, (string) json_encode($state, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+
+        foreach (array_diff_key(array_intersect_key($refreshFailuresBefore, $synced), array_flip($failed)) as $type => $token) {
+            $this->clearRefreshFailure((string) $type, $token);
+        }
+    }
+
+    /**
+     * A failure left in place keeps the type concealed: it fails closed.
+     */
+    private function clearRefreshFailure(string $type, string $token): void
+    {
+        try {
+            MediaSourceRefreshFailureModel::query()
+                ->where('source_type', $type)
+                ->where('token', $token)
+                ->delete();
+        } catch (Throwable $e) {
+            Log::warning('[Media] A media refresh failure could not be cleared; the type stays concealed until the next sync.', [
+                'type' => $type,
+                'exception' => $e,
+            ]);
+        }
     }
 
     /**

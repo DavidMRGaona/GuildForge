@@ -50,11 +50,13 @@ final readonly class MediaIndexer implements MediaIndexerInterface
         try {
             $this->bus->dispatch((new RefreshMediaUsagesJob($type, $recordId))->afterCommit());
         } catch (Throwable $e) {
-            Log::warning('[Media] Could not queue a media usages refresh.', [
+            Log::warning('[Media] Could not queue a media usages refresh; the type is concealed until the next sync.', [
                 'type' => $type,
                 'record_id' => $recordId,
                 'exception' => $e,
             ]);
+            // The refresh is lost: the index may keep a usage shown that the source now hides (core#844)
+            $this->syncState->markRefreshFailed($type);
         }
     }
 
@@ -69,6 +71,9 @@ final readonly class MediaIndexer implements MediaIndexerInterface
         $sources = $this->registry->sources();
         // What each source is before its usages are read: a module updated meanwhile is not taken as synced
         $before = $this->syncState->fingerprints($sources);
+        // Refresh failures seen before reading: one written while a source is read may come from a change
+        // the read missed, so it outlives this sync (core#844). Unreadable ones are all kept
+        $refreshFailures = $this->syncState->refreshFailures() ?? [];
         $succeeded = [];
 
         foreach ($sources as $source) {
@@ -88,6 +93,7 @@ final readonly class MediaIndexer implements MediaIndexerInterface
         $this->syncState->record(
             array_filter($after, static fn (string $fingerprint, string $type): bool => ($before[$type] ?? null) === $fingerprint, ARRAY_FILTER_USE_BOTH),
             [...$failedSources, ...array_keys(array_diff_assoc($after, $before))],
+            $refreshFailures,
         );
 
         // A partial run must not look like a reconciliation: the page warns while the failure is the newest

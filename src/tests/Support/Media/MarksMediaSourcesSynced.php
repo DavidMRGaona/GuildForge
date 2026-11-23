@@ -16,6 +16,6 @@ trait MarksMediaSourcesSynced
     protected function markMediaSourcesSynced(): void
     {
         $state = $this->app->make(MediaSourceSyncState::class);
-        $state->record($state->fingerprints($this->app->make(MediaSourceRegistryInterface::class)->sources()), []);
+        $state->record($state->fingerprints($this->app->make(MediaSourceRegistryInterface::class)->sources()), [], $state->refreshFailures() ?? []);
     }
 }

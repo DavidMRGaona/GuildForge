@@ -181,6 +181,8 @@ The closure returns the ids, as the source knows them, of the records the saved 
 
 You can also call `MediaIndexerInterface::refresh($type, $recordId)` directly.
 
+A refresh that is lost leaves its type out of date (core#844): when the refresh cannot be queued, the source throws while reading the record, or the source cannot be built in the process that runs it, the type is recorded as failed, as a failed sync would leave it. Until then the library shows the files it claims or uses as «Imagen oculta» and never offers them to reuse, since the row may still say what the source no longer does (a usage that became hidden). A refresh that works afterwards does not bring the type back, because it knows nothing about the other records; only the next sync that reads the source completely does, and only if no refresh of the type failed while it ran. A refresh whose rows were written but whose files could not be looked up in the catalog is not a failure: the files are settled by the next sync and the type stays up to date. Other types are never affected.
+
 ## Commands
 
 | Command | What it does |
