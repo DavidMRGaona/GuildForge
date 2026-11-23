@@ -15,6 +15,12 @@ use App\Application\Linking\DTOs\LinkableRecordDTO;
  * it. Unlike search(), which reaches people without panel access as visitors, this gets the
  * account's own id: the lookup only ever asks it about the signed-in person, about their own
  * records, so what only the owner sees (a private table, a hidden direction) may be answered.
+ *
+ * There is no panel check here: the account may not open the panel. So never reuse the
+ * visibility rule of find() and search(), which may show drafts to whoever holds a view
+ * permission because the lookup only hands them a real id with panel access. Apply the rule of
+ * what the site shows that very person. The lookup drops every panelUrl of the answer when the
+ * account may not open the panel.
  */
 interface FindsLinkableRecordsOfOrganizer extends LinkableRecordSourceInterface
 {

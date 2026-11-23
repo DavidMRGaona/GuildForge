@@ -182,9 +182,9 @@ final readonly class LinkableRecordLookup implements LinkableRecordLookupInterfa
             return [];
         }
 
-        $organizerId = $this->organizerId($organizer, $type);
+        $account = $this->organizer($organizer, $type);
 
-        if ($organizerId === null) {
+        if (! $account instanceof UserModel) {
             return [];
         }
 
@@ -194,14 +194,15 @@ final readonly class LinkableRecordLookup implements LinkableRecordLookupInterfa
 
         try {
             // Read inside the try: a source breaking its own return type fails here too
-            foreach ($source->organizedBy($organizerId, $limit) as $record) {
+            foreach ($source->organizedBy(strtolower((string) $account->getKey()), $limit) as $record) {
                 if ($record->type !== $type) {
                     $strays++;
 
                     continue;
                 }
 
-                $records[] = $record;
+                // A record answered twice (created and directed by the person) is offered once
+                $records[$record->id] ??= $record;
             }
         } catch (Throwable $exception) {
             $this->reportFailure('organizedBy', $source, $type, $exception);
@@ -217,7 +218,7 @@ final readonly class LinkableRecordLookup implements LinkableRecordLookupInterfa
             ]);
         }
 
-        return array_slice($records, 0, $limit);
+        return $this->withoutPanelUrlsUnlessPanel(array_slice(array_values($records), 0, $limit), $account, $type);
     }
 
     public function types(): array
@@ -236,12 +237,12 @@ final readonly class LinkableRecordLookup implements LinkableRecordLookupInterfa
     }
 
     /**
-     * The organizer's account id in lower case, read again from the database so a stale or made
-     * up model is never trusted: null when it is not a uuid, unknown, deactivated (soft-deleted)
-     * or anonymized, or when it cannot be read (logged). No panel check: their own records are
-     * not the panel's drafts.
+     * The organizer's account, read again from the database so a stale or made up model is never
+     * trusted: null when it is not a uuid, unknown, deactivated (soft-deleted) or anonymized, or
+     * when it cannot be read (logged). No panel check to ask: their own records are not the
+     * panel's drafts.
      */
-    private function organizerId(Authenticatable $organizer, string $type): ?string
+    private function organizer(Authenticatable $organizer, string $type): ?UserModel
     {
         $id = $organizer->getAuthIdentifier();
 
@@ -249,10 +250,8 @@ final readonly class LinkableRecordLookup implements LinkableRecordLookupInterfa
             return null;
         }
 
-        $id = strtolower($id);
-
         try {
-            $exists = UserModel::query()->whereNull('anonymized_at')->whereKey($id)->exists();
+            $account = UserModel::query()->whereNull('anonymized_at')->find(strtolower($id));
         } catch (Throwable $exception) {
             Log::error('[LinkableRecordLookup] The organizer could not be read, nothing answered', [
                 'type' => $type,
@@ -263,7 +262,44 @@ final readonly class LinkableRecordLookup implements LinkableRecordLookupInterfa
             return null;
         }
 
-        return $exists ? $id : null;
+        return $account instanceof UserModel ? $account : null;
+    }
+
+    /**
+     * The panel URL is for who may open the panel: organizedBy() hands the source the real id of
+     * anybody, so the lookup drops every URL here when the account may not (asked once per call,
+     * only when some record carries one; a failing check drops them and is logged).
+     *
+     * @param  list<LinkableRecordDTO>  $records
+     * @return list<LinkableRecordDTO>
+     */
+    private function withoutPanelUrlsUnlessPanel(array $records, UserModel $account, string $type): array
+    {
+        $linked = array_filter($records, static fn (LinkableRecordDTO $record): bool => $record->panelUrl !== null);
+
+        if ($linked === []) {
+            return $records;
+        }
+
+        try {
+            if ($this->authorization->can($account, 'admin.access')) {
+                return $records;
+            }
+        } catch (Throwable $exception) {
+            Log::error('[LinkableRecordLookup] Panel access could not be checked, panel links dropped', [
+                'type' => $type,
+                'exception' => $exception::class,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        return array_map(static fn (LinkableRecordDTO $record): LinkableRecordDTO => $record->panelUrl === null ? $record : new LinkableRecordDTO(
+            type: $record->type,
+            id: $record->id,
+            title: $record->title,
+            date: $record->date,
+            dateIsDay: $record->dateIsDay,
+        ), $records);
     }
 
     /**

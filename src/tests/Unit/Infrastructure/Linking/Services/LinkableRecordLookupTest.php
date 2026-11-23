@@ -495,6 +495,65 @@ final class LinkableRecordLookupTest extends TestCase
     }
 
     #[Test]
+    public function organized_by_drops_the_panel_urls_of_an_organizer_who_may_not_open_the_panel(): void
+    {
+        $organizer = UserModel::factory()->create();
+        $this->registry->register(OrganizerFakeLinkableRecordSource::class, 'example-module');
+        OrganizerFakeLinkableRecordSource::$organized = [$organizer->id => [
+            $this->linkedRecord('organized-fake', 'one'),
+            $this->linkedRecord('organized-fake', 'two'),
+        ]];
+
+        $records = $this->lookup->organizedBy('organized-fake', $organizer);
+
+        $this->assertSame([null, null], array_map(fn (LinkableRecordDTO $record): ?string => $record->panelUrl, $records));
+        $this->assertSame(['one', 'two'], array_map(fn (LinkableRecordDTO $record): string => $record->id, $records));
+        $this->assertSame(['admin.access'], $this->askedPermissions);
+    }
+
+    #[Test]
+    public function organized_by_keeps_the_panel_urls_of_an_organizer_who_may_open_the_panel(): void
+    {
+        $organizer = UserModel::factory()->create();
+        $this->panelViewers = [$organizer->id];
+        $this->registry->register(OrganizerFakeLinkableRecordSource::class, 'example-module');
+        OrganizerFakeLinkableRecordSource::$organized = [$organizer->id => [$this->linkedRecord('organized-fake', 'one')]];
+
+        $this->assertSame('https://example.test/admin/one', $this->lookup->organizedBy('organized-fake', $organizer)[0]->panelUrl ?? null);
+    }
+
+    #[Test]
+    public function organized_by_drops_the_panel_urls_and_logs_an_error_when_the_panel_check_fails(): void
+    {
+        $log = Log::spy();
+        $organizer = UserModel::factory()->create();
+        $this->panelViewers = [$organizer->id];
+        $this->authorizationFails = true;
+        $this->registry->register(OrganizerFakeLinkableRecordSource::class, 'example-module');
+        OrganizerFakeLinkableRecordSource::$organized = [$organizer->id => [$this->linkedRecord('organized-fake', 'one')]];
+
+        $records = $this->lookup->organizedBy('organized-fake', $organizer);
+
+        $this->assertSame('one', $records[0]->id ?? null);
+        $this->assertNull($records[0]->panelUrl ?? null);
+        $log->shouldHaveReceived('error')->once();
+    }
+
+    #[Test]
+    public function organized_by_offers_a_record_answered_twice_once(): void
+    {
+        $organizer = UserModel::factory()->create();
+        $this->registry->register(OrganizerFakeLinkableRecordSource::class, 'example-module');
+        OrganizerFakeLinkableRecordSource::$organized = [$organizer->id => [
+            $this->record('organized-fake', 'one'),
+            $this->record('organized-fake', 'two'),
+            $this->record('organized-fake', 'one'),
+        ]];
+
+        $this->assertSame(['one', 'two'], array_map(fn (LinkableRecordDTO $record): string => $record->id, $this->lookup->organizedBy('organized-fake', $organizer)));
+    }
+
+    #[Test]
     public function organized_by_takes_an_account_never_a_loose_id(): void
     {
         // What only its owner sees may be answered, so a consumer passes the signed-in account,
@@ -560,5 +619,10 @@ final class LinkableRecordLookupTest extends TestCase
     private function record(string $type, string $id): LinkableRecordDTO
     {
         return new LinkableRecordDTO(type: $type, id: $id, title: "Record {$id}");
+    }
+
+    private function linkedRecord(string $type, string $id): LinkableRecordDTO
+    {
+        return new LinkableRecordDTO(type: $type, id: $id, title: "Record {$id}", panelUrl: "https://example.test/admin/{$id}");
     }
 }

@@ -76,6 +76,10 @@ interface LinkableRecordLookupInterface
      * is not a uuid, unknown, deactivated or anonymized, or the source failed (logged); records of
      * another type are dropped and logged. Nothing here throws.
      *
+     * A record answered twice is kept once. There is no panel check before asking (the person may
+     * not open the panel), so every panelUrl is dropped unless the account may open it
+     * (admin.access, asked once per call).
+     *
      * @return list<LinkableRecordDTO>
      */
     public function organizedBy(string $type, Authenticatable $organizer, int $limit = self::DEFAULT_SEARCH_LIMIT): array;
