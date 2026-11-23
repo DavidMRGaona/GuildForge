@@ -25,6 +25,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $height
  * @property string $outcome
  * @property MediaDeletionKind $kind
+ * @property bool $is_hidden whether the library concealed the file when it was deleted (core#841)
  * @property string|null $deleted_by
  * @property Carbon $deleted_at
  */
@@ -48,6 +49,7 @@ final class MediaDeletionModel extends Model
         'height',
         'outcome',
         'kind',
+        'is_hidden',
         'deleted_by',
         'deleted_at',
     ];
@@ -63,6 +65,7 @@ final class MediaDeletionModel extends Model
             'height' => 'integer',
             'deleted_at' => 'datetime',
             'kind' => MediaDeletionKind::class,
+            'is_hidden' => 'boolean',
         ];
     }
 

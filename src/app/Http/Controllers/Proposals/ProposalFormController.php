@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Proposals;
 
+use App\Application\Media\Services\MediaFileReleaserInterface;
 use App\Application\Proposals\DTOs\OwnProposalDTO;
 use App\Application\Proposals\Services\ProposalEligibilityServiceInterface;
 use App\Application\Proposals\Services\ProposalQueryServiceInterface;
@@ -19,9 +20,11 @@ use App\Domain\Proposals\Exceptions\ProposalException;
 use App\Domain\Proposals\Exceptions\ProposalNotAllowedException;
 use App\Domain\Proposals\Exceptions\ProposalNotFoundException;
 use App\Filament\Forms\RichEditor\EditorImages;
+use App\Filament\Media\Sources\ProposalImageMediaSource;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OwnProposalResource;
 use App\Http\Resources\TagResource;
+use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -30,6 +33,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 /**
  * What the two proposal forms (event and article) share: the page, the answer to a refusal of the
@@ -44,6 +48,7 @@ abstract class ProposalFormController extends Controller
         protected readonly ProposalTagOptionsInterface $tags,
         protected readonly TimezoneServiceInterface $timezone,
         protected readonly SeoMetadataFactoryInterface $seo,
+        private readonly MediaFileReleaserInterface $releaser,
     ) {}
 
     abstract protected function type(): ProposalType;
@@ -144,8 +149,9 @@ abstract class ProposalFormController extends Controller
     }
 
     /**
-     * Stores an uploaded image in the folder the panel uses for the type ("events/<Y>/<m>" or
-     * "articles/<Y>/<m>"), the one its media source claims. Returns the stored path.
+     * Stores an uploaded image in the web forms' folder of the type ("events/proposals/<Y>/<m>" or
+     * "articles/proposals/<Y>/<m>"), whose media source conceals the files nobody uses (core#841).
+     * Returns the stored path.
      */
     protected function storeImage(mixed $file): ?string
     {
@@ -154,7 +160,7 @@ abstract class ProposalFormController extends Controller
         }
 
         $path = Storage::disk(EditorImages::DISK)->putFileAs(
-            $this->type()->value.'/'.now()->format('Y/m'),
+            ProposalImageMediaSource::folderOf($this->type()).now()->format('Y/m'),
             $file,
             Str::uuid()->toString().'.'.($file->guessExtension() ?? 'jpg'),
             ['visibility' => 'public', 'mimetype' => $file->getMimeType()],
@@ -163,6 +169,29 @@ abstract class ProposalFormController extends Controller
         abort_if(! is_string($path), 500);
 
         return $path;
+    }
+
+    /**
+     * Saves with an image this request stored: when the save is refused or fails, nothing holds the file, so
+     * it is let go of at once instead of waiting in the library (core#841). The release only deletes it once
+     * a live check finds nobody using it.
+     *
+     * @template TResult
+     *
+     * @param  Closure(): TResult  $save
+     * @return TResult
+     */
+    protected function savingWithImage(?string $storedImage, Closure $save): mixed
+    {
+        try {
+            return $save();
+        } catch (Throwable $e) {
+            if ($storedImage !== null) {
+                $this->releaser->release($storedImage);
+            }
+
+            throw $e;
+        }
     }
 
     protected function toMyProposals(): RedirectResponse

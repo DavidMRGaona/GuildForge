@@ -76,7 +76,7 @@ final class PostMediaSource implements MediaUsageSourceInterface, ReleasesMediaT
 
 When **any** visible, active source claiming a file implements it (winning the folder or not, as for `ShowsMediaPreviews`), a file of that folder **without any usage** in the index is concealed (the placeholder, «Imagen oculta») and never offered in «Elegir de la biblioteca». So a parent folder whose source declares it also conceals the unused files of the nested folders other modules claim inside it, unless it excludes them (`excludedSubfolders()`). Files with usages follow [Showing previews](#showing-previews) and [Hiding one usage](#hiding-one-usage) as before. Nothing else changes: an unused file is still listed, counted, selectable and deleted once the 7-day grace period is over. It is worked out when the page is read (`EloquentMediaLibraryQuery::conceals()` and `applyReusable()`), so it needs no sync of its own.
 
-Do not declare it on sources whose unused files are reviewed before deleting and may be seen (events, galleries, hero slides): the library would stop showing what it is there to show. No core source declares it.
+Do not declare it on sources whose unused files are reviewed before deleting and may be seen (events, galleries, hero slides): the library would stop showing what it is there to show. Give the private uploads a folder of their own instead, as the core does for the web proposal forms (core#841): they store their images in `events/proposals/` and `articles/proposals/`, which `EventMediaSource` and `ArticleMediaSource` exclude and `ProposalImageMediaSource` (`core.proposal-images`) claims. That source declares the marker and gives no usages of its own: the events and articles sources still report every record, whatever folder its image is in. So the image of a save the service refused, or a draft's image that could not be released, never shows, while the unused files of the panel's folders keep their thumbnail. A save the service refuses also releases the image it uploaded at once. It is the only core source that declares it.
 
 ### Hiding one usage
 
@@ -92,7 +92,7 @@ When any usage of a file is hidden (stored in `media_usages.is_hidden`), or the 
 
 - draws a placeholder instead of the thumbnail in the grid, the list, «Ver detalles» and the details panel, does not offer «Abrir original» or «Copiar URL», and titles the details «Imagen oculta» instead of the file name;
 - keeps listing the file, its size, its folder and every usage with the title the source gives: mask the title yourself when it gives the secret away;
-- never names it by its id: the details heading, the delete dialog and the deletion notice call it «Imagen oculta»;
+- never names it by its id: the details heading, the delete dialog and the deletion notice call it «Imagen oculta», and so does «Borrados» once it is deleted (whether it was concealed is stored with the deletion, `media_deletions.is_hidden`; a file deleted before it was indexed is judged without usages);
 - never offers the file in «Elegir de la biblioteca»; a file chosen there and concealed before the form is saved is refused with «Esta imagen ya no se puede elegir».
 
 A file shared by a shown usage and a hidden one is hidden for both. If a source gives the same usage (file, record and role) twice, it is hidden when any copy is.

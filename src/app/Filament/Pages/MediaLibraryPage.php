@@ -903,7 +903,8 @@ final class MediaLibraryPage extends Page implements HasTable
             ->limit(self::DELETIONS_SHOWN)
             ->get()
             ->map(fn (MediaDeletionModel $row): array => [
-                'fileId' => $row->file_id,
+                // A file the library concealed is never named by its id (core#841)
+                'fileId' => $row->is_hidden ? (string) __('filament.media_library.hidden_preview.alt') : $row->file_id,
                 'origin' => $row->source_type !== null
                     ? ($this->sourceLabel($registry->source($row->source_type)) ?? $row->source_type)
                     : (string) __('filament.media_library.unknown_origin'),

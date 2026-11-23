@@ -27,11 +27,13 @@ final class ArticleProposalController extends ProposalFormController
 
     public function store(ArticleProposalRequest $request): RedirectResponse
     {
+        $image = $this->storeImage($request->file('image'));
+
         try {
-            $id = $this->proposals->createArticle(
+            $id = $this->savingWithImage($image, fn (): string => $this->proposals->createArticle(
                 $this->userId($request),
-                $request->toDto($this->storeImage($request->file('image'))),
-            );
+                $request->toDto($image),
+            ));
         } catch (ProposalException $exception) {
             return $this->refusal($exception);
         }
@@ -55,14 +57,16 @@ final class ArticleProposalController extends ProposalFormController
             return $current;
         }
 
+        $stored = $request->hasFile('image') ? $this->storeImage($request->file('image')) : null;
         $image = match (true) {
-            $request->hasFile('image') => $this->storeImage($request->file('image')),
+            $request->hasFile('image') => $stored,
             $request->removesImage() => null,
             default => $current->imagePublicId,
         };
 
         try {
-            $this->proposals->updateArticle($this->userId($request), $id, $request->toDto($image));
+            // Only the image this request stored is let go of: the current one stays with the draft
+            $this->savingWithImage($stored, fn () => $this->proposals->updateArticle($this->userId($request), $id, $request->toDto($image)));
         } catch (ProposalException $exception) {
             return $this->refusal($exception);
         }

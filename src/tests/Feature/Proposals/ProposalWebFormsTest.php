@@ -160,14 +160,15 @@ final class ProposalWebFormsTest extends TestCase
         $this->assertNull($event->reviewed_by);
     }
 
-    public function test_it_stores_the_image_in_the_folder_the_panel_uses(): void
+    public function test_it_stores_the_image_in_the_proposals_folder_of_its_type(): void
     {
+        // Its source conceals the files nobody uses: a draft's image that could not be let go of (core#841)
         $this->actingAs(UserModel::factory()->create())
             ->post('/propuestas/eventos', $this->eventForm(['image' => UploadedFile::fake()->image('cartel.png', 60, 40)]))
             ->assertRedirect();
 
         $path = (string) $this->event(EventModel::query()->includingUnsubmittedProposals()->firstOrFail()->id)->image_public_id;
-        $this->assertMatchesRegularExpression('~^events/\d{4}/\d{2}/[0-9a-f-]{36}\.png$~', $path);
+        $this->assertMatchesRegularExpression('~^events/proposals/\d{4}/\d{2}/[0-9a-f-]{36}\.png$~', $path);
         Storage::disk('images')->assertExists($path);
     }
 
