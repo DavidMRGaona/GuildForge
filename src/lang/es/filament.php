@@ -1448,6 +1448,7 @@ return [
             'rich_text' => 'Textos',
             'footer' => 'Pie de página',
             'profile_banners' => 'Banners de perfil',
+            'proposal_images' => 'Propuestas desde la web',
         ],
         'footer_titles' => [
             'logo' => 'Pie de página · logotipo «:alt»',

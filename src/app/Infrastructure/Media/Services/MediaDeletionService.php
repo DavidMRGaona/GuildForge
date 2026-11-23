@@ -26,6 +26,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Container\Container;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -329,6 +330,8 @@ final readonly class MediaDeletionService implements MediaDeletionServiceInterfa
             'height' => $file?->height,
             'outcome' => $outcome->value,
             'kind' => $kind->value,
+            // Decided before the index rows go: «Borrados» never names a file the library did not (core#841)
+            'is_hidden' => $this->concealed($id, $file),
             'deleted_by' => $actorId,
             'deleted_at' => CarbonImmutable::now(),
         ];
@@ -345,6 +348,23 @@ final readonly class MediaDeletionService implements MediaDeletionServiceInterfa
                 'deleted_at' => $row['deleted_at']->toIso8601String(),
                 'exception' => $e,
             ]);
+        }
+    }
+
+    /**
+     * Whether the library conceals the file, as it does on the page; a file that was never indexed (released
+     * right after its upload) is judged without usages. Any doubt conceals it.
+     */
+    private function concealed(MediaFileId $id, ?MediaFileModel $file): bool
+    {
+        try {
+            $file ??= (new MediaFileModel)
+                ->forceFill(['file_id' => $id->value, 'folder' => $id->folder()])
+                ->setRelation('usages', new Collection);
+
+            return $this->container->make(MediaLibraryQueryInterface::class)->conceals($file);
+        } catch (Throwable) {
+            return true;
         }
     }
 

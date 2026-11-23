@@ -29,6 +29,15 @@ final class EventMediaSource extends EloquentColumnMediaSource implements Releas
         return ['events/'];
     }
 
+    /**
+     * The web proposal forms' folder is claimed by ProposalImageMediaSource, which conceals its unused files
+     * (core#841); the editor images of `content/` stay out as in every column source.
+     */
+    public function excludedSubfolders(): array
+    {
+        return [...parent::excludedSubfolders(), ProposalImageMediaSource::SUBFOLDER];
+    }
+
     protected function modelClass(): string
     {
         return EventModel::class;

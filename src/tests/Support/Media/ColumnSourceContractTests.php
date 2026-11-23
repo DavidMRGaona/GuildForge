@@ -23,6 +23,16 @@ trait ColumnSourceContractTests
 
     abstract protected function updatePermission(): string;
 
+    /**
+     * Subfolders the source leaves out of its claim: the editor images' one, for every column source.
+     *
+     * @return list<string>
+     */
+    protected function excludedSubfolders(): array
+    {
+        return ['content/'];
+    }
+
     public function test_usages_lists_each_record_with_an_image(): void
     {
         $with = $this->makeRecord('x/2026/a.jpg');
@@ -116,7 +126,7 @@ trait ColumnSourceContractTests
 
     public function test_content_folder_is_excluded_from_the_claim(): void
     {
-        $this->assertSame(['content/'], $this->source()->excludedSubfolders());
+        $this->assertSame($this->excludedSubfolders(), $this->source()->excludedSubfolders());
         $this->assertFalse($this->source()->hidden());
     }
 }

@@ -920,6 +920,46 @@ final class MediaLibraryPageTest extends TestCase
         $this->assertStringNotContainsString('una cuenta eliminada', $html);
     }
 
+    public function test_the_deletions_log_never_names_a_file_the_library_concealed(): void
+    {
+        // A draft's image, say: the library did not name it, so its deletion does not either (core#841)
+        $deleter = $this->deleter();
+        $author = UserModel::factory()->create(['name' => 'Autora del borrador']);
+        MediaDeletionModel::query()->create([
+            'file_id' => 'events/proposals/2026/11/secret-draft',
+            'resource_type' => 'image',
+            'folder' => 'events/proposals/2026/11/',
+            'source_type' => 'core.proposal-images',
+            'outcome' => 'deleted',
+            'kind' => 'automatic',
+            'is_hidden' => true,
+            // Nor who deleted it: that would tell who held the draft
+            'deleted_by' => $author->id,
+            'deleted_at' => CarbonImmutable::now()->subHour(),
+        ]);
+        MediaDeletionModel::query()->create([
+            'file_id' => 'events/2026/11/visible-cover',
+            'resource_type' => 'image',
+            'folder' => 'events/2026/11/',
+            'source_type' => 'events',
+            'outcome' => 'deleted',
+            'deleted_by' => $deleter->id,
+            'deleted_at' => CarbonImmutable::now()->subHours(2),
+        ]);
+        $this->actingAs($deleter);
+
+        $page = Livewire::test(MediaLibraryPage::class)->mountAction('deletions');
+        $content = $this->mountedAction($page)->getModalContent();
+        $this->assertInstanceOf(View::class, $content);
+        $html = $content->render();
+
+        $this->assertStringNotContainsString('secret-draft', $html);
+        $this->assertStringNotContainsString('Autora del borrador', $html);
+        $this->assertStringContainsString('Por —', $html);
+        $this->assertStringContainsString('Imagen oculta', $html);
+        $this->assertStringContainsString('events/2026/11/visible-cover', $html);
+    }
+
     public function test_the_deletions_log_says_when_it_shows_only_the_latest(): void
     {
         $deleter = $this->deleter();

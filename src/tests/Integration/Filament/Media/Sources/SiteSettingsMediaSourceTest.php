@@ -111,6 +111,10 @@ final class SiteSettingsMediaSourceTest extends TestCase
         $this->assertSame('footer', $registry->claimingSource(new MediaFileId('footer/content/2026/11/x'))?->type());
         // The banners of public profiles (core#743)
         $this->assertSame('core.profile-banner', $registry->claimingSource(new MediaFileId('profiles/banners/2026/11/x'))?->type());
-        $this->assertCount(9, $registry->sources());
+        // The web proposal forms' folders (core#841); the panel's dated folders stay with their type
+        $this->assertSame('core.proposal-images', $registry->claimingSource(new MediaFileId('events/proposals/2026/11/x'))?->type());
+        $this->assertSame('core.proposal-images', $registry->claimingSource(new MediaFileId('articles/proposals/2026/11/x'))?->type());
+        $this->assertSame('events', $registry->claimingSource(new MediaFileId('events/2026/11/x'))?->type());
+        $this->assertCount(10, $registry->sources());
     }
 }

@@ -23,6 +23,7 @@ use App\Filament\Media\Sources\EventMediaSource;
 use App\Filament\Media\Sources\FooterMediaSource;
 use App\Filament\Media\Sources\GalleryPhotoMediaSource;
 use App\Filament\Media\Sources\HeroSlideMediaSource;
+use App\Filament\Media\Sources\ProposalImageMediaSource;
 use App\Filament\Media\Sources\RichTextMediaSource;
 use App\Filament\Media\Sources\SiteSettingsMediaSource;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideModel;
@@ -102,6 +103,7 @@ final class MediaServiceProvider extends ServiceProvider
             RichTextMediaSource::class,
             FooterMediaSource::class,
             ProfileBannerMediaSource::class,
+            ProposalImageMediaSource::class,
         ]);
 
         // Observer instances carry their arguments, so they are attached as model event listeners

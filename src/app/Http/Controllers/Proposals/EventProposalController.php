@@ -29,11 +29,13 @@ final class EventProposalController extends ProposalFormController
 
     public function store(EventProposalRequest $request): RedirectResponse
     {
+        $image = $this->storeImage($request->file('image'));
+
         try {
-            $id = $this->proposals->createEvent(
+            $id = $this->savingWithImage($image, fn (): string => $this->proposals->createEvent(
                 $this->userId($request),
-                $request->toDto($this->timezone, $this->storeImage($request->file('image'))),
-            );
+                $request->toDto($this->timezone, $image),
+            ));
         } catch (ProposalException $exception) {
             return $this->refusal($exception);
         }
@@ -57,14 +59,16 @@ final class EventProposalController extends ProposalFormController
             return $current;
         }
 
+        $stored = $request->hasFile('image') ? $this->storeImage($request->file('image')) : null;
         $image = match (true) {
-            $request->hasFile('image') => $this->storeImage($request->file('image')),
+            $request->hasFile('image') => $stored,
             $request->removesImage() => null,
             default => $current->imagePublicId,
         };
 
         try {
-            $this->proposals->updateEvent($this->userId($request), $id, $request->toDto($this->timezone, $image));
+            // Only the image this request stored is let go of: the current one stays with the draft
+            $this->savingWithImage($stored, fn () => $this->proposals->updateEvent($this->userId($request), $id, $request->toDto($this->timezone, $image)));
         } catch (ProposalException $exception) {
             return $this->refusal($exception);
         }

@@ -903,7 +903,8 @@ final class MediaLibraryPage extends Page implements HasTable
             ->limit(self::DELETIONS_SHOWN)
             ->get()
             ->map(fn (MediaDeletionModel $row): array => [
-                'fileId' => $row->file_id,
+                // A file the library concealed is never named by its id (core#841)
+                'fileId' => $row->is_hidden ? (string) __('filament.media_library.hidden_preview.alt') : $row->file_id,
                 'origin' => $row->source_type !== null
                     ? ($this->sourceLabel($registry->source($row->source_type)) ?? $row->source_type)
                     : (string) __('filament.media_library.unknown_origin'),
@@ -914,6 +915,8 @@ final class MediaLibraryPage extends Page implements HasTable
                 // The account may have been deleted since (the key is set to null then); a file released
                 // while nobody was signed in (a command) was never deleted by anyone
                 'deletedBy' => match (true) {
+                    // Who deleted it would tell who held the draft, which the panel never sees (core#841)
+                    $row->is_hidden => '—',
                     $row->deletedBy instanceof UserModel => $row->deletedBy->name,
                     $row->kind === MediaDeletionKind::Automatic && $row->getRawOriginal('deleted_by') === null => null,
                     default => (string) __('filament.media_library.deletions.removed_account'),
