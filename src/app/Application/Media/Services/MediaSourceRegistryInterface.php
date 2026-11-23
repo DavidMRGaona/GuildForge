@@ -57,4 +57,11 @@ interface MediaSourceRegistryInterface
      * @return list<string>
      */
     public function hiddenFolders(): array;
+
+    /**
+     * Whether the source of this type is hidden, as read once when the sources were resolved, so every caller
+     * of one request agrees. A source that cannot tell and a type no active source has count as hidden (fail
+     * closed).
+     */
+    public function isHidden(string $type): bool;
 }

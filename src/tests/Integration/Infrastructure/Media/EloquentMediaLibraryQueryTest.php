@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Infrastructure\Media;
 
+use App\Application\Media\Contracts\ConcealsUnusedMediaFiles;
 use App\Application\Media\Contracts\MediaUsageSourceInterface;
 use App\Application\Media\Contracts\ReleasesMediaThroughCoreInterface;
 use App\Application\Media\Contracts\ShowsMediaPreviews;
@@ -380,6 +381,102 @@ final class EloquentMediaLibraryQueryTest extends TestCase
         $this->assertFalse($query->conceals($this->model('forum/public/a')));
         $this->assertTrue($query->conceals($this->model('forum/characters/b')));
         $this->assertSame(['forum/public/a'], $query->applyReusable($query->query())->pluck('file_id')->all());
+    }
+
+    public function test_a_nested_source_that_conceals_unused_files_leaves_its_parent_alone(): void
+    {
+        $this->registry->clear();
+        $this->register('forum', new FakeMarkedMediaSource('forum', ['forum/']));
+        $this->register('characters', new FakeConcealingUnusedMediaSource('characters', ['forum/characters/']));
+        $this->file('forum/a');
+        $this->file('forum/characters/b');
+
+        $query = $this->library();
+
+        $this->assertFalse($query->conceals($this->model('forum/a')));
+        $this->assertTrue($query->conceals($this->model('forum/characters/b')));
+        $this->assertSame(['forum/a'], $query->applyReusable($query->query())->pluck('file_id')->all());
+    }
+
+    public function test_a_source_that_conceals_unused_files_on_a_shared_folder_conceals_them_winning_or_losing_the_tie(): void
+    {
+        foreach (['wins' => ['concealing', 'shown'], 'loses' => ['shown', 'concealing']] as $case => $order) {
+            $this->registry->clear();
+            MediaUsageModel::query()->delete();
+            MediaFileModel::query()->delete();
+
+            foreach ($order as $type) {
+                $this->register($type, $type === 'concealing'
+                    ? new FakeConcealingUnusedMediaSource($type, ['shared/'])
+                    : new FakeMarkedMediaSource($type, ['shared/']));
+            }
+
+            $this->file('shared/unused');
+            $this->file('shared/used');
+            $this->usage('shared/used', sourceType: 'shown');
+
+            $query = $this->library();
+
+            $this->assertTrue($query->conceals($this->model('shared/unused')), $case);
+            $this->assertFalse($query->conceals($this->model('shared/used')), $case);
+            $this->assertSame(['shared/used'], $query->applyReusable($query->query())->pluck('file_id')->all(), $case);
+        }
+    }
+
+    public function test_conceals_and_apply_reusable_agree_on_unused_files(): void
+    {
+        $this->registry->clear();
+        $this->register('forum', new FakeConcealingUnusedMediaSource('forum', ['forum/'], excludedSubfolders: ['public/']));
+        $this->register('public', new FakeMarkedMediaSource('public', ['forum/public/']));
+        $this->register('characters', new FakeMarkedMediaSource('characters', ['forum/characters/']));
+        $this->register('events', new FakeMarkedMediaSource('events', ['events/']));
+        $this->register('deep', new FakeConcealingUnusedMediaSource('deep', ['events/deep/']));
+
+        foreach (['forum/a', 'forum/b', 'forum/public/a', 'forum/public/b', 'forum/characters/a', 'forum/characters/b', 'events/a', 'events/b', 'events/deep/a', 'events/deep/b', 'events/deep/c'] as $id) {
+            $this->file($id);
+        }
+
+        $this->usage('forum/b', sourceType: 'forum');
+        $this->usage('forum/public/b', sourceType: 'public');
+        $this->usage('forum/characters/b', sourceType: 'events');
+        $this->usage('events/b', sourceType: 'events');
+        $this->usage('events/deep/b', sourceType: 'deep');
+        $this->usage('events/deep/c', hidden: true, sourceType: 'deep');
+
+        $query = $this->library();
+        $reusable = $query->applyReusable($query->query())->orderBy('file_id')->pluck('file_id')->all();
+
+        $this->assertSame(['events/a', 'events/b', 'events/deep/b', 'forum/b', 'forum/characters/b', 'forum/public/a', 'forum/public/b'], $reusable);
+
+        foreach ($query->query()->with('usages')->get() as $file) {
+            $this->assertSame(! in_array($file->file_id, $reusable, true), $query->conceals($file), $file->file_id);
+        }
+    }
+
+    public function test_a_source_that_stops_telling_whether_it_is_hidden_keeps_concealing_its_unused_files(): void
+    {
+        // Whether a source is hidden is read once, by the registry: a later call that throws in the same
+        // request must not drop the claim, nor what it conceals
+        $this->registry->clear();
+        $forum = new class('forum', ['forum/']) extends FakeMediaSource implements ConcealsUnusedMediaFiles, ReleasesMediaThroughCoreInterface, ShowsMediaPreviews
+        {
+            public bool $fails = false;
+
+            public function hidden(): bool
+            {
+                return $this->fails ? throw new \RuntimeException('unreadable') : false;
+            }
+        };
+        $this->register('forum', $forum);
+        $this->register('public', new FakeMarkedMediaSource('public', ['forum/public/']));
+        $this->file('forum/public/a');
+        $this->registry->sources();
+        $forum->fails = true;
+
+        $query = $this->library();
+
+        $this->assertTrue($query->conceals($this->model('forum/public/a')));
+        $this->assertSame([], $query->applyReusable($query->query())->pluck('file_id')->all());
     }
 
     public function test_every_visible_source_claiming_a_file_must_show_it(): void

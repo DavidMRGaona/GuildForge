@@ -136,6 +136,11 @@ final class MediaSourceRegistry implements MediaSourceRegistryInterface
         return array_values(array_unique($folders));
     }
 
+    public function isHidden(string $type): bool
+    {
+        return $this->resolveAll()[$type]['hidden'] ?? true;
+    }
+
     /**
      * Resolved sources by type with their module and folders, skipping (and keeping in $unresolved) the ones
      * that cannot be loaded and any whose type is already taken. Built once until the registrations change.

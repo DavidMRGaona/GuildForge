@@ -295,8 +295,10 @@ final class EloquentMediaLibraryQuery implements MediaLibraryQueryInterface
 
     /**
      * Every claimed folder of the active sources, in registration order. A source whose folders or
-     * excluded subfolders cannot be read claims nothing, as in the registry. A source shows its previews
-     * only when it declares ShowsMediaPreviews and the index is up to date with it as it is now.
+     * excluded subfolders cannot be read claims nothing, as in the registry. Whether it is hidden is the
+     * registry's answer, read once and failing closed, so a later call that throws never drops a claim and
+     * what it conceals. A source shows its previews only when it declares ShowsMediaPreviews and the index is
+     * up to date with it as it is now.
      *
      * @return list<Claim>
      */
@@ -312,12 +314,13 @@ final class EloquentMediaLibraryQuery implements MediaLibraryQueryInterface
         foreach ($this->registry->sources() as $source) {
             try {
                 $type = $source->type();
-                $hidden = $source->hidden();
                 $folders = $source->folders();
                 $excluded = array_values(array_filter($source->excludedSubfolders(), static fn (string $subfolder): bool => $subfolder !== ''));
             } catch (Throwable) {
                 continue;
             }
+
+            $hidden = $this->registry->isHidden($type);
 
             foreach ($folders as $folder) {
                 if ($folder !== '') {
