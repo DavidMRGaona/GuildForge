@@ -25,6 +25,7 @@ use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
 use Tests\Support\Filament\MediaPickerFixturePage;
+use Tests\Support\Media\FakeConcealingUnusedMediaSource;
 use Tests\Support\Media\FakeMarkedMediaSource;
 use Tests\Support\Media\FakeMediaSource;
 use Tests\Support\Media\MarksMediaSourcesSynced;
@@ -259,6 +260,36 @@ final class MediaLibraryPickerTest extends TestCase
             'title' => 'Logro secreto',
             'is_hidden' => true,
         ]);
+
+        $page->call('save')->assertHasFormErrors(['image_public_id']);
+
+        $this->assertSame([__('filament.media_picker.errors.hidden')], $page->errors()->get('data.image_public_id'));
+        $this->assertNull($page->get('saved'));
+    }
+
+    public function test_an_unused_file_of_a_source_that_conceals_unused_files_is_never_offered_nor_saved(): void
+    {
+        // core#843: a forum image whose last message was deleted since the form was opened
+        $this->register('forum', new FakeConcealingUnusedMediaSource('forum', ['forum/']));
+        $this->image('forum/orphan');
+        $this->image('forum/shared');
+        MediaUsageModel::query()->create([
+            'file_id' => 'forum/shared',
+            'source_type' => 'forum',
+            'record_id' => 'post-1',
+            'role' => 'Imagen',
+            'title' => 'Mensaje del foro',
+        ]);
+
+        $html = $this->browserHtml(Livewire::test(MediaPickerFixturePage::class)->mountAction($this->pick()));
+        $this->assertStringContainsString('data-media-file="forum/shared"', $html);
+        $this->assertStringNotContainsString('data-media-file="forum/orphan"', $html);
+        $this->assertSaveRejected('forum/orphan.jpg', missing: false);
+
+        $page = Livewire::test(MediaPickerFixturePage::class)
+            ->callAction($this->pick(), data: ['file' => 'forum/shared'])
+            ->assertHasNoActionErrors();
+        MediaUsageModel::query()->where('file_id', 'forum/shared')->delete();
 
         $page->call('save')->assertHasFormErrors(['image_public_id']);
 

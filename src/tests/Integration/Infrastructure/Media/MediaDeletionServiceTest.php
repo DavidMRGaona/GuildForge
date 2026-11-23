@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
+use Tests\Support\Media\FakeConcealingUnusedMediaSource;
 use Tests\Support\Media\FakeMediaSource;
 use Tests\Support\Media\InMemoryMediaCatalog;
 use Tests\Support\Media\UnresolvableMediaSource;
@@ -129,6 +130,22 @@ final class MediaDeletionServiceTest extends TestCase
         $this->assertSame('deleted', $row->outcome);
         $this->assertSame((string) $actor->getKey(), $row->deleted_by);
         $this->assertTrue($row->deleted_at->equalTo(Carbon::now()));
+    }
+
+    public function test_an_unused_file_of_a_source_that_conceals_unused_files_is_deleted_like_any_other(): void
+    {
+        // Concealing unused files only changes what the library shows (core#843)
+        $this->app->instance('test.media.deletion.forum', new FakeConcealingUnusedMediaSource('forum', ['forum/']));
+        $this->registry->register($this->classString('test.media.deletion.forum'));
+        $this->file('forum/orphan');
+        $this->file('forum/recent', uploadedAt: Carbon::now()->subDays(2));
+
+        $result = $this->service()->delete([new MediaFileId('forum/orphan'), new MediaFileId('forum/recent')], $this->deleter());
+
+        $this->assertSame(1, $result->deleted);
+        $this->assertSame(['forum/recent' => MediaDeletionRefusal::Recent], $result->refused);
+        $this->assertArrayNotHasKey('forum/orphan', $this->catalog->assets);
+        $this->assertArrayHasKey('forum/recent', $this->catalog->assets);
     }
 
     public function test_missing_in_cloudinary_is_recorded_as_missing(): void
