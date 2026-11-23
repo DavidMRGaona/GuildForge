@@ -9,14 +9,17 @@ use App\Application\Media\Services\MediaIndexerInterface;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Infrastructure\Media\Jobs\RefreshMediaUsagesJob;
+use App\Infrastructure\Media\Observers\RefreshMediaUsagesObserver;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaFileModel;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaUsageModel;
 use App\Infrastructure\Media\Services\MediaIndexer;
 use App\Infrastructure\Media\Services\MediaSourceSyncState;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use Illuminate\Contracts\Bus\Dispatcher;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Mockery;
 use RuntimeException;
@@ -436,6 +439,69 @@ final class MediaIndexerTest extends TestCase
         $bus->shouldReceive('dispatch')->andThrow(new RuntimeException('queue unreachable'));
 
         $this->app->make(MediaIndexer::class, ['bus' => $bus])->refresh('events', 'e1');
+
+        $this->assertSame(['articles'], $this->upToDate());
+    }
+
+    public function test_a_refresh_that_cannot_be_queued_at_commit_time_leaves_its_type_not_up_to_date(): void
+    {
+        // The push waits for the caller's commit: refusing it then must neither escape nor go unrecorded
+        $this->source('events');
+        $this->source('articles');
+        $this->indexer()->sync();
+        $bus = Mockery::mock(Dispatcher::class);
+        $bus->shouldReceive('dispatch')->once()->andThrow(new RuntimeException('queue unreachable'));
+        $indexer = $this->app->make(MediaIndexer::class, ['bus' => $bus]);
+
+        DB::transaction(function () use ($indexer): void {
+            $indexer->refresh('events', 'e1');
+            // Nothing is queued before the commit
+            $this->assertSame(['articles', 'events'], $this->upToDate());
+        });
+
+        $this->assertSame(['articles'], $this->upToDate());
+    }
+
+    public function test_a_refresh_asked_inside_a_transaction_that_rolls_back_is_never_queued(): void
+    {
+        $this->source('events');
+        $this->indexer()->sync();
+        $bus = Mockery::mock(Dispatcher::class);
+        $bus->shouldNotReceive('dispatch');
+        $indexer = $this->app->make(MediaIndexer::class, ['bus' => $bus]);
+
+        try {
+            DB::transaction(function () use ($indexer): void {
+                $indexer->refresh('events', 'e1');
+
+                throw new RuntimeException('save failed');
+            });
+        } catch (RuntimeException) {
+        }
+
+        $this->assertSame(['events'], $this->upToDate());
+    }
+
+    public function test_an_observer_that_cannot_work_out_the_records_leaves_its_type_not_up_to_date(): void
+    {
+        $this->source('events');
+        $this->source('articles');
+        $this->indexer()->sync();
+        $observer = new RefreshMediaUsagesObserver('events', static fn (Model $model): array => throw new RuntimeException('no ids'));
+
+        $observer->saved(new ModuleModel);
+
+        $this->assertSame(['articles'], $this->upToDate());
+    }
+
+    public function test_a_refresh_job_that_never_finished_leaves_its_type_not_up_to_date(): void
+    {
+        // A timeout or a worker that died: handle() never got to record anything
+        $this->source('events');
+        $this->source('articles');
+        $this->indexer()->sync();
+
+        (new RefreshMediaUsagesJob('events', 'e1'))->failed(new RuntimeException('timed out'));
 
         $this->assertSame(['articles'], $this->upToDate());
     }

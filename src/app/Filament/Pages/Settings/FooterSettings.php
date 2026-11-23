@@ -21,6 +21,7 @@ use App\Filament\Concerns\ChecksPermissions;
 use App\Filament\Concerns\HasKnowledgeGuideAction;
 use App\Filament\Media\Sources\FooterMediaSource;
 use App\Filament\Support\PanelNavigationGroup;
+use App\Infrastructure\Media\Services\MediaSourceSyncState;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Builder;
 use Filament\Forms\Components\Builder\Block;
@@ -193,14 +194,20 @@ final class FooterSettings extends Page implements HasForms
      */
     private function releaseAndRefreshMedia(array $removed): void
     {
+        // Apart: a release that fails must not cost the refresh
         try {
             foreach (array_unique($removed) as $path) {
                 resolve(MediaFileReleaserInterface::class)->release($path);
             }
+        } catch (Throwable $e) {
+            Log::warning('[Media] Could not release the logos that left the saved footer; they were kept.', ['exception' => $e]);
+        }
 
+        try {
             resolve(MediaIndexerInterface::class)->refresh(FooterMediaSource::TYPE, FooterMediaSource::RECORD_ID);
         } catch (Throwable $e) {
-            Log::warning('[Media] Could not refresh the media usages of the saved footer.', ['exception' => $e]);
+            Log::warning('[Media] Could not refresh the media usages of the saved footer; it is concealed until the next sync.', ['exception' => $e]);
+            MediaSourceSyncState::markLost(FooterMediaSource::TYPE);
         }
     }
 

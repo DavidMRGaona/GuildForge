@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Console\Media;
 
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaUsageModel;
+use App\Infrastructure\Media\Services\MediaSourceSyncState;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
@@ -92,5 +93,20 @@ final class MediaForgetSourceCommandTest extends TestCase
         $this->artisanCommand('media:forget-source', ['type' => 'nothing.here', '--force' => true])
             ->expectsOutputToContain('No usage rows of type "nothing.here".')
             ->assertSuccessful();
+    }
+
+    public function test_forgetting_a_type_drops_its_refresh_failure(): void
+    {
+        // Nothing of the type is left to conceal (core#844)
+        $state = $this->app->make(MediaSourceSyncState::class);
+        $this->usage('gametables.tables', 't1');
+        $state->markRefreshFailed('gametables.tables');
+        $state->markRefreshFailed('events');
+        $state->markRefreshFailed('nothing.here');
+
+        $this->artisanCommand('media:forget-source', ['type' => 'gametables.tables', '--force' => true])->assertSuccessful();
+        $this->artisanCommand('media:forget-source', ['type' => 'nothing.here', '--force' => true])->assertSuccessful();
+
+        $this->assertSame(['events'], array_keys($state->refreshFailures() ?? []));
     }
 }

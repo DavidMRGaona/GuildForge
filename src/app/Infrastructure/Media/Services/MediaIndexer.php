@@ -45,18 +45,24 @@ final readonly class MediaIndexer implements MediaIndexerInterface
         private MediaSourceSyncState $syncState,
     ) {}
 
+    /**
+     * Queued once the caller's transaction commits (at once outside one; never inside the impersonation
+     * safety net, which always rolls back). The dispatch runs in its own catch: a queue that refuses it at
+     * commit time never reaches the caller, whose data is already saved, and leaves the type concealed.
+     */
     public function refresh(string $type, string $recordId): void
     {
         try {
-            $this->bus->dispatch((new RefreshMediaUsagesJob($type, $recordId))->afterCommit());
+            DB::afterCommit(function () use ($type, $recordId): void {
+                try {
+                    // Kept for a callback run while another transaction is open: the job waits for that one too
+                    $this->bus->dispatch((new RefreshMediaUsagesJob($type, $recordId))->afterCommit());
+                } catch (Throwable $e) {
+                    $this->lost($type, $recordId, $e);
+                }
+            });
         } catch (Throwable $e) {
-            Log::warning('[Media] Could not queue a media usages refresh; the type is concealed until the next sync.', [
-                'type' => $type,
-                'record_id' => $recordId,
-                'exception' => $e,
-            ]);
-            // The refresh is lost: the index may keep a usage shown that the source now hides (core#844)
-            $this->syncState->markRefreshFailed($type);
+            $this->lost($type, $recordId, $e);
         }
     }
 
@@ -109,6 +115,19 @@ final readonly class MediaIndexer implements MediaIndexerInterface
             removed: $removed,
             failedSources: $failedSources,
         );
+    }
+
+    /**
+     * The refresh is lost: the index may keep a usage shown that the source now hides (core#844).
+     */
+    private function lost(string $type, string $recordId, Throwable $e): void
+    {
+        Log::warning('[Media] Could not queue a media usages refresh; the type is concealed until the next sync.', [
+            'type' => $type,
+            'record_id' => $recordId,
+            'exception' => $e,
+        ]);
+        $this->syncState->markRefreshFailed($type);
     }
 
     public function lastSyncedAt(): ?DateTimeImmutable

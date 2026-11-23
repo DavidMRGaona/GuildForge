@@ -130,6 +130,15 @@ final class RefreshMediaUsagesJob implements ShouldQueue
     }
 
     /**
+     * The job never got to finish (a timeout, a worker that died, dependencies that could not be built): its
+     * rows may be stale, so the type stays concealed until the next sync (core#844).
+     */
+    public function failed(?Throwable $e): void
+    {
+        MediaSourceSyncState::markLost($this->type);
+    }
+
+    /**
      * @param  array<string, string>  $paths
      */
     private function addMissingFiles(array $paths, MediaIndexWriter $writer, MediaFileIdResolverInterface $resolver): void

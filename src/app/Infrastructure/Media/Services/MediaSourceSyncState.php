@@ -128,6 +128,30 @@ final readonly class MediaSourceSyncState
     }
 
     /**
+     * For code that lost a refresh before it could even ask for one (the record ids could not be worked out,
+     * the indexer could not be built): never throws, even when this class cannot be built.
+     */
+    public static function markLost(string $type): void
+    {
+        try {
+            resolve(self::class)->markRefreshFailed($type);
+        } catch (Throwable $e) {
+            Log::error('[Media] A failed media refresh could not be recorded; the library may show its files until the next sync.', [
+                'type' => $type,
+                'exception' => $e,
+            ]);
+        }
+    }
+
+    /**
+     * Drops a type's refresh failure: only when its usage rows are forgotten (media:forget-source).
+     */
+    public function forgetRefreshFailure(string $type): void
+    {
+        MediaSourceRefreshFailureModel::query()->where('source_type', $type)->delete();
+    }
+
+    /**
      * @return array<string, string>|null the token of each type's refresh failure, null when unreadable
      */
     public function refreshFailures(): ?array

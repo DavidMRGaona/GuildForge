@@ -8,6 +8,7 @@ use App\Application\Media\Services\MediaFileReleaserInterface;
 use App\Application\Media\Services\MediaIndexerInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Filament\Media\Sources\RichTextMediaSource;
+use App\Infrastructure\Media\Services\MediaSourceSyncState;
 use Filament\Actions\Action;
 use Illuminate\Support\Facades\Log;
 use JsonException;
@@ -197,10 +198,14 @@ trait ManagesPageSettings
                 $indexer->refresh($type, $recordId);
             }
         } catch (Throwable $e) {
-            Log::warning('[Media] Could not refresh the media usages of the saved settings.', [
+            Log::warning('[Media] Could not refresh the media usages of the saved settings; their types are concealed until the next sync.', [
                 'records' => $records,
                 'exception' => $e,
             ]);
+
+            foreach (array_unique(array_column($records, 0)) as $type) {
+                MediaSourceSyncState::markLost($type);
+            }
         }
     }
 
