@@ -6,12 +6,14 @@ namespace App\Infrastructure\Linking\Services;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Linking\Contracts\FindsLinkableRecordsInBatches;
+use App\Application\Linking\Contracts\FindsLinkableRecordsOfOrganizer;
 use App\Application\Linking\Contracts\LinkableRecordSourceInterface;
 use App\Application\Linking\DTOs\LinkableRecordDTO;
 use App\Application\Linking\Services\LinkableRecordLookupInterface;
 use App\Application\Linking\Services\LinkableRecordSourceRegistryInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Generator;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
@@ -168,6 +170,56 @@ final readonly class LinkableRecordLookup implements LinkableRecordLookupInterfa
         return array_slice($records, 0, $limit);
     }
 
+    public function organizedBy(string $type, Authenticatable $organizer, int $limit = self::DEFAULT_SEARCH_LIMIT): array
+    {
+        if ($limit < 1) {
+            return [];
+        }
+
+        $source = $this->registry->source($type);
+
+        if (! $source instanceof FindsLinkableRecordsOfOrganizer) {
+            return [];
+        }
+
+        $organizerId = $this->organizerId($organizer, $type);
+
+        if ($organizerId === null) {
+            return [];
+        }
+
+        $limit = min($limit, self::MAX_SEARCH_LIMIT);
+        $records = [];
+        $strays = 0;
+
+        try {
+            // Read inside the try: a source breaking its own return type fails here too
+            foreach ($source->organizedBy($organizerId, $limit) as $record) {
+                if ($record->type !== $type) {
+                    $strays++;
+
+                    continue;
+                }
+
+                $records[] = $record;
+            }
+        } catch (Throwable $exception) {
+            $this->reportFailure('organizedBy', $source, $type, $exception);
+
+            return [];
+        }
+
+        if ($strays > 0) {
+            Log::error('[LinkableRecordLookup] Source answered with records of another type, not shown', [
+                'source' => $source::class,
+                'type' => $type,
+                'count' => $strays,
+            ]);
+        }
+
+        return array_slice($records, 0, $limit);
+    }
+
     public function types(): array
     {
         $types = [];
@@ -181,6 +233,37 @@ final readonly class LinkableRecordLookup implements LinkableRecordLookupInterfa
         }
 
         return $types;
+    }
+
+    /**
+     * The organizer's account id in lower case, read again from the database so a stale or made
+     * up model is never trusted: null when it is not a uuid, unknown, deactivated (soft-deleted)
+     * or anonymized, or when it cannot be read (logged). No panel check: their own records are
+     * not the panel's drafts.
+     */
+    private function organizerId(Authenticatable $organizer, string $type): ?string
+    {
+        $id = $organizer->getAuthIdentifier();
+
+        if (! is_string($id) || ! Str::isUuid($id)) {
+            return null;
+        }
+
+        $id = strtolower($id);
+
+        try {
+            $exists = UserModel::query()->whereNull('anonymized_at')->whereKey($id)->exists();
+        } catch (Throwable $exception) {
+            Log::error('[LinkableRecordLookup] The organizer could not be read, nothing answered', [
+                'type' => $type,
+                'exception' => $exception::class,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
+
+        return $exists ? $id : null;
     }
 
     /**

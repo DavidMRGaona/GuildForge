@@ -12,8 +12,10 @@ use App\Application\Linking\Services\LinkableRecordLookupInterface;
 use App\Infrastructure\Linking\Services\LinkableRecordLookup;
 use App\Infrastructure\Linking\Services\LinkableRecordSourceRegistry;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Mockery;
 use Mockery\MockInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -21,6 +23,7 @@ use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 use Tests\Support\Linking\BatchFakeLinkableRecordSource;
 use Tests\Support\Linking\FakeLinkableRecordSource;
+use Tests\Support\Linking\OrganizerFakeLinkableRecordSource;
 use Tests\Support\Linking\OtherFakeLinkableRecordSource;
 use Tests\Support\Linking\StrayBatchLinkableRecordSource;
 use Tests\Support\Linking\ThrowingBatchLinkableRecordSource;
@@ -383,6 +386,126 @@ final class LinkableRecordLookupTest extends TestCase
     }
 
     #[Test]
+    public function organized_by_answers_what_the_account_organizes_asking_for_its_own_id(): void
+    {
+        $organizer = UserModel::factory()->create();
+        $this->registry->register(OrganizerFakeLinkableRecordSource::class, 'example-module');
+        OrganizerFakeLinkableRecordSource::$organized = [
+            $organizer->id => [$this->record('organized-fake', 'mine'), $this->record('organized-fake', 'also-mine')],
+            self::VIEWER => [$this->record('organized-fake', 'someone-else')],
+        ];
+
+        $records = $this->lookup->organizedBy('organized-fake', $organizer);
+
+        $this->assertSame(['mine', 'also-mine'], array_map(fn (LinkableRecordDTO $record): string => $record->id, $records));
+        $this->assertSame([[$organizer->id, LinkableRecordLookupInterface::DEFAULT_SEARCH_LIMIT]], OrganizerFakeLinkableRecordSource::$organizerCalls);
+    }
+
+    #[Test]
+    public function organized_by_gets_the_own_id_without_any_panel_check(): void
+    {
+        // Their own records are not drafts of the panel: whoever cannot open it still gets their id
+        $organizer = UserModel::factory()->create();
+        $this->registry->register(OrganizerFakeLinkableRecordSource::class, 'example-module');
+
+        $this->lookup->organizedBy('organized-fake', $organizer);
+
+        $this->assertSame($organizer->id, OrganizerFakeLinkableRecordSource::$organizerCalls[0][0] ?? null);
+        $this->assertSame([], $this->askedPermissions);
+    }
+
+    #[Test]
+    public function organized_by_hands_the_source_the_id_in_lower_case(): void
+    {
+        $organizer = UserModel::factory()->create();
+        $shouting = new UserModel;
+        $shouting->id = strtoupper($organizer->id);
+        $this->registry->register(OrganizerFakeLinkableRecordSource::class, 'example-module');
+
+        $this->lookup->organizedBy('organized-fake', $shouting);
+
+        $this->assertSame($organizer->id, OrganizerFakeLinkableRecordSource::$organizerCalls[0][0] ?? null);
+    }
+
+    #[Test]
+    #[DataProvider('visitorAccounts')]
+    public function organized_by_answers_nothing_for_an_account_that_cannot_organize_without_asking_the_source(string $state): void
+    {
+        $log = Log::spy();
+        $id = $this->viewerIn($state);
+        $organizer = Str::isUuid($id) ? UserModel::query()->withTrashed()->find($id) : null;
+
+        if (! $organizer instanceof UserModel) {
+            $organizer = new UserModel;
+            $organizer->id = $id;
+        }
+
+        $this->registry->register(OrganizerFakeLinkableRecordSource::class, 'example-module');
+
+        $this->assertSame([], $this->lookup->organizedBy('organized-fake', $organizer));
+        $this->assertSame([], OrganizerFakeLinkableRecordSource::$organizerCalls);
+        $log->shouldNotHaveReceived('error');
+    }
+
+    #[Test]
+    public function organized_by_answers_nothing_for_a_source_without_the_contract_or_a_type_without_a_source(): void
+    {
+        $log = Log::spy();
+        $organizer = UserModel::factory()->create();
+        $this->registry->register(FakeLinkableRecordSource::class, 'example-module');
+        FakeLinkableRecordSource::$records = [$this->record('fake', 'one')];
+
+        $this->assertSame([], $this->lookup->organizedBy('fake', $organizer));
+        $this->assertSame([], $this->lookup->organizedBy('missing-type', $organizer));
+        $log->shouldNotHaveReceived('error');
+    }
+
+    #[Test]
+    public function organized_by_answers_nothing_and_logs_an_error_when_the_source_throws(): void
+    {
+        $log = Log::spy();
+        $organizer = UserModel::factory()->create();
+        $this->registry->register(OrganizerFakeLinkableRecordSource::class, 'example-module');
+        OrganizerFakeLinkableRecordSource::$fails = true;
+
+        $this->assertSame([], $this->lookup->organizedBy('organized-fake', $organizer));
+        $log->shouldHaveReceived('error')->once();
+    }
+
+    #[Test]
+    public function organized_by_keeps_only_records_of_the_type_up_to_the_capped_limit(): void
+    {
+        $log = Log::spy();
+        $organizer = UserModel::factory()->create();
+        $this->registry->register(OrganizerFakeLinkableRecordSource::class, 'example-module');
+        OrganizerFakeLinkableRecordSource::$organized = [$organizer->id => [
+            $this->record('organized-fake', 'one'),
+            $this->record('fake', 'stray'),
+            ...array_map(
+                fn (int $index): LinkableRecordDTO => $this->record('organized-fake', "record-{$index}"),
+                range(1, LinkableRecordLookupInterface::MAX_SEARCH_LIMIT + 5),
+            ),
+        ]];
+
+        $this->assertSame(['one'], array_map(fn (LinkableRecordDTO $record): string => $record->id, $this->lookup->organizedBy('organized-fake', $organizer, 2)));
+        $this->assertCount(LinkableRecordLookupInterface::MAX_SEARCH_LIMIT - 1, $this->lookup->organizedBy('organized-fake', $organizer, 500));
+        $this->assertSame([], $this->lookup->organizedBy('organized-fake', $organizer, 0));
+        $this->assertSame([2, LinkableRecordLookupInterface::MAX_SEARCH_LIMIT], array_column(OrganizerFakeLinkableRecordSource::$organizerCalls, 1));
+        $log->shouldHaveReceived('error')->twice();
+    }
+
+    #[Test]
+    public function organized_by_takes_an_account_never_a_loose_id(): void
+    {
+        // What only its owner sees may be answered, so a consumer passes the signed-in account,
+        // never an id that could be anybody's (security.md → Linkable records)
+        $parameter = new \ReflectionMethod(LinkableRecordLookupInterface::class, 'organizedBy')->getParameters()[1];
+
+        $this->assertSame('organizer', $parameter->getName());
+        $this->assertSame(Authenticatable::class, (string) $parameter->getType());
+    }
+
+    #[Test]
     public function the_lookup_is_a_container_singleton(): void
     {
         $lookup = $this->app->make(LinkableRecordLookupInterface::class);
@@ -396,6 +519,9 @@ final class LinkableRecordLookupTest extends TestCase
         FakeLinkableRecordSource::$askedIds = [];
         FakeLinkableRecordSource::$viewerIds = [];
         BatchFakeLinkableRecordSource::$batches = [];
+        OrganizerFakeLinkableRecordSource::$organized = [];
+        OrganizerFakeLinkableRecordSource::$organizerCalls = [];
+        OrganizerFakeLinkableRecordSource::$fails = false;
     }
 
     /**
