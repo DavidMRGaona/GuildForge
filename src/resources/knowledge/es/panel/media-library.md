@@ -43,7 +43,7 @@ Una imagen sale oculta por una de estas razones:
 
 - **Su origen no la enseña.** La biblioteca solo muestra las imágenes de los orígenes que dicen que se pueden ver: los de la web (eventos, artículos, galerías, hero slides, ajustes del sitio, pie de página y banners de perfil) y los de los módulos que ya lo declaran. Las de un módulo que todavía no lo declara salen ocultas hasta que se actualice.
 - **Es de origen desconocido.** No se sabe de dónde viene, así que no se enseña.
-- **La biblioteca no está al día con su origen.** Pasa justo después de actualizar la web o un módulo, o si la última actualización de ese origen falló. Se arregla sola con la siguiente actualización; también puedes pulsar **Actualizar**.
+- **La biblioteca no está al día con su origen.** Pasa justo después de actualizar la web o un módulo, si la última actualización de ese origen falló o si no se pudo poner al día uno de sus registros al guardarlo. Se arregla sola con la siguiente actualización; también puedes pulsar **Actualizar**.
 - **Uno de sus usos la oculta**, como la insignia de un logro secreto, la imagen de una propuesta que su autor aún no ha enviado o el banner de un perfil que no ven todas las personas registradas. Si un archivo lo comparten un registro visible y uno oculto, se oculta para los dos.
 - **Nadie la usa y su origen puede guardar imágenes privadas.** Pasa, por ejemplo, con las imágenes del foro: las de un tema borrado de una categoría para socios, o las que se subieron para un mensaje que nunca se envió, se quedan sin uso y podrían ser privadas.
 
