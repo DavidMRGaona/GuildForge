@@ -14,6 +14,7 @@ use App\Domain\Media\Enums\MediaFileStatus;
 use App\Domain\Media\MediaFileStatusRule;
 use App\Domain\Media\ValueObjects\MediaFileId;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaFileModel;
+use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaUsageModel;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Throwable;
@@ -35,6 +36,9 @@ final class EloquentMediaLibraryQuery implements MediaLibraryQueryInterface
 {
     /** @var list<Claim>|null */
     private ?array $claims = null;
+
+    /** @var list<string>|null types of the active sources the index is up to date with */
+    private ?array $upToDate = null;
 
     public function __construct(
         private readonly MediaSourceRegistryInterface $registry,
@@ -104,8 +108,8 @@ final class EloquentMediaLibraryQuery implements MediaLibraryQueryInterface
 
         $query->where('media_files.resource_type', 'image')
             ->whereNotNull('media_files.format')
-            // An image a source keeps out of sight is never offered (core#830)
-            ->whereDoesntHave('usages', static fn (Builder $usages): Builder => $usages->where('is_hidden', true));
+            // An image a usage keeps out of sight, or one with a usage the index may hold stale, is never offered
+            ->whereDoesntHave('usages', fn (Builder $usages): Builder => $this->whereConcealing($usages));
 
         foreach ($concealing as $claim) {
             // Nor one that any visible source claiming it would not show, winning the folder or not
@@ -151,7 +155,7 @@ final class EloquentMediaLibraryQuery implements MediaLibraryQueryInterface
             }
         }
 
-        return $file->hasHiddenUsage();
+        return $this->hasConcealingUsage($file);
     }
 
     public function stats(): MediaLibraryStatsDTO
@@ -216,6 +220,46 @@ final class EloquentMediaLibraryQuery implements MediaLibraryQueryInterface
     }
 
     /**
+     * Whether a usage keeps the file out of sight: it is hidden (core#830), or its source is not one the index
+     * is up to date with (core#837), so its `is_hidden` may be stale. A source with no folder (rich text) or of
+     * a disabled module counts too.
+     */
+    private function hasConcealingUsage(MediaFileModel $file): bool
+    {
+        $upToDate = $this->upToDate();
+
+        if ($file->relationLoaded('usages')) {
+            return $file->usages->contains(static fn (MediaUsageModel $usage): bool => $usage->is_hidden
+                || ! in_array($usage->source_type, $upToDate, true));
+        }
+
+        return $file->usages()->where(fn (Builder $usages): Builder => $this->whereConcealing($usages))->exists();
+    }
+
+    /**
+     * The usages that keep a file out of sight, in SQL; the same rule as hasConcealingUsage().
+     *
+     * @template TModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  Builder<TModel>  $usages
+     * @return Builder<TModel>
+     */
+    private function whereConcealing(Builder $usages): Builder
+    {
+        return $usages->where(fn (Builder $concealing): Builder => $concealing
+            ->where('is_hidden', true)
+            ->orWhereNotIn('source_type', $this->upToDate()));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function upToDate(): array
+    {
+        return $this->upToDate ??= $this->syncState->upToDate($this->registry->sources());
+    }
+
+    /**
      * The same test as whereMatches(), in PHP: case sensitive, by prefix, minus the excluded subfolders.
      *
      * @param  Claim  $claim
@@ -245,7 +289,7 @@ final class EloquentMediaLibraryQuery implements MediaLibraryQueryInterface
         }
 
         $claims = [];
-        $synced = $this->syncState->all();
+        $upToDate = $this->upToDate();
 
         foreach ($this->registry->sources() as $source) {
             try {
@@ -263,8 +307,7 @@ final class EloquentMediaLibraryQuery implements MediaLibraryQueryInterface
                         'type' => $type,
                         'hidden' => $hidden,
                         'releasesThroughCore' => $source instanceof ReleasesMediaThroughCoreInterface,
-                        'showsPreviews' => $source instanceof ShowsMediaPreviews
-                            && ($synced[$type] ?? null) === MediaSourceSyncState::fingerprint($source),
+                        'showsPreviews' => $source instanceof ShowsMediaPreviews && in_array($type, $upToDate, true),
                         'folder' => $folder,
                         'excluded' => $excluded,
                     ];

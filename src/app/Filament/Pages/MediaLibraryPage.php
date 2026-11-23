@@ -87,12 +87,6 @@ final class MediaLibraryPage extends Page implements HasTable
 
     private const int PREVIEW_WIDTH = 1200;
 
-    /** Not kept between requests: Livewire only keeps public properties */
-    private ?MediaLibraryQueryInterface $libraryQuery = null;
-
-    /** @var array<string, bool> whether each file drawn in this request is concealed */
-    private array $concealedFiles = [];
-
     /** Drawn instead of the image of a file the library conceals (core#830, core#837) */
     private const string HIDDEN_PREVIEW = 'images/media-library/hidden-preview.svg';
 
@@ -119,6 +113,12 @@ final class MediaLibraryPage extends Page implements HasTable
      * @var array<string, array{0: ?string, 1: ?string}>
      */
     private array $neighbours = [];
+
+    /** One per request, like $neighbours: Livewire only keeps public properties */
+    private ?MediaLibraryQueryInterface $libraryQuery = null;
+
+    /** @var array<string, bool> whether each file drawn in this request is concealed */
+    private array $concealedFiles = [];
 
     /** Grid or list, remembered per browser session. Not `$layout`: Filament's Page has a static one */
     #[Session]

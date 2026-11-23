@@ -66,9 +66,12 @@ final readonly class MediaIndexer implements MediaIndexerInterface
         [$catalogComplete, $added, $removed] = $this->syncFiles($startedAt);
 
         $failedSources = [];
-        $syncedSources = [];
+        $sources = $this->registry->sources();
+        // What each source is before its usages are read: a module updated meanwhile is not taken as synced
+        $before = $this->syncState->fingerprints($sources);
+        $succeeded = [];
 
-        foreach ($this->registry->sources() as $source) {
+        foreach ($sources as $source) {
             $failed = $this->syncSource($source);
 
             if ($failed !== null) {
@@ -77,15 +80,15 @@ final readonly class MediaIndexer implements MediaIndexerInterface
                 continue;
             }
 
-            try {
-                $syncedSources[$source->type()] = MediaSourceSyncState::fingerprint($source);
-            } catch (Throwable) {
-                // Its rows were written, but it cannot be told apart: it stays as if never synced
-            }
+            $succeeded[] = $source;
         }
 
         // The library shows a source's images only while its rows come from a sync of the source as it is now
-        $this->syncState->record($syncedSources, $failedSources);
+        $after = $this->syncState->fingerprints($succeeded);
+        $this->syncState->record(
+            array_filter($after, static fn (string $fingerprint, string $type): bool => ($before[$type] ?? null) === $fingerprint, ARRAY_FILTER_USE_BOTH),
+            [...$failedSources, ...array_keys(array_diff_assoc($after, $before))],
+        );
 
         // A partial run must not look like a reconciliation: the page warns while the failure is the newest
         $this->settings->set(

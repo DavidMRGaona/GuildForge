@@ -78,7 +78,7 @@ trait HasProposalReview
      */
     public function isUnsubmittedProposal(): bool
     {
-        return $this->proposalStatus() === ProposalStatus::Draft && $this->getAttribute('submitted_at') === null;
+        return $this->proposalReview()?->isUnsubmittedDraft() ?? false;
     }
 
     /**

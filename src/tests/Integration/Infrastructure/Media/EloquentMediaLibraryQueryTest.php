@@ -9,17 +9,21 @@ use App\Application\Media\Contracts\ReleasesMediaThroughCoreInterface;
 use App\Application\Media\Contracts\ShowsMediaPreviews;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Domain\Media\Enums\MediaFileStatus;
 use App\Domain\Media\MediaFileStatusRule;
 use App\Domain\Media\ValueObjects\MediaFileId;
+use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaFileModel;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaUsageModel;
 use App\Infrastructure\Media\Services\MediaIndexer;
 use App\Infrastructure\Media\Services\MediaLibraryQueryInterface;
 use App\Infrastructure\Media\Services\MediaSourceSyncState;
+use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Carbon;
+use Mockery;
 use Tests\Support\Media\FakeMarkedMediaSource;
 use Tests\Support\Media\FakeMediaSource;
 use Tests\Support\Media\FakePreviewedMediaSource;
@@ -375,7 +379,8 @@ final class EloquentMediaLibraryQueryTest extends TestCase
         $this->file('events/a');
         $state = $this->app->make(MediaSourceSyncState::class);
 
-        $state->record(['events' => MediaSourceSyncState::fingerprint(new FakeMediaSource('events', ['events/']))], []);
+        // Last synced as another source (before it declared the marker, say)
+        $state->record(['events' => $state->fingerprints([new FakeMediaSource('events', ['events/'])])['events']], []);
         $this->assertTrue($this->library()->conceals($this->model('events/a')));
         $this->assertSame([], $this->library()->applyReusable($this->library()->query())->pluck('file_id')->all());
 
@@ -385,9 +390,72 @@ final class EloquentMediaLibraryQueryTest extends TestCase
         $this->app->make(SettingsServiceInterface::class)->set(MediaSourceSyncState::KEY, 'not json');
         $this->assertTrue($this->library()->conceals($this->model('events/a')));
 
-        $state->record(['events' => MediaSourceSyncState::fingerprint(new FakeMarkedMediaSource('events', ['events/']))], []);
+        $this->markMediaSourcesSynced();
         $this->assertFalse($this->library()->conceals($this->model('events/a')));
         $this->assertSame(['events/a'], $this->library()->applyReusable($this->library()->query())->pluck('file_id')->all());
+    }
+
+    public function test_a_usage_of_a_source_not_up_to_date_conceals_the_file(): void
+    {
+        // A source without folders (the rich text one) only gives usages: their `is_hidden` may be stale too
+        $this->registry->clear();
+        $this->register('events', new FakeMarkedMediaSource('events', ['events/']));
+        $this->register('texts', new FakeMarkedMediaSource('texts', []));
+        $this->file('events/a');
+        $this->usage('events/a', sourceType: 'texts');
+        $query = $this->library();
+        $this->assertFalse($query->conceals($this->model('events/a')));
+
+        $this->app->make(MediaSourceSyncState::class)->record([], ['texts']);
+
+        $query = $this->library();
+        $this->assertTrue($query->conceals($this->model('events/a')));
+        $this->assertTrue($query->conceals(MediaFileModel::query()->with('usages')->where('file_id', 'events/a')->firstOrFail()));
+        $this->assertSame([], $query->applyReusable($query->query())->pluck('file_id')->all());
+    }
+
+    public function test_a_usage_of_a_type_without_an_active_source_conceals_the_file(): void
+    {
+        // A disabled module: its rows can no longer be refreshed
+        $this->registry->clear();
+        $this->register('events', new FakeMarkedMediaSource('events', ['events/']));
+        $this->file('events/a');
+        $this->usage('events/a', sourceType: 'gone.module');
+
+        $query = $this->library();
+
+        $this->assertTrue($query->conceals($this->model('events/a')));
+        $this->assertSame([], $query->applyReusable($query->query())->pluck('file_id')->all());
+    }
+
+    public function test_a_new_version_of_the_module_conceals_its_files_until_it_is_synced(): void
+    {
+        // The same class may hide more in a new release: rows of the old one are not trusted
+        $this->registry->clear();
+        ModuleModel::factory()->enabled()->create(['name' => 'shop', 'version' => '1.0.0']);
+        $this->register('shop.items', new FakeMarkedMediaSource('shop.items', ['shop/']), module: 'shop');
+        $this->file('shop/a');
+        $this->assertFalse($this->library()->conceals($this->model('shop/a')));
+
+        ModuleModel::query()->where('name', 'shop')->update(['version' => '1.1.0']);
+
+        $this->assertTrue($this->library()->conceals($this->model('shop/a')));
+        $this->markMediaSourcesSynced();
+        $this->assertFalse($this->library()->conceals($this->model('shop/a')));
+    }
+
+    public function test_a_new_core_version_conceals_the_files_of_core_sources_until_they_are_synced(): void
+    {
+        $this->registry->clear();
+        $this->register('events', new FakeMarkedMediaSource('events', ['events/']));
+        $this->file('events/a');
+        $this->assertFalse($this->library()->conceals($this->model('events/a')));
+
+        $core = Mockery::mock(CoreVersionServiceInterface::class);
+        $core->shouldReceive('getCurrentVersion')->andReturn(ModuleVersion::fromString('99.0.0'));
+        $this->app->instance(CoreVersionServiceInterface::class, $core);
+
+        $this->assertTrue($this->library()->conceals($this->model('events/a')));
     }
 
     public function test_a_source_whose_last_sync_failed_conceals_its_files(): void
@@ -497,12 +565,12 @@ final class EloquentMediaLibraryQueryTest extends TestCase
         $this->register($type, new FakeMediaSource($type, $folders, $hidden, $excluded));
     }
 
-    private function register(string $type, MediaUsageSourceInterface $source): void
+    private function register(string $type, MediaUsageSourceInterface $source, ?string $module = null): void
     {
         $alias = 'test.media.library.'.$type;
         $this->app->instance($alias, $source);
         /** @var class-string $alias */
-        $this->registry->register($alias);
+        $this->registry->register($alias, $module);
         $this->markMediaSourcesSynced();
     }
 
@@ -521,11 +589,11 @@ final class EloquentMediaLibraryQueryTest extends TestCase
         ]);
     }
 
-    private function usage(string $fileId, bool $hidden = false, string $recordId = 'record-1'): void
+    private function usage(string $fileId, bool $hidden = false, string $recordId = 'record-1', string $sourceType = 'events'): void
     {
         MediaUsageModel::query()->create([
             'file_id' => $fileId,
-            'source_type' => 'events',
+            'source_type' => $sourceType,
             'record_id' => $recordId,
             'role' => 'Imagen',
             'title' => 'Registro',

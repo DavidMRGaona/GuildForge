@@ -425,6 +425,8 @@ Cloudinary handles image storage, transformation, and delivery.
 
 The `DeletesCloudinaryImages` trait automatically deletes old Cloudinary images when the fields configured in `$cloudinaryImageFields` are updated.
 
+**After deploying a new core version, run `php artisan media:sync`** (`docker exec guildforge_app php artisan media:sync`, or the **Actualizar** button of **Contenido → Biblioteca de medios**). The media library shows an image only while its index rows were written by the version of each source running now (core#837): until the first sync after a new release, every image of the core sources is listed with the «Imagen oculta» placeholder and is not offered in «Elegir de la biblioteca». The daily sync settles it if nobody runs it. Module updates from the panel queue it on their own.
+
 ### Email (Resend / SES)
 
 GuildForge supports two mail providers for production:

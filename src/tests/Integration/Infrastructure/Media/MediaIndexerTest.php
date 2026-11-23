@@ -12,8 +12,10 @@ use App\Infrastructure\Media\Jobs\RefreshMediaUsagesJob;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaFileModel;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaUsageModel;
 use App\Infrastructure\Media\Services\MediaSourceSyncState;
+use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Carbon;
+use Tests\Support\Media\FakeMediaSource;
 use Tests\Support\Media\InMemoryMediaCatalog;
 use Tests\Support\Media\InMemoryMediaSource;
 use Tests\TestCase;
@@ -50,6 +52,13 @@ final class MediaIndexerTest extends TestCase
         $this->registry->register($alias, $module);
 
         return $source;
+    }
+
+    private function registerAs(string $alias, object $source, ?string $module): void
+    {
+        $this->app->instance($alias, $source);
+        /** @var class-string $alias */
+        $this->registry->register($alias, $module);
     }
 
     private function file(string $id, int $bytes = 10): MediaFileModel
@@ -225,7 +234,29 @@ final class MediaIndexerTest extends TestCase
 
         $this->indexer()->sync();
 
-        $this->assertSame(['gone' => 'kept', 'good' => MediaSourceSyncState::fingerprint($good)], $state->all());
+        $this->assertSame(['gone' => 'kept', 'good' => $state->fingerprints([$good])['good']], $state->all());
+    }
+
+    public function test_a_source_whose_module_is_updated_while_it_syncs_is_not_taken_as_synced(): void
+    {
+        // Its rows may come from the old code: it stays concealed until the next sync
+        ModuleModel::factory()->enabled()->create(['name' => 'shop', 'version' => '1.0.0']);
+        $source = new class('shop.items', ['shop/']) extends FakeMediaSource
+        {
+            public function usages(): iterable
+            {
+                ModuleModel::query()->where('name', 'shop')->update(['version' => '1.1.0']);
+
+                return [];
+            }
+        };
+        $this->registerAs('test.media.shop', $source, 'shop');
+        $state = $this->app->make(MediaSourceSyncState::class);
+        $state->record(['shop.items' => 'old'], []);
+
+        $this->indexer()->sync();
+
+        $this->assertArrayNotHasKey('shop.items', $state->all());
     }
 
     public function test_sync_replaces_the_usages_of_each_active_source(): void

@@ -7,7 +7,15 @@ namespace Tests\Feature\Media;
 use App\Application\Media\Services\MediaCatalogInterface;
 use App\Application\Media\Services\MediaFileIdResolverInterface;
 use App\Application\Media\Services\MediaIndexerInterface;
+use App\Application\Proposals\DTOs\EventProposalDataDTO;
+use App\Application\Proposals\DTOs\ProposalSettingsDTO;
+use App\Application\Proposals\DTOs\ProposalTypeSettingsDTO;
+use App\Application\Proposals\Services\ProposalServiceInterface;
+use App\Application\Proposals\Services\ProposalSettingsServiceInterface;
 use App\Domain\Proposals\Enums\ProposalStatus;
+use App\Domain\Proposals\Enums\ProposalType;
+use App\Filament\Forms\Components\MediaLibraryBrowser;
+use App\Filament\Forms\Components\MediaLibraryPicker;
 use App\Filament\Media\Sources\ArticleMediaSource;
 use App\Filament\Media\Sources\EventMediaSource;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaFileModel;
@@ -17,9 +25,15 @@ use App\Infrastructure\Media\Services\MediaLibraryQueryInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
-use Illuminate\Database\Eloquent\Model;
+use DateTimeImmutable;
+use Filament\Actions\Testing\TestAction;
+use Filament\Schemas\Schema;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\ViewErrorBag;
+use Livewire\Livewire;
+use Tests\Support\Authorization\CreatesUsersWithPermissions;
+use Tests\Support\Filament\MediaPickerFixturePage;
 use Tests\Support\Media\InMemoryMediaCatalog;
 use Tests\TestCase;
 
@@ -30,6 +44,7 @@ use Tests\TestCase;
  */
 final class UnsubmittedProposalMediaTest extends TestCase
 {
+    use CreatesUsersWithPermissions;
     use LazilyRefreshDatabase;
 
     private InMemoryMediaCatalog $catalog;
@@ -42,6 +57,24 @@ final class UnsubmittedProposalMediaTest extends TestCase
         $this->app->instance(MediaFileIdResolverInterface::class, new CloudinaryMediaFileIdResolver('site'));
         $this->catalog = new InMemoryMediaCatalog;
         $this->app->instance(MediaCatalogInterface::class, $this->catalog);
+        app(ProposalSettingsServiceInterface::class)->save(new ProposalSettingsDTO(
+            events: new ProposalTypeSettingsDTO(enabled: true),
+            articles: new ProposalTypeSettingsDTO(enabled: true),
+            maxPending: 3,
+            maxOpenDrafts: 5,
+            submissionsPerHour: 5,
+        ));
+        MediaPickerFixturePage::$constrain = null;
+        MediaPickerFixturePage::$storedPaths = null;
+        MediaPickerFixturePage::$directory = 'events/2026/11';
+    }
+
+    protected function tearDown(): void
+    {
+        MediaPickerFixturePage::$constrain = null;
+        MediaPickerFixturePage::$storedPaths = null;
+
+        parent::tearDown();
     }
 
     public function test_the_image_of_an_unsubmitted_event_draft_is_concealed_and_not_offered(): void
@@ -64,23 +97,36 @@ final class UnsubmittedProposalMediaTest extends TestCase
 
     public function test_submitting_a_draft_shows_its_image_and_withdrawing_it_conceals_it_again(): void
     {
-        $draft = EventModel::factory()->proposal()->create(['title' => 'Jornada de rol', 'image_public_id' => 'events/2026/11/p.jpg']);
+        $author = UserModel::factory()->create();
+        $proposals = app(ProposalServiceInterface::class);
+        $id = $proposals->createEvent($author->id, new EventProposalDataDTO(
+            title: 'Jornada de rol',
+            description: '<p>Ven a jugar</p>',
+            startDate: new DateTimeImmutable('2026-12-20 17:00:00 UTC'),
+            endDate: new DateTimeImmutable('2026-12-20 21:00:00 UTC'),
+            location: 'Local',
+            imagePublicId: 'events/2026/11/p.jpg',
+            tagIds: [],
+        ));
         $this->catalog->add('events/2026/11/p');
         $this->sync();
         $this->assertTrue($this->library()->conceals($this->file('events/2026/11/p')));
+        $this->assertNotOfferedByThePicker('events/2026/11/p');
 
-        // As ProposalService::submit() does: through the model, so its observer refreshes the usages
-        $this->saveProposal($draft, ProposalStatus::PendingReview, submitted: true);
+        // Submitting saves the model, so its observer refreshes the usages
+        $proposals->submit($author->id, ProposalType::Event, $id);
 
         $this->assertFalse($this->library()->conceals($this->file('events/2026/11/p')));
         $this->assertSame(['events/2026/11/p'], $this->reusable());
-        $this->assertSame('Jornada de rol', $this->usage('events', (string) $draft->id)->title);
+        $this->assertSame('Jornada de rol', $this->usage('events', $id)->title);
+        $this->assertStringContainsString('data-media-file="events/2026/11/p"', $this->pickerHtml());
 
-        // As ProposalService::withdraw() does: the author's again
-        $this->saveProposal($draft, ProposalStatus::Draft, submitted: false);
+        // Withdrawn, it is the author's again
+        $proposals->withdraw($author->id, ProposalType::Event, $id);
 
         $this->assertTrue($this->library()->conceals($this->file('events/2026/11/p')));
         $this->assertSame([], $this->reusable());
+        $this->assertNotOfferedByThePicker('events/2026/11/p');
     }
 
     public function test_a_returned_draft_was_submitted_so_it_stays_in_sight(): void
@@ -113,10 +159,34 @@ final class UnsubmittedProposalMediaTest extends TestCase
         $this->assertSame([], $this->reusable());
     }
 
-    private function saveProposal(Model $proposal, ProposalStatus $status, bool $submitted): void
+    private function assertNotOfferedByThePicker(string $fileId): void
     {
-        $proposal->forceFill(['proposal_status' => $status, 'submitted_at' => $submitted ? now() : null]);
-        $proposal->save();
+        $this->assertStringNotContainsString($fileId, $this->pickerHtml());
+        $this->actingAs($this->editorWithPermissions(['media.view_any', 'events.update']));
+        $page = Livewire::test(MediaPickerFixturePage::class)
+            ->set('data.image_public_id', ['a' => $fileId.'.jpg'])
+            ->call('save')
+            ->assertHasFormErrors(['image_public_id']);
+        $this->assertNull($page->get('saved'));
+    }
+
+    /**
+     * The browser of «Elegir de la biblioteca», rendered alone: action modals render outside the component.
+     */
+    private function pickerHtml(): string
+    {
+        $this->actingAs($this->editorWithPermissions(['media.view_any', 'events.update']));
+        $component = Livewire::test(MediaPickerFixturePage::class)
+            ->mountAction(TestAction::make(MediaLibraryPicker::ACTION)->schemaComponent('image_public_id', schema: 'form'))
+            ->instance();
+        $this->assertInstanceOf(MediaPickerFixturePage::class, $component);
+        $schema = (fn (): ?Schema => $this->getMountedActionSchema())->call($component);
+        $this->assertInstanceOf(Schema::class, $schema);
+        $browser = $schema->getFlatFields()['file'] ?? null;
+        $this->assertInstanceOf(MediaLibraryBrowser::class, $browser);
+        view()->share('errors', new ViewErrorBag);
+
+        return $browser->toHtml();
     }
 
     private function sync(): void
