@@ -8,6 +8,8 @@ use App\Application\Media\Contracts\ConcealsUnusedMediaFiles;
 use App\Application\Media\Contracts\MediaUsageSourceInterface;
 use App\Application\Media\Contracts\ReleasesMediaThroughCoreInterface;
 use App\Application\Media\Contracts\ShowsMediaPreviews;
+use App\Application\Media\Services\MediaCatalogInterface;
+use App\Application\Media\Services\MediaIndexerInterface;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
@@ -29,6 +31,7 @@ use Tests\Support\Media\FakeConcealingUnusedMediaSource;
 use Tests\Support\Media\FakeMarkedMediaSource;
 use Tests\Support\Media\FakeMediaSource;
 use Tests\Support\Media\FakePreviewedMediaSource;
+use Tests\Support\Media\InMemoryMediaCatalog;
 use Tests\Support\Media\MarksMediaSourcesSynced;
 use Tests\TestCase;
 
@@ -629,6 +632,33 @@ final class EloquentMediaLibraryQueryTest extends TestCase
         $this->app->make(MediaSourceSyncState::class)->record([], ['events']);
 
         $this->assertTrue($this->library()->conceals($this->model('events/a')));
+    }
+
+    public function test_a_failed_refresh_conceals_the_files_of_its_type_until_the_next_good_sync(): void
+    {
+        // core#844: a refresh that failed may have left a usage shown that the source now hides
+        $this->registry->clear();
+        $this->register('events', new FakeMarkedMediaSource('events', ['events/']));
+        $this->register('articles', new FakeMarkedMediaSource('articles', ['articles/']));
+        $this->file('events/a');
+        $this->file('articles/a');
+        $catalog = new InMemoryMediaCatalog;
+        $catalog->add('events/a');
+        $catalog->add('articles/a');
+        $this->app->instance(MediaCatalogInterface::class, $catalog);
+
+        $this->app->make(MediaSourceSyncState::class)->markRefreshFailed('events');
+
+        $query = $this->library();
+        $this->assertTrue($query->conceals($this->model('events/a')));
+        $this->assertFalse($query->conceals($this->model('articles/a')));
+        $this->assertSame(['articles/a'], $query->applyReusable($query->query())->pluck('file_id')->all());
+
+        $this->app->make(MediaIndexerInterface::class)->sync();
+
+        $query = $this->library();
+        $this->assertFalse($query->conceals($this->model('events/a')));
+        $this->assertSame(['articles/a', 'events/a'], $query->applyReusable($query->query())->orderBy('file_id')->pluck('file_id')->all());
     }
 
     public function test_a_file_of_a_hidden_source_is_concealed_even_if_it_shows_previews(): void

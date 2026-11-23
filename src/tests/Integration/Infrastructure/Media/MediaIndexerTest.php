@@ -9,12 +9,20 @@ use App\Application\Media\Services\MediaIndexerInterface;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
 use App\Application\Services\SettingsServiceInterface;
 use App\Infrastructure\Media\Jobs\RefreshMediaUsagesJob;
+use App\Infrastructure\Media\Observers\RefreshMediaUsagesObserver;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaFileModel;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaUsageModel;
+use App\Infrastructure\Media\Services\MediaIndexer;
 use App\Infrastructure\Media\Services\MediaSourceSyncState;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
+use Illuminate\Contracts\Bus\Dispatcher;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Mockery;
+use RuntimeException;
 use Tests\Support\Media\FakeMediaSource;
 use Tests\Support\Media\InMemoryMediaCatalog;
 use Tests\Support\Media\InMemoryMediaSource;
@@ -84,6 +92,25 @@ final class MediaIndexerTest extends TestCase
             'role' => $role,
             'title' => 'Registro antiguo',
         ]);
+    }
+
+    /**
+     * @return list<string> types the index is up to date with, sorted
+     */
+    private function upToDate(): array
+    {
+        $types = $this->app->make(MediaSourceSyncState::class)->upToDate($this->registry->sources());
+        sort($types);
+
+        return $types;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function refreshFailures(): array
+    {
+        return $this->app->make(MediaSourceSyncState::class)->refreshFailures() ?? [];
     }
 
     /**
@@ -374,5 +401,187 @@ final class MediaIndexerTest extends TestCase
     public function test_usages_are_shown_unless_hidden(): void
     {
         $this->assertFalse($this->usage('events/a', 'events', 'e1')->refresh()->is_hidden);
+    }
+
+    public function test_a_refresh_whose_source_fails_leaves_its_type_not_up_to_date(): void
+    {
+        // A lost refresh may leave a usage shown that the source now hides (core#844)
+        $events = $this->source('events');
+        $this->source('articles');
+        $this->indexer()->sync();
+        $this->assertSame(['articles', 'events'], $this->upToDate());
+
+        $events->failingForRecords = true;
+        $this->app->call([new RefreshMediaUsagesJob('events', 'e1'), 'handle']);
+
+        $this->assertSame(['articles'], $this->upToDate());
+        $this->assertArrayHasKey('events', $this->refreshFailures());
+    }
+
+    public function test_a_refresh_without_a_source_in_this_worker_leaves_its_type_not_up_to_date(): void
+    {
+        // The source cannot be built here, or its module is enabled where the worker does not know it yet
+        $this->source('events');
+        $this->indexer()->sync();
+
+        $this->app->call([new RefreshMediaUsagesJob('shop.items', 's1'), 'handle']);
+
+        $this->assertSame(['shop.items'], array_keys($this->refreshFailures()));
+        $this->assertSame(['events'], $this->upToDate());
+    }
+
+    public function test_a_refresh_that_cannot_be_queued_leaves_its_type_not_up_to_date(): void
+    {
+        $this->source('events');
+        $this->source('articles');
+        $this->indexer()->sync();
+        $bus = Mockery::mock(Dispatcher::class);
+        $bus->shouldReceive('dispatch')->andThrow(new RuntimeException('queue unreachable'));
+
+        $this->app->make(MediaIndexer::class, ['bus' => $bus])->refresh('events', 'e1');
+
+        $this->assertSame(['articles'], $this->upToDate());
+    }
+
+    public function test_a_refresh_that_cannot_be_queued_at_commit_time_leaves_its_type_not_up_to_date(): void
+    {
+        // The push waits for the caller's commit: refusing it then must neither escape nor go unrecorded
+        $this->source('events');
+        $this->source('articles');
+        $this->indexer()->sync();
+        $bus = Mockery::mock(Dispatcher::class);
+        $bus->shouldReceive('dispatch')->once()->andThrow(new RuntimeException('queue unreachable'));
+        $indexer = $this->app->make(MediaIndexer::class, ['bus' => $bus]);
+
+        DB::transaction(function () use ($indexer): void {
+            $indexer->refresh('events', 'e1');
+            // Nothing is queued before the commit
+            $this->assertSame(['articles', 'events'], $this->upToDate());
+        });
+
+        $this->assertSame(['articles'], $this->upToDate());
+    }
+
+    public function test_a_refresh_asked_inside_a_transaction_that_rolls_back_is_never_queued(): void
+    {
+        $this->source('events');
+        $this->indexer()->sync();
+        $bus = Mockery::mock(Dispatcher::class);
+        $bus->shouldNotReceive('dispatch');
+        $indexer = $this->app->make(MediaIndexer::class, ['bus' => $bus]);
+
+        try {
+            DB::transaction(function () use ($indexer): void {
+                $indexer->refresh('events', 'e1');
+
+                throw new RuntimeException('save failed');
+            });
+        } catch (RuntimeException) {
+        }
+
+        $this->assertSame(['events'], $this->upToDate());
+    }
+
+    public function test_an_observer_that_cannot_work_out_the_records_leaves_its_type_not_up_to_date(): void
+    {
+        $this->source('events');
+        $this->source('articles');
+        $this->indexer()->sync();
+        $observer = new RefreshMediaUsagesObserver('events', static fn (Model $model): array => throw new RuntimeException('no ids'));
+
+        $observer->saved(new ModuleModel);
+
+        $this->assertSame(['articles'], $this->upToDate());
+    }
+
+    public function test_a_refresh_job_that_never_finished_leaves_its_type_not_up_to_date(): void
+    {
+        // A timeout or a worker that died: handle() never got to record anything
+        $this->source('events');
+        $this->source('articles');
+        $this->indexer()->sync();
+
+        (new RefreshMediaUsagesJob('events', 'e1'))->failed(new RuntimeException('timed out'));
+
+        $this->assertSame(['articles'], $this->upToDate());
+    }
+
+    public function test_a_refresh_that_works_does_not_bring_a_failed_type_back(): void
+    {
+        // A refresh does not know what else changed meanwhile: only a complete sync does
+        $events = $this->source('events')->use('events/a.jpg', 'e1');
+        $this->indexer()->sync();
+        $events->failingForRecords = true;
+        $this->app->call([new RefreshMediaUsagesJob('events', 'e1'), 'handle']);
+
+        $events->failingForRecords = false;
+        $this->app->call([new RefreshMediaUsagesJob('events', 'e1'), 'handle']);
+
+        $this->assertSame([], $this->upToDate());
+
+        $this->indexer()->sync();
+
+        $this->assertSame(['events'], $this->upToDate());
+        $this->assertSame([], $this->refreshFailures());
+    }
+
+    public function test_a_sync_that_fails_for_the_type_keeps_its_refresh_failure(): void
+    {
+        $events = $this->source('events');
+        $this->source('articles');
+        $this->indexer()->sync();
+        $events->failingForRecords = true;
+        $this->app->call([new RefreshMediaUsagesJob('events', 'e1'), 'handle']);
+        $this->app->call([new RefreshMediaUsagesJob('articles', 'a1'), 'handle']);
+
+        $events->failing = true;
+        $this->indexer()->sync();
+
+        $this->assertSame(['events'], array_keys($this->refreshFailures()));
+        $this->assertSame(['articles'], $this->upToDate());
+    }
+
+    public function test_a_refresh_that_fails_while_a_sync_reads_the_source_keeps_the_type_failed(): void
+    {
+        // The sync may have read the record before it changed: the failure outlives it
+        $source = new class('events', ['events/']) extends FakeMediaSource
+        {
+            public function usages(): iterable
+            {
+                resolve(MediaSourceSyncState::class)->markRefreshFailed('events');
+
+                return [];
+            }
+        };
+        $this->registerAs('test.media.events', $source, null);
+        $this->app->make(MediaSourceSyncState::class)->markRefreshFailed('events');
+
+        $this->indexer()->sync();
+
+        $this->assertSame([], $this->upToDate());
+        $this->assertArrayHasKey('events', $this->refreshFailures());
+    }
+
+    public function test_a_refresh_whose_files_cannot_be_looked_up_keeps_its_type_up_to_date(): void
+    {
+        // Its rows were written: only the catalog could not be asked about the files
+        $this->source('events')->use('events/a.jpg', 'e1');
+        $this->indexer()->sync();
+        $this->catalog->unavailable = true;
+
+        $this->app->call([new RefreshMediaUsagesJob('events', 'e1'), 'handle']);
+
+        $this->assertSame(['events'], $this->upToDate());
+        $this->assertSame([], $this->refreshFailures());
+    }
+
+    public function test_unreadable_refresh_failures_leave_no_type_up_to_date(): void
+    {
+        $this->source('events');
+        $this->indexer()->sync();
+
+        Schema::drop('media_source_refresh_failures');
+
+        $this->assertSame([], $this->upToDate());
     }
 }

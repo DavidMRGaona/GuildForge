@@ -13,6 +13,7 @@ use App\Domain\Media\ValueObjects\MediaFileId;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaFileModel;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaUsageModel;
 use App\Infrastructure\Media\Services\MediaIndexWriter;
+use App\Infrastructure\Media\Services\MediaSourceSyncState;
 use Carbon\CarbonImmutable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -29,7 +30,8 @@ use Throwable;
  *
  * A type without an active source keeps its rows (the module may only be disabled in this worker). Any
  * failure is logged and the job ends: with the sync queue it runs at commit time, where an exception would
- * reach the request; the nightly sync settles what was left.
+ * reach the request; the nightly sync settles what was left. Until then, a type whose rows could not be
+ * brought in line (the source threw, or cannot be built here) is concealed in the library (core#844).
  */
 final class RefreshMediaUsagesJob implements ShouldQueue
 {
@@ -51,11 +53,18 @@ final class RefreshMediaUsagesJob implements ShouldQueue
         MediaSourceRegistryInterface $registry,
         MediaIndexWriter $writer,
         MediaFileIdResolverInterface $resolver,
+        MediaSourceSyncState $syncState,
     ): void {
+        // Once the rows are written, a failure only touches the files: the type's rows are right
+        $written = false;
+
         try {
             $source = $registry->source($this->type);
 
             if (! $source instanceof MediaUsageSourceInterface) {
+                $syncState->markRefreshFailed($this->type);
+                $this->warn('[Media] No active media source for a refreshed record in this process; the type is concealed until the next sync.');
+
                 return;
             }
 
@@ -104,12 +113,29 @@ final class RefreshMediaUsagesJob implements ShouldQueue
 
                 return $before;
             });
+            $written = true;
 
             $this->addMissingFiles($paths, $writer, $resolver);
             $this->dropLostFiles(array_keys(array_diff_key($before, $paths)));
         } catch (Throwable $e) {
-            $this->warn('[Media] The media usages of a record could not be refreshed; the nightly sync will settle them.', $e);
+            if ($written) {
+                $this->warn('[Media] The files of a refreshed record could not be updated; the nightly sync will settle them.', $e);
+
+                return;
+            }
+
+            $syncState->markRefreshFailed($this->type);
+            $this->warn('[Media] The media usages of a record could not be refreshed; the type is concealed until the nightly sync settles them.', $e);
         }
+    }
+
+    /**
+     * The job never got to finish (a timeout, a worker that died, dependencies that could not be built): its
+     * rows may be stale, so the type stays concealed until the next sync (core#844).
+     */
+    public function failed(?Throwable $e): void
+    {
+        MediaSourceSyncState::markLost($this->type);
     }
 
     /**
@@ -186,12 +212,12 @@ final class RefreshMediaUsagesJob implements ShouldQueue
         return resolve(MediaCatalogInterface::class);
     }
 
-    private function warn(string $message, Throwable $e): void
+    private function warn(string $message, ?Throwable $e = null): void
     {
-        Log::warning($message, [
+        Log::warning($message, array_filter([
             'type' => $this->type,
             'record_id' => $this->recordId,
             'exception' => $e,
-        ]);
+        ], static fn (mixed $value): bool => $value !== null));
     }
 }

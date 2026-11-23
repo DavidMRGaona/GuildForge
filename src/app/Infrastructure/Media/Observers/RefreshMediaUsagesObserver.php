@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Media\Observers;
 
 use App\Application\Media\Services\MediaIndexerInterface;
+use App\Infrastructure\Media\Services\MediaSourceSyncState;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
@@ -16,6 +17,7 @@ use Throwable;
  * their own models as model event listeners.
  *
  * It never fails the save: anything that goes wrong is logged and the nightly sync settles the record.
+ * Until then the type is concealed in the library, as for any lost refresh (core#844).
  */
 final readonly class RefreshMediaUsagesObserver
 {
@@ -53,11 +55,12 @@ final readonly class RefreshMediaUsagesObserver
                 $indexer->refresh($this->type, $id);
             }
         } catch (Throwable $e) {
-            Log::warning('[Media] Could not refresh the media usages of a saved record.', [
+            Log::warning('[Media] Could not refresh the media usages of a saved record; the type is concealed until the next sync.', [
                 'type' => $this->type,
                 'model' => $model::class,
                 'exception' => $e,
             ]);
+            MediaSourceSyncState::markLost($this->type);
         }
     }
 }

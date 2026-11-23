@@ -45,16 +45,24 @@ final readonly class MediaIndexer implements MediaIndexerInterface
         private MediaSourceSyncState $syncState,
     ) {}
 
+    /**
+     * Queued once the caller's transaction commits (at once outside one; never inside the impersonation
+     * safety net, which always rolls back). The dispatch runs in its own catch: a queue that refuses it at
+     * commit time never reaches the caller, whose data is already saved, and leaves the type concealed.
+     */
     public function refresh(string $type, string $recordId): void
     {
         try {
-            $this->bus->dispatch((new RefreshMediaUsagesJob($type, $recordId))->afterCommit());
+            DB::afterCommit(function () use ($type, $recordId): void {
+                try {
+                    // Kept for a callback run while another transaction is open: the job waits for that one too
+                    $this->bus->dispatch((new RefreshMediaUsagesJob($type, $recordId))->afterCommit());
+                } catch (Throwable $e) {
+                    $this->lost($type, $recordId, $e);
+                }
+            });
         } catch (Throwable $e) {
-            Log::warning('[Media] Could not queue a media usages refresh.', [
-                'type' => $type,
-                'record_id' => $recordId,
-                'exception' => $e,
-            ]);
+            $this->lost($type, $recordId, $e);
         }
     }
 
@@ -69,6 +77,9 @@ final readonly class MediaIndexer implements MediaIndexerInterface
         $sources = $this->registry->sources();
         // What each source is before its usages are read: a module updated meanwhile is not taken as synced
         $before = $this->syncState->fingerprints($sources);
+        // Refresh failures seen before reading: one written while a source is read may come from a change
+        // the read missed, so it outlives this sync (core#844). Unreadable ones are all kept
+        $refreshFailures = $this->syncState->refreshFailures() ?? [];
         $succeeded = [];
 
         foreach ($sources as $source) {
@@ -88,6 +99,7 @@ final readonly class MediaIndexer implements MediaIndexerInterface
         $this->syncState->record(
             array_filter($after, static fn (string $fingerprint, string $type): bool => ($before[$type] ?? null) === $fingerprint, ARRAY_FILTER_USE_BOTH),
             [...$failedSources, ...array_keys(array_diff_assoc($after, $before))],
+            $refreshFailures,
         );
 
         // A partial run must not look like a reconciliation: the page warns while the failure is the newest
@@ -103,6 +115,19 @@ final readonly class MediaIndexer implements MediaIndexerInterface
             removed: $removed,
             failedSources: $failedSources,
         );
+    }
+
+    /**
+     * The refresh is lost: the index may keep a usage shown that the source now hides (core#844).
+     */
+    private function lost(string $type, string $recordId, Throwable $e): void
+    {
+        Log::warning('[Media] Could not queue a media usages refresh; the type is concealed until the next sync.', [
+            'type' => $type,
+            'record_id' => $recordId,
+            'exception' => $e,
+        ]);
+        $this->syncState->markRefreshFailed($type);
     }
 
     public function lastSyncedAt(): ?DateTimeImmutable

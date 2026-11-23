@@ -11,6 +11,7 @@ use App\Domain\Modules\Exceptions\InvalidModuleNameException;
 use App\Domain\Modules\Repositories\ModuleRepositoryInterface;
 use App\Domain\Modules\ValueObjects\ModuleName;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaUsageModel;
+use App\Infrastructure\Media\Services\MediaSourceSyncState;
 use Illuminate\Console\Command;
 
 /**
@@ -28,7 +29,7 @@ final class MediaForgetSourceCommand extends Command
 
     protected $description = 'Delete the media usage rows of a source type that is no longer active (an uninstalled module)';
 
-    public function handle(MediaSourceRegistryInterface $registry, ModuleRepositoryInterface $modules): int
+    public function handle(MediaSourceRegistryInterface $registry, ModuleRepositoryInterface $modules, MediaSourceSyncState $syncState): int
     {
         $type = $this->stringArgument('type');
 
@@ -49,6 +50,7 @@ final class MediaForgetSourceCommand extends Command
 
         $count = MediaUsageModel::query()->where('source_type', $type)->count();
 
+        // Without rows nothing tells whose type it is: its failure is kept, so it fails closed
         if ($count === 0) {
             $this->info(sprintf('No usage rows of type "%s".', $type));
 
@@ -63,6 +65,8 @@ final class MediaForgetSourceCommand extends Command
         }
 
         $deleted = MediaUsageModel::query()->where('source_type', $type)->delete();
+        // Nothing of the type is left to conceal
+        $syncState->forgetRefreshFailure($type);
 
         $this->info(sprintf('Deleted %d usage rows of type "%s".', $deleted, $type));
 
