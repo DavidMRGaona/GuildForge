@@ -6,12 +6,14 @@ namespace App\Infrastructure\Linking\Services;
 
 use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Linking\Contracts\FindsLinkableRecordsInBatches;
+use App\Application\Linking\Contracts\FindsLinkableRecordsOfOrganizer;
 use App\Application\Linking\Contracts\LinkableRecordSourceInterface;
 use App\Application\Linking\DTOs\LinkableRecordDTO;
 use App\Application\Linking\Services\LinkableRecordLookupInterface;
 use App\Application\Linking\Services\LinkableRecordSourceRegistryInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Generator;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
@@ -168,6 +170,57 @@ final readonly class LinkableRecordLookup implements LinkableRecordLookupInterfa
         return array_slice($records, 0, $limit);
     }
 
+    public function organizedBy(string $type, Authenticatable $organizer, int $limit = self::DEFAULT_SEARCH_LIMIT): array
+    {
+        if ($limit < 1) {
+            return [];
+        }
+
+        $source = $this->registry->source($type);
+
+        if (! $source instanceof FindsLinkableRecordsOfOrganizer) {
+            return [];
+        }
+
+        $account = $this->organizer($organizer, $type);
+
+        if (! $account instanceof UserModel) {
+            return [];
+        }
+
+        $limit = min($limit, self::MAX_SEARCH_LIMIT);
+        $records = [];
+        $strays = 0;
+
+        try {
+            // Read inside the try: a source breaking its own return type fails here too
+            foreach ($source->organizedBy(strtolower((string) $account->getKey()), $limit) as $record) {
+                if ($record->type !== $type) {
+                    $strays++;
+
+                    continue;
+                }
+
+                // A record answered twice (created and directed by the person) is offered once
+                $records[$record->id] ??= $record;
+            }
+        } catch (Throwable $exception) {
+            $this->reportFailure('organizedBy', $source, $type, $exception);
+
+            return [];
+        }
+
+        if ($strays > 0) {
+            Log::error('[LinkableRecordLookup] Source answered with records of another type, not shown', [
+                'source' => $source::class,
+                'type' => $type,
+                'count' => $strays,
+            ]);
+        }
+
+        return $this->withoutPanelUrlsUnlessPanel(array_slice(array_values($records), 0, $limit), $account, $type);
+    }
+
     public function types(): array
     {
         $types = [];
@@ -181,6 +234,72 @@ final readonly class LinkableRecordLookup implements LinkableRecordLookupInterfa
         }
 
         return $types;
+    }
+
+    /**
+     * The organizer's account, read again from the database so a stale or made up model is never
+     * trusted: null when it is not a uuid, unknown, deactivated (soft-deleted) or anonymized, or
+     * when it cannot be read (logged). No panel check to ask: their own records are not the
+     * panel's drafts.
+     */
+    private function organizer(Authenticatable $organizer, string $type): ?UserModel
+    {
+        $id = $organizer->getAuthIdentifier();
+
+        if (! is_string($id) || ! Str::isUuid($id)) {
+            return null;
+        }
+
+        try {
+            $account = UserModel::query()->whereNull('anonymized_at')->find(strtolower($id));
+        } catch (Throwable $exception) {
+            Log::error('[LinkableRecordLookup] The organizer could not be read, nothing answered', [
+                'type' => $type,
+                'exception' => $exception::class,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
+
+        return $account instanceof UserModel ? $account : null;
+    }
+
+    /**
+     * The panel URL is for who may open the panel: organizedBy() hands the source the real id of
+     * anybody, so the lookup drops every URL here when the account may not (asked once per call,
+     * only when some record carries one; a failing check drops them and is logged).
+     *
+     * @param  list<LinkableRecordDTO>  $records
+     * @return list<LinkableRecordDTO>
+     */
+    private function withoutPanelUrlsUnlessPanel(array $records, UserModel $account, string $type): array
+    {
+        $linked = array_filter($records, static fn (LinkableRecordDTO $record): bool => $record->panelUrl !== null);
+
+        if ($linked === []) {
+            return $records;
+        }
+
+        try {
+            if ($this->authorization->can($account, 'admin.access')) {
+                return $records;
+            }
+        } catch (Throwable $exception) {
+            Log::error('[LinkableRecordLookup] Panel access could not be checked, panel links dropped', [
+                'type' => $type,
+                'exception' => $exception::class,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        return array_map(static fn (LinkableRecordDTO $record): LinkableRecordDTO => $record->panelUrl === null ? $record : new LinkableRecordDTO(
+            type: $record->type,
+            id: $record->id,
+            title: $record->title,
+            date: $record->date,
+            dateIsDay: $record->dateIsDay,
+        ), $records);
     }
 
     /**

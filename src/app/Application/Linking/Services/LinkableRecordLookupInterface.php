@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Linking\Services;
 
 use App\Application\Linking\DTOs\LinkableRecordDTO;
+use Illuminate\Contracts\Auth\Authenticatable;
 
 /**
  * What consumers of linkable records use instead of asking the sources themselves: it fails
@@ -61,6 +62,27 @@ interface LinkableRecordLookupInterface
      * @return list<LinkableRecordDTO>
      */
     public function search(string $type, string $query, string $viewerId, int $limit = self::DEFAULT_SEARCH_LIMIT): array;
+
+    /**
+     * Records of the type the account organizes (FindsLinkableRecordsOfOrganizer), at most
+     * $limit (capped at MAX_SEARCH_LIMIT; below 1 nothing), the most relevant first.
+     *
+     * Pass only the signed-in account (the request's user, the impersonated one while
+     * impersonating), never someone else's: the source may answer what only that person sees,
+     * such as their private records. Offering these to choose from is not enough either: check
+     * again on the server, when saving, that what was chosen is still among them.
+     *
+     * Empty when the type has no source, the source does not implement the contract, the account
+     * is not a uuid, unknown, deactivated or anonymized, or the source failed (logged); records of
+     * another type are dropped and logged. Nothing here throws.
+     *
+     * A record answered twice is kept once. There is no panel check before asking (the person may
+     * not open the panel), so every panelUrl is dropped unless the account may open it
+     * (admin.access, asked once per call).
+     *
+     * @return list<LinkableRecordDTO>
+     */
+    public function organizedBy(string $type, Authenticatable $organizer, int $limit = self::DEFAULT_SEARCH_LIMIT): array;
 
     /**
      * Label of every type that can be linked right now, keyed by type, in registration order

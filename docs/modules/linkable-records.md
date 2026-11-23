@@ -2,7 +2,7 @@
 
 A module that links its own data to records of other parts of the site (an organization that sponsored a tournament, a venue lent for an event) has to find those records and show them again later, without importing the classes of whoever owns them. The site search does not do: it only holds public, indexed records, and links must also reach drafts and records that only the panel shows. The core offers a linkable record contract for that: owners register a source, consumers ask the core's lookup. For the rest of the module SDK, see the [module development guide](./README.md).
 
-Requirement: set `requires.core` in `module.json` to the core release that introduces linkable records (the one with core#594). An older core does not know `registerLinkableRecordSources()`: the records would never be offered, and a consumer would find no lookup to ask.
+Requirement: set `requires.core` in `module.json` to the core release that introduces linkable records (the one with core#594). An older core does not know `registerLinkableRecordSources()`: the records would never be offered, and a consumer would find no lookup to ask. `FindsLinkableRecordsOfOrganizer` and `organizedBy()` need the release with core#847.
 
 ## Pieces
 
@@ -10,8 +10,9 @@ Requirement: set `requires.core` in `module.json` to the core release that intro
 |---|---|---|
 | `LinkableRecordSourceInterface` | `App\Application\Linking\Contracts` | `type()` (stable kebab-case, e.g. `tournament`), `label()` (translated, e.g. «Torneo»), `search($query, $viewerId, $limit)` and `find($id, $viewerId)` |
 | `FindsLinkableRecordsInBatches` | same | Optional, extends the source contract: `findMany(array $ids, $viewerId)` answers up to `MAX_IDS` (100) ids in one call |
+| `FindsLinkableRecordsOfOrganizer` | same | Optional, extends the source contract: `organizedBy($userId, $limit)` answers the records an account organizes (core#847) |
 | `LinkableRecordDTO` | `App\Application\Linking\DTOs` | `type`, `id` (1 to 100 characters), `title`, `date` (optional), `dateIsDay` (false unless `date` is a calendar day) and `panelUrl` (optional, absolute http(s)) |
-| `LinkableRecordLookupInterface` | `App\Application\Linking\Services` | What consumers use: `find($type, $id, $viewerId)`, `findMany($type, $ids, $viewerId)` (keyed by id), `search($type, $query, $viewerId, $limit = 20)` (at most 50) and `types()` (label per type) |
+| `LinkableRecordLookupInterface` | `App\Application\Linking\Services` | What consumers use: `find($type, $id, $viewerId)`, `findMany($type, $ids, $viewerId)` (keyed by id), `search($type, $query, $viewerId, $limit = 20)` (at most 50), `organizedBy($type, $organizer, $limit = 20)` (at most 50) and `types()` (label per type) |
 | `LinkableRecordSourceRegistryInterface` | same | `register`, `registerMany`, `all`, `sources()` keyed by type, `source($type)`, `unregisterModule()`, `clear()`: the first source registered for a type wins; one that cannot be built, is not a source or has an invalid type is skipped with a warning |
 
 The registry builds the sources once per request or queued job (and again when the registrations change), so a source that cannot be used is logged once there, not on every lookup. `clear()` drops every module's sources but keeps those the core registered itself (its events), which it offers whatever modules are enabled.
@@ -31,6 +32,7 @@ Viewer ids are account UUIDs. An id with no account sees what a visitor would.
    - `date` is what consumers sort by and show: an instant (shown in the display zone) or, with `dateIsDay: true`, a calendar day that is never converted between zones.
    - A source that builds panel URLs from a Filament resource lives next to the panel code (the core's is `App\Filament\Linking\Sources\EventLinkableRecordSource`).
    - Optionally, implement `FindsLinkableRecordsInBatches` instead of `LinkableRecordSourceInterface` (it extends it) to answer many ids in one query: `findMany($ids, $viewerId)` gets distinct ids, never more than `FindsLinkableRecordsInBatches::MAX_IDS` (100), and returns the visible records among them, in any order, leaving out the missing and hidden ones. Same visibility rule as `find()`. Without it the lookup calls `find()` once per id, so existing sources keep working unchanged.
+   - Optionally, implement `FindsLinkableRecordsOfOrganizer` (it extends the source contract too, and can go together with batches) to answer what one account organizes, so others can let a person link only to what is theirs (a venue booking to the game tables they run). `organizedBy($userId, $limit)` gets the account's own uuid in lower case, never `VISITOR` (the lookup has left out unknown, deactivated and anonymized accounts), and returns at most `$limit` records of your `type()`, the most relevant first. You decide what organizing means (for game tables: who created or directs one) and answer only what the site shows that very person, under the same rule as your pages for that viewer: their own private records may be among them, drafts only the panel opens never are. **There is no panel check here**, since the person may not open the panel: never reuse the visibility rule of your `find()` and `search()`, which may show drafts to whoever holds your view permission because the lookup only hands them a real id with panel access. Apply the rule of what the site shows that very person. You may fill `panelUrl` as in `find()`: the lookup drops it from the answer when the account may not open the panel. Without the contract, `organizedBy()` answers nothing for your type.
 2. Return it from the provider:
 
 ```php
@@ -59,6 +61,16 @@ if ($record === null) {
 **It fails closed.** A type without a source (its module disabled or uninstalled, a source that cannot be built) and a source that throws, or answers with a record of another type or id, are treated alike: `find()` returns `null`, `search()` and `findMany()` return `[]` and nothing throws. Only the second is an error, logged by the lookup; the first is ordinary and logs nothing. Show such links the same way, whatever the reason (for example as a neutral count of links not available), and never with a title kept from earlier: that title would outlive the viewer's right to see the record.
 
 `types()` lists the types that can be linked right now with their labels, for a type picker; a source whose label cannot be read is left out (and logged).
+
+To let a person link only to what they organize, ask with their account:
+
+```php
+$tables = $this->linkableRecords->organizedBy('game-table', $request->user());
+```
+
+- **Only the signed-in account.** Pass the request's user (while impersonating, the impersonated account, which is what the request holds), never another person's account: the source may answer what only that person sees, such as their private records. That is why it takes an `Authenticatable`, not an id.
+- **Check again when saving.** Offering these records in a select is not a check: a form can be forged. When a link is created or changed, ask `organizedBy()` again on the server and refuse an id that is not among them. A link already stored may stay when the record stops being theirs (it is shown, or not, through `find()` like any other), but cannot be chosen again. In the panel, where a team links records of anybody, `search()` and `find()` for that viewer are the rule instead.
+- It fails closed like the rest: no source, a source without the contract, an account that is not a uuid, unknown, deactivated or anonymized, or a source that throws (logged) give `[]`. The limit is capped at 50, and below 1 nothing is asked. No panel check applies: a person's own records are not the panel's drafts.
 
 To show a list of links, ask for all the ids of one type at once:
 
