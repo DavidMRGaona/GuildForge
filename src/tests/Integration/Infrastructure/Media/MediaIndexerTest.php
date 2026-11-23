@@ -11,6 +11,7 @@ use App\Application\Services\SettingsServiceInterface;
 use App\Infrastructure\Media\Jobs\RefreshMediaUsagesJob;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaFileModel;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaUsageModel;
+use App\Infrastructure\Media\Services\MediaSourceSyncState;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\Support\Media\InMemoryMediaCatalog;
@@ -212,6 +213,19 @@ final class MediaIndexerTest extends TestCase
 
         $this->assertSame('2026-11-10T04:00:00+00:00', $this->indexer()->lastSyncedAt()?->format(DATE_ATOM));
         $this->assertSame('2026-11-10T03:15:00+00:00', $this->indexer()->lastSyncFailedAt()?->format(DATE_ATOM));
+    }
+
+    public function test_sync_records_which_sources_the_index_is_up_to_date_with(): void
+    {
+        // The library shows a source's images only while its rows come from a sync of the source as it is (core#837)
+        $good = $this->source('good');
+        $this->source('broken')->failing = true;
+        $state = $this->app->make(MediaSourceSyncState::class);
+        $state->record(['broken' => 'stale', 'gone' => 'kept'], []);
+
+        $this->indexer()->sync();
+
+        $this->assertSame(['gone' => 'kept', 'good' => MediaSourceSyncState::fingerprint($good)], $state->all());
     }
 
     public function test_sync_replaces_the_usages_of_each_active_source(): void

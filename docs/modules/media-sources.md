@@ -35,13 +35,16 @@ A source implements `App\Application\Media\Contracts\MediaUsageSourceInterface`:
 
 ### Showing previews
 
-The library hides every image unless whoever knows where it comes from says it may be seen (core ≥ the release with #837). A file shows its thumbnail, its preview, «Abrir original» and «Copiar URL», and can be chosen in «Elegir de la biblioteca», only when all three hold:
+The library hides every image unless whoever knows where it comes from says it may be seen (core ≥ the release with #837). A file shows its thumbnail, its preview, «Abrir original» and «Copiar URL», and can be chosen in «Elegir de la biblioteca», only when all of these hold:
 
-1. the active source that claims its folder (the longest matching one, as for the status) implements the marker interface `App\Application\Media\Contracts\ShowsMediaPreviews` (no methods);
-2. none of its usages is hidden ([Hiding one usage](#hiding-one-usage));
-3. that source is not hidden (`hidden()`, the avatars).
+1. a visible, active source wins its folder (the longest matching one, as for the status);
+2. **every** visible, active source that claims the file implements the marker interface `App\Application\Media\Contracts\ShowsMediaPreviews` (no methods), not only the one that wins: two sources claiming the same folder, or a parent folder and a nested one that does not exclude it, must both declare it;
+3. the index is up to date with each of those sources: its last sync did not fail, and it ran with the source as it is now (same class, marker declared);
+4. none of its usages is hidden ([Hiding one usage](#hiding-one-usage)).
 
-Anything else is **concealed**, with the same placeholder as a hidden usage (below): files of unknown origin, files of a source without the marker, and files of a source whose `hidden()` throws. It is decided per claiming source, not per usage, so the unused files of a shown folder keep their thumbnail: they are what gets reviewed before deleting. It is worked out when the page is read, from the sources active now, so enabling, disabling or updating a module changes it at once.
+Anything else is **concealed**, with the same placeholder as a hidden usage (below): files of unknown origin, files a source without the marker claims, files of a source whose `hidden()` throws, and files of a source not synced since it changed or whose last sync failed. It is decided per claiming source, not per usage, so the unused files of a shown folder keep their thumbnail: they are what gets reviewed before deleting. It is worked out when the page is read, from the sources active now and the outcome of each one's last sync (`MediaSourceSyncState`, setting `media_library_source_syncs`), so enabling, disabling or updating a module changes it at once and never shows rows written before the change.
+
+**The marker takes effect only after the next sync.** Rows indexed before a source declared it carry the `hidden` flags of the old code, so until the source is synced again as it is now its images stay concealed. Enabling or updating a module queues that sync (`SyncMediaLibraryOnModuleChange`); after deploying a core that changes its own sources, run `php artisan media:sync` (otherwise the daily sync settles it). Declare the marker and hide the private usages in the same release: the first sync with the marker must already hide them.
 
 **To show your module's thumbnails again**, once every image of its folders may be seen by whoever opens the library, declare the marker on each source that claims them:
 
@@ -49,7 +52,12 @@ Anything else is **concealed**, with the same placeholder as a hidden usage (bel
 final class TableMediaSource extends EloquentColumnMediaSource implements ReleasesMediaThroughCoreInterface, ShowsMediaPreviews
 ```
 
-Do not declare it on a source that also stores private images (hidden or pending posts, private categories, hidden profiles) unless those usages are hidden. Until a module declares it, its images show the placeholder and are not offered for reuse; nothing else changes. Every core source with folders declares it; `ProfileBannerMediaSource` hides the banner of a profile not every member may see (visibility `association` or `hidden`, no public name, deactivated account). `RichTextMediaSource` declares it too, but it claims no folder, so it decides nothing.
+Do not declare it on a source that also stores private images (hidden or pending posts, private categories, hidden profiles, drafts only their author sees) unless those usages are hidden; mask their titles too when the title gives the record away. Until a module declares it, its images show the placeholder and are not offered for reuse; nothing else changes. Every core source with folders declares it, and hides what only some people may see:
+
+- `EventMediaSource`, `ArticleMediaSource` and the event and article texts of `RichTextMediaSource` hide the usages of a proposal draft never submitted (`proposal_status` draft and no `submitted_at`, `HasProposalReview::isUnsubmittedProposal()`), titled «Propuesta sin enviar» and without an edit link: until then it is its author's alone (`HidesUnsubmittedProposals`). Submitting or withdrawing saves the model, so its usages are refreshed;
+- `ProfileBannerMediaSource` hides the banner of a profile not every member may see (visibility `association` or `hidden`, no public name, deactivated account).
+
+`RichTextMediaSource` declares the marker too, but it claims no folder, so it decides nothing but its own hidden usages.
 
 ### Hiding one usage
 
@@ -65,6 +73,7 @@ When any usage of a file is hidden (stored in `media_usages.is_hidden`), or the 
 
 - draws a placeholder instead of the thumbnail in the grid, the list, «Ver detalles» and the details panel, does not offer «Abrir original» or «Copiar URL», and titles the details «Imagen oculta» instead of the file name;
 - keeps listing the file, its size, its folder and every usage with the title the source gives: mask the title yourself when it gives the secret away;
+- never names it by its id: the details heading, the delete dialog and the deletion notice call it «Imagen oculta»;
 - never offers the file in «Elegir de la biblioteca»; a file chosen there and concealed before the form is saved is refused with «Esta imagen ya no se puede elegir».
 
 A file shared by a shown usage and a hidden one is hidden for both. If a source gives the same usage (file, record and role) twice, it is hidden when any copy is.

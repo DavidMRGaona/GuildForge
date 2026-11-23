@@ -42,6 +42,7 @@ final readonly class MediaIndexer implements MediaIndexerInterface
         private Dispatcher $bus,
         // The catalog is resolved only by sync(): refresh() runs on every save and must not depend on it
         private Container $container,
+        private MediaSourceSyncState $syncState,
     ) {}
 
     public function refresh(string $type, string $recordId): void
@@ -65,14 +66,26 @@ final readonly class MediaIndexer implements MediaIndexerInterface
         [$catalogComplete, $added, $removed] = $this->syncFiles($startedAt);
 
         $failedSources = [];
+        $syncedSources = [];
 
         foreach ($this->registry->sources() as $source) {
             $failed = $this->syncSource($source);
 
             if ($failed !== null) {
                 $failedSources[] = $failed;
+
+                continue;
+            }
+
+            try {
+                $syncedSources[$source->type()] = MediaSourceSyncState::fingerprint($source);
+            } catch (Throwable) {
+                // Its rows were written, but it cannot be told apart: it stays as if never synced
             }
         }
+
+        // The library shows a source's images only while its rows come from a sync of the source as it is now
+        $this->syncState->record($syncedSources, $failedSources);
 
         // A partial run must not look like a reconciliation: the page warns while the failure is the newest
         $this->settings->set(

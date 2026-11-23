@@ -17,6 +17,7 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\Support\Media\InMemoryMediaCatalog;
+use Tests\Support\Media\MarksMediaSourcesSynced;
 use Tests\TestCase;
 
 /**
@@ -26,11 +27,13 @@ use Tests\TestCase;
 final class SharedImageWithinOneSaveTest extends TestCase
 {
     use LazilyRefreshDatabase;
+    use MarksMediaSourcesSynced;
 
     public function test_a_photo_removed_and_picked_again_in_the_same_save_keeps_its_file(): void
     {
         Storage::fake('images');
         $this->app->instance(MediaFileIdResolverInterface::class, new CloudinaryMediaFileIdResolver('site'));
+        $this->markMediaSourcesSynced();
         $catalog = new InMemoryMediaCatalog;
         $this->app->instance(MediaCatalogInterface::class, $catalog);
         $catalog->add('galleries/2026/11/x');

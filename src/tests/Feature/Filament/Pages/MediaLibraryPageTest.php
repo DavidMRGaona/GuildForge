@@ -25,6 +25,7 @@ use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\Testing\TestAction;
+use Filament\Notifications\Notification;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Contracts\Support\Htmlable;
@@ -37,12 +38,14 @@ use Livewire\Livewire;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
 use Tests\Support\Media\FakeMediaSource;
 use Tests\Support\Media\InMemoryMediaCatalog;
+use Tests\Support\Media\MarksMediaSourcesSynced;
 use Tests\TestCase;
 
 final class MediaLibraryPageTest extends TestCase
 {
     use CreatesUsersWithPermissions;
     use LazilyRefreshDatabase;
+    use MarksMediaSourcesSynced;
 
     private InMemoryMediaCatalog $catalog;
 
@@ -577,6 +580,50 @@ final class MediaLibraryPageTest extends TestCase
         $this->assertNotNull($file->fresh());
     }
 
+    public function test_a_concealed_file_is_not_named_by_its_id_when_deleting(): void
+    {
+        // A source without previews whose record started using the file after the library was read
+        $this->register(new class('forum', ['forum/']) extends FakeMediaSource
+        {
+            public function usesFile(MediaFileId $file): bool
+            {
+                return true;
+            }
+        });
+        $file = $this->file('forum/secret-post');
+        $this->actingAs($this->deleter());
+
+        $description = $this->rowAction($this->listPage(), 'delete', $file)->getModalDescription();
+        $this->assertIsString($description);
+        $this->assertStringNotContainsString('forum/secret-post', $description);
+        $this->assertStringContainsString(__('filament.media_library.hidden_preview.alt'), $description);
+
+        $lines = [
+            trans_choice('filament.media_library.notifications.refused_count', 1, ['count' => 1]),
+            __('filament.media_library.notifications.refused_item', [
+                'file' => __('filament.media_library.hidden_preview.alt'),
+                'reason' => MediaLibraryPage::refusalText(MediaDeletionRefusal::InUse),
+            ]),
+        ];
+        $this->listPage()
+            ->callTableAction('delete', $file, ['confirmation' => true])
+            ->assertNotified(Notification::make()
+                ->danger()
+                ->title(__('filament.media_library.notifications.nothing_deleted'))
+                ->body(implode('<br>', array_map(e(...), $lines))));
+        $this->assertNotNull($file->fresh());
+    }
+
+    public function test_a_file_shown_in_the_library_is_still_named_by_its_id_when_deleting(): void
+    {
+        $file = $this->file('events/a');
+        $this->actingAs($this->deleter());
+
+        $description = $this->rowAction($this->listPage(), 'delete', $file)->getModalDescription();
+        $this->assertIsString($description);
+        $this->assertStringContainsString('events/a', $description);
+    }
+
     public function test_every_refusal_has_a_text(): void
     {
         foreach (MediaDeletionRefusal::cases() as $refusal) {
@@ -940,6 +987,7 @@ final class MediaLibraryPageTest extends TestCase
         $this->app->instance($alias, $source);
         /** @var class-string $alias */
         $this->registry->register($alias);
+        $this->markMediaSourcesSynced();
     }
 
     /**

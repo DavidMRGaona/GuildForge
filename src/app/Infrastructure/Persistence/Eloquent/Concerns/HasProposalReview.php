@@ -73,6 +73,15 @@ trait HasProposalReview
     }
 
     /**
+     * A draft never sent to review (no submitted_at): its author's alone, hidden from every query by
+     * HidesUnsubmittedProposals. Returned drafts were submitted, so they are not.
+     */
+    public function isUnsubmittedProposal(): bool
+    {
+        return $this->proposalStatus() === ProposalStatus::Draft && $this->getAttribute('submitted_at') === null;
+    }
+
+    /**
      * Drafts never submitted included: for the proposals flow only.
      *
      * @param  Builder<self>  $query

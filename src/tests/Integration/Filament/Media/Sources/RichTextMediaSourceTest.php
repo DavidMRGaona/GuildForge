@@ -349,6 +349,22 @@ final class RichTextMediaSourceTest extends TestCase
         ]);
 
         $this->assertTrue($this->source()->usesFile(new MediaFileId('articles/2026/11/d')));
-        $this->assertSame([['articles/2026/11/d', 'articles:'.$draft->id, 'En el texto', 'Borrador']], $this->usages());
+        // Its author's alone until submitted: neither its image nor its title is shown (core#837)
+        $this->assertSame([['articles/2026/11/d', 'articles:'.$draft->id, 'En el texto', 'Propuesta sin enviar']], $this->usages());
+        $this->assertTrue($this->source()->usagesFor('articles:'.$draft->id)[0]->hidden);
+        $this->assertNull($this->source()->editUrl('articles:'.$draft->id, $this->editorWithPermissions(['articles.update'])));
+    }
+
+    public function test_a_submitted_proposal_is_shown_with_its_title(): void
+    {
+        $proposal = ArticleModel::factory()->proposal()->create([
+            'title' => 'Propuesta enviada',
+            'content' => '<p><img src="'.self::BASE.'guildforge/articles/2026/11/s.jpg" alt=""></p>',
+            'submitted_at' => now(),
+        ]);
+
+        $usage = $this->source()->usagesFor('articles:'.$proposal->id)[0];
+        $this->assertSame('Propuesta enviada', $usage->title);
+        $this->assertFalse($usage->hidden);
     }
 }

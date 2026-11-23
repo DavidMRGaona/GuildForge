@@ -163,6 +163,11 @@ final readonly class RichTextMediaSource implements MediaUsageSourceInterface, R
             return null;
         }
 
+        // The panel never opens an unsubmitted draft
+        if (($record instanceof EventModel || $record instanceof ArticleModel) && $record->isUnsubmittedProposal()) {
+            return null;
+        }
+
         return match ($kind) {
             'events' => EventResource::getUrl('edit', ['record' => $record]),
             'articles' => ArticleResource::getUrl('edit', ['record' => $record]),
@@ -227,11 +232,14 @@ final readonly class RichTextMediaSource implements MediaUsageSourceInterface, R
     private function usagesOfRecord(string $kind, Model $record): array
     {
         $key = $record->getKey();
+        // A proposal draft never submitted is its author's alone: hidden and untitled, still in use (core#837)
+        $unsubmitted = ($record instanceof EventModel || $record instanceof ArticleModel) && $record->isUnsubmittedProposal();
 
         return $this->usagesIn(
             $record->getAttribute($this->models()[$kind]['column']),
             $kind.':'.(is_scalar($key) ? (string) $key : ''),
-            (string) $record->getAttribute('title'),
+            $unsubmitted ? (string) __('filament.media_library.unsubmitted_proposal') : (string) $record->getAttribute('title'),
+            $unsubmitted,
         );
     }
 
@@ -250,7 +258,7 @@ final readonly class RichTextMediaSource implements MediaUsageSourceInterface, R
     /**
      * @return list<MediaUsageDTO>
      */
-    private function usagesIn(mixed $text, string $recordId, string $title): array
+    private function usagesIn(mixed $text, string $recordId, string $title, bool $hidden = false): array
     {
         $usages = [];
 
@@ -260,6 +268,7 @@ final readonly class RichTextMediaSource implements MediaUsageSourceInterface, R
                 recordId: $recordId,
                 role: __('filament.media_library.roles.in_text'),
                 title: $title,
+                hidden: $hidden,
             );
         }
 

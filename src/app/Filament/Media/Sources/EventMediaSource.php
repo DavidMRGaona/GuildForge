@@ -44,14 +44,26 @@ final class EventMediaSource extends EloquentColumnMediaSource implements Releas
         return __('filament.media_library.roles.image');
     }
 
+    /**
+     * A proposal draft never submitted is its author's alone (HidesUnsubmittedProposals): its image stays out
+     * of sight and its title is not given, though the file still counts as used (core#837).
+     */
+    protected function isHidden(Model $record): bool
+    {
+        return $record instanceof EventModel && $record->isUnsubmittedProposal();
+    }
+
     protected function titleOf(Model $record): string
     {
-        return (string) $record->getAttribute('title');
+        return $this->isHidden($record)
+            ? (string) __('filament.media_library.unsubmitted_proposal')
+            : (string) $record->getAttribute('title');
     }
 
     protected function editUrlOf(Model $record, object $user): ?string
     {
-        if (! Gate::forUser($user)->allows('update', $record)) {
+        // The panel never opens an unsubmitted draft
+        if ($this->isHidden($record) || ! Gate::forUser($user)->allows('update', $record)) {
             return null;
         }
 
