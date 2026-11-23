@@ -5,25 +5,35 @@ declare(strict_types=1);
 namespace Tests\Integration\Infrastructure\Media;
 
 use App\Application\Media\Contracts\MediaUsageSourceInterface;
+use App\Application\Media\Contracts\ReleasesMediaThroughCoreInterface;
+use App\Application\Media\Contracts\ShowsMediaPreviews;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Domain\Media\Enums\MediaFileStatus;
 use App\Domain\Media\MediaFileStatusRule;
 use App\Domain\Media\ValueObjects\MediaFileId;
+use App\Domain\Modules\ValueObjects\ModuleVersion;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaFileModel;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaUsageModel;
 use App\Infrastructure\Media\Services\MediaIndexer;
 use App\Infrastructure\Media\Services\MediaLibraryQueryInterface;
+use App\Infrastructure\Media\Services\MediaSourceSyncState;
+use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Carbon;
+use Mockery;
 use Tests\Support\Media\FakeMarkedMediaSource;
 use Tests\Support\Media\FakeMediaSource;
+use Tests\Support\Media\FakePreviewedMediaSource;
+use Tests\Support\Media\MarksMediaSourcesSynced;
 use Tests\TestCase;
 
 final class EloquentMediaLibraryQueryTest extends TestCase
 {
     use LazilyRefreshDatabase;
+    use MarksMediaSourcesSynced;
 
     private MediaSourceRegistryInterface $registry;
 
@@ -254,6 +264,252 @@ final class EloquentMediaLibraryQueryTest extends TestCase
         $this->assertSame(MediaFileStatus::InUse, $query->statusOf($secret));
     }
 
+    public function test_a_file_of_a_source_that_does_not_show_previews_is_concealed(): void
+    {
+        $this->registry->clear();
+        $this->register('forum', new FakeMediaSource('forum', ['forum/']));
+        $this->file('forum/a');
+        $this->usage('forum/a');
+
+        $this->assertTrue($this->library()->conceals($this->model('forum/a')));
+    }
+
+    public function test_a_file_of_a_source_that_shows_previews_is_not_concealed(): void
+    {
+        $this->registry->clear();
+        $this->register('events', new FakePreviewedMediaSource('events', ['events/']));
+        $this->file('events/a');
+        $this->usage('events/a');
+
+        $this->assertFalse($this->library()->conceals($this->model('events/a')));
+    }
+
+    public function test_a_hidden_usage_conceals_a_file_of_a_source_that_shows_previews(): void
+    {
+        $this->registry->clear();
+        $this->register('events', new FakePreviewedMediaSource('events', ['events/']));
+        $this->file('events/secret');
+        $this->usage('events/secret', recordId: 'record-1');
+        $this->usage('events/secret', hidden: true, recordId: 'record-2');
+
+        $this->assertTrue($this->library()->conceals($this->model('events/secret')));
+    }
+
+    public function test_a_file_of_unknown_origin_is_concealed(): void
+    {
+        $this->registry->clear();
+        $this->register('events', new FakePreviewedMediaSource('events', ['events/']));
+        $this->file('unknown/a');
+        $this->usage('unknown/a');
+        $this->file('unknown/b');
+
+        $this->assertTrue($this->library()->conceals($this->model('unknown/a')));
+        $this->assertTrue($this->library()->conceals($this->model('unknown/b')));
+    }
+
+    public function test_an_unused_file_of_a_folder_that_shows_previews_is_not_concealed(): void
+    {
+        // The decision is per claiming source: unused files are what gets reviewed before deleting
+        $this->registry->clear();
+        $this->register('events', new FakePreviewedMediaSource('events', ['events/']));
+        $this->file('events/unused');
+
+        $this->assertFalse($this->library()->conceals($this->model('events/unused')));
+    }
+
+    public function test_every_visible_source_claiming_a_file_must_show_it(): void
+    {
+        // A nested folder claimed by a source without previews hides its files; one excluded from a parent
+        // without previews is not the parent's, so a nested source that shows them decides alone
+        $this->registry->clear();
+        $this->register('galleries', new FakePreviewedMediaSource('galleries', ['galleries/']));
+        $this->register('covers', new FakeMediaSource('covers', ['galleries/covers/']));
+        $this->register('forum', new FakeMediaSource('forum', ['forum/'], excludedSubfolders: ['public/']));
+        $this->register('public', new FakePreviewedMediaSource('public', ['forum/public/']));
+        $this->file('galleries/a');
+        $this->file('galleries/covers/b');
+        $this->file('forum/c');
+        $this->file('forum/public/d');
+
+        $query = $this->library();
+
+        $this->assertFalse($query->conceals($this->model('galleries/a')));
+        $this->assertTrue($query->conceals($this->model('galleries/covers/b')));
+        $this->assertTrue($query->conceals($this->model('forum/c')));
+        $this->assertFalse($query->conceals($this->model('forum/public/d')));
+    }
+
+    public function test_a_parent_folder_without_previews_conceals_a_nested_folder_that_has_them(): void
+    {
+        // The nested source wins the folder, but the parent claims the file too and would not show it
+        $this->registry->clear();
+        $this->register('forum', new FakeMediaSource('forum', ['forum/']));
+        $this->register('public', new FakeMarkedMediaSource('public', ['forum/public/']));
+        $this->file('forum/public/a');
+
+        $query = $this->library();
+
+        $this->assertTrue($query->conceals($this->model('forum/public/a')));
+        $this->assertSame([], $query->applyReusable($query->query())->pluck('file_id')->all());
+    }
+
+    public function test_two_sources_claiming_the_same_folder_must_both_show_it(): void
+    {
+        // The first registered wins the folder; the second still claims the file
+        $this->registry->clear();
+        $this->register('first', new FakeMarkedMediaSource('first', ['shared/']));
+        $this->register('second', new FakeMediaSource('second', ['shared/']));
+        $this->register('events', new FakeMarkedMediaSource('events', ['events/']));
+        $this->register('copy', new FakeMarkedMediaSource('copy', ['events/']));
+        $this->file('shared/a');
+        $this->file('events/b');
+
+        $query = $this->library();
+
+        $this->assertTrue($query->conceals($this->model('shared/a')));
+        $this->assertFalse($query->conceals($this->model('events/b')));
+        $this->assertSame(['events/b'], $query->applyReusable($query->query())->pluck('file_id')->all());
+    }
+
+    public function test_a_source_never_synced_since_it_is_as_it_is_now_conceals_its_files(): void
+    {
+        // Rows written before the source declared ShowsMediaPreviews may carry a stale `is_hidden`
+        $this->registry->clear();
+        $this->register('events', new FakeMarkedMediaSource('events', ['events/']));
+        $this->file('events/a');
+        $state = $this->app->make(MediaSourceSyncState::class);
+
+        // Last synced as another source (before it declared the marker, say)
+        $state->record(['events' => $state->fingerprints([new FakeMediaSource('events', ['events/'])])['events']], []);
+        $this->assertTrue($this->library()->conceals($this->model('events/a')));
+        $this->assertSame([], $this->library()->applyReusable($this->library()->query())->pluck('file_id')->all());
+
+        $this->app->make(SettingsServiceInterface::class)->set(MediaSourceSyncState::KEY, '');
+        $this->assertTrue($this->library()->conceals($this->model('events/a')));
+
+        $this->app->make(SettingsServiceInterface::class)->set(MediaSourceSyncState::KEY, 'not json');
+        $this->assertTrue($this->library()->conceals($this->model('events/a')));
+
+        $this->markMediaSourcesSynced();
+        $this->assertFalse($this->library()->conceals($this->model('events/a')));
+        $this->assertSame(['events/a'], $this->library()->applyReusable($this->library()->query())->pluck('file_id')->all());
+    }
+
+    public function test_a_usage_of_a_source_not_up_to_date_conceals_the_file(): void
+    {
+        // A source without folders (the rich text one) only gives usages: their `is_hidden` may be stale too
+        $this->registry->clear();
+        $this->register('events', new FakeMarkedMediaSource('events', ['events/']));
+        $this->register('texts', new FakeMarkedMediaSource('texts', []));
+        $this->file('events/a');
+        $this->usage('events/a', sourceType: 'texts');
+        $query = $this->library();
+        $this->assertFalse($query->conceals($this->model('events/a')));
+
+        $this->app->make(MediaSourceSyncState::class)->record([], ['texts']);
+
+        $query = $this->library();
+        $this->assertTrue($query->conceals($this->model('events/a')));
+        $this->assertTrue($query->conceals(MediaFileModel::query()->with('usages')->where('file_id', 'events/a')->firstOrFail()));
+        $this->assertSame([], $query->applyReusable($query->query())->pluck('file_id')->all());
+    }
+
+    public function test_a_usage_of_a_type_without_an_active_source_conceals_the_file(): void
+    {
+        // A disabled module: its rows can no longer be refreshed
+        $this->registry->clear();
+        $this->register('events', new FakeMarkedMediaSource('events', ['events/']));
+        $this->file('events/a');
+        $this->usage('events/a', sourceType: 'gone.module');
+
+        $query = $this->library();
+
+        $this->assertTrue($query->conceals($this->model('events/a')));
+        $this->assertSame([], $query->applyReusable($query->query())->pluck('file_id')->all());
+    }
+
+    public function test_a_new_version_of_the_module_conceals_its_files_until_it_is_synced(): void
+    {
+        // The same class may hide more in a new release: rows of the old one are not trusted
+        $this->registry->clear();
+        ModuleModel::factory()->enabled()->create(['name' => 'shop', 'version' => '1.0.0']);
+        $this->register('shop.items', new FakeMarkedMediaSource('shop.items', ['shop/']), module: 'shop');
+        $this->file('shop/a');
+        $this->assertFalse($this->library()->conceals($this->model('shop/a')));
+
+        ModuleModel::query()->where('name', 'shop')->update(['version' => '1.1.0']);
+
+        $this->assertTrue($this->library()->conceals($this->model('shop/a')));
+        $this->markMediaSourcesSynced();
+        $this->assertFalse($this->library()->conceals($this->model('shop/a')));
+    }
+
+    public function test_a_new_core_version_conceals_the_files_of_core_sources_until_they_are_synced(): void
+    {
+        $this->registry->clear();
+        $this->register('events', new FakeMarkedMediaSource('events', ['events/']));
+        $this->file('events/a');
+        $this->assertFalse($this->library()->conceals($this->model('events/a')));
+
+        $core = Mockery::mock(CoreVersionServiceInterface::class);
+        $core->shouldReceive('getCurrentVersion')->andReturn(ModuleVersion::fromString('99.0.0'));
+        $this->app->instance(CoreVersionServiceInterface::class, $core);
+
+        $this->assertTrue($this->library()->conceals($this->model('events/a')));
+    }
+
+    public function test_a_source_whose_last_sync_failed_conceals_its_files(): void
+    {
+        $this->registry->clear();
+        $this->register('events', new FakeMarkedMediaSource('events', ['events/']));
+        $this->file('events/a');
+
+        $this->app->make(MediaSourceSyncState::class)->record([], ['events']);
+
+        $this->assertTrue($this->library()->conceals($this->model('events/a')));
+    }
+
+    public function test_a_file_of_a_hidden_source_is_concealed_even_if_it_shows_previews(): void
+    {
+        $this->registry->clear();
+        $this->register('avatars', new FakePreviewedMediaSource('avatars', ['avatars/'], hidden: true));
+        $this->file('avatars/a');
+
+        $this->assertTrue($this->library()->conceals($this->model('avatars/a')));
+    }
+
+    public function test_a_source_that_cannot_tell_whether_it_is_hidden_conceals_its_files(): void
+    {
+        $this->registry->clear();
+        $moody = new class('moody', ['moody/']) extends FakeMediaSource implements ShowsMediaPreviews
+        {
+            public function hidden(): bool
+            {
+                throw new \RuntimeException('unreadable');
+            }
+        };
+        $this->register('moody', $moody);
+        $this->file('moody/a');
+
+        $this->assertTrue($this->library()->conceals($this->model('moody/a')));
+    }
+
+    public function test_apply_reusable_never_offers_a_file_of_a_source_that_does_not_show_previews(): void
+    {
+        $this->registry->clear();
+        $this->register('events', new FakeMarkedMediaSource('events', ['events/']));
+        $releasing = new class('forum', ['forum/']) extends FakeMediaSource implements ReleasesMediaThroughCoreInterface {};
+        $this->register('forum', $releasing);
+        $this->file('events/a');
+        $this->file('forum/b');
+
+        $query = $this->library();
+
+        $this->assertSame(['events/a'], $query->applyReusable($query->query())->pluck('file_id')->all());
+        // Still listed in the library itself
+        $this->assertSame(['events/a', 'forum/b'], $query->query()->orderBy('file_id')->pluck('file_id')->all());
+    }
+
     public function test_is_reusable_folder(): void
     {
         $this->registry->clear();
@@ -290,6 +546,11 @@ final class EloquentMediaLibraryQueryTest extends TestCase
         $this->assertSame(['events/2026/a'], $query->applySearch($query->query(), 'events/2026')->pluck('file_id')->all());
     }
 
+    private function model(string $id): MediaFileModel
+    {
+        return MediaFileModel::query()->where('file_id', $id)->firstOrFail();
+    }
+
     private function library(): MediaLibraryQueryInterface
     {
         return $this->app->make(MediaLibraryQueryInterface::class);
@@ -304,12 +565,13 @@ final class EloquentMediaLibraryQueryTest extends TestCase
         $this->register($type, new FakeMediaSource($type, $folders, $hidden, $excluded));
     }
 
-    private function register(string $type, MediaUsageSourceInterface $source): void
+    private function register(string $type, MediaUsageSourceInterface $source, ?string $module = null): void
     {
         $alias = 'test.media.library.'.$type;
         $this->app->instance($alias, $source);
         /** @var class-string $alias */
-        $this->registry->register($alias);
+        $this->registry->register($alias, $module);
+        $this->markMediaSourcesSynced();
     }
 
     private function file(string $id, int $bytes = 1000, ?CarbonImmutable $uploadedAt = null, string $resourceType = 'image', ?string $format = 'jpg'): void
@@ -327,11 +589,11 @@ final class EloquentMediaLibraryQueryTest extends TestCase
         ]);
     }
 
-    private function usage(string $fileId, bool $hidden = false, string $recordId = 'record-1'): void
+    private function usage(string $fileId, bool $hidden = false, string $recordId = 'record-1', string $sourceType = 'events'): void
     {
         MediaUsageModel::query()->create([
             'file_id' => $fileId,
-            'source_type' => 'events',
+            'source_type' => $sourceType,
             'record_id' => $recordId,
             'role' => 'Imagen',
             'title' => 'Registro',

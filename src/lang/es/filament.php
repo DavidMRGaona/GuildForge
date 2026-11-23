@@ -1331,8 +1331,8 @@ return [
         'title_more' => ':title +:count',
         'hidden_preview' => [
             'alt' => 'Imagen oculta',
-            'tooltip' => 'Uno de sus usos oculta la imagen.',
-            'notice' => 'La imagen no se muestra: uno de sus usos la oculta. Sigue contando como en uso.',
+            'tooltip' => 'La biblioteca no muestra esta imagen.',
+            'notice' => 'La biblioteca no muestra esta imagen: su origen no la enseña aquí, no está al día o uno de sus usos la oculta. Su estado y el borrado no cambian.',
         ],
         'uploaded_on' => ':origin · subido el :date',
         'select_unused' => 'Seleccionar los sin usar',
@@ -1453,6 +1453,7 @@ return [
             'logo' => 'Pie de página · logotipo «:alt»',
             'text' => 'Pie de página · texto de la columna :column',
         ],
+        'unsubmitted_proposal' => 'Propuesta sin enviar',
         'rich_text_titles' => [
             'legal_privacy_content' => 'Política de privacidad',
             'legal_notice_content' => 'Aviso legal',

@@ -87,7 +87,7 @@ final class MediaLibraryPage extends Page implements HasTable
 
     private const int PREVIEW_WIDTH = 1200;
 
-    /** Drawn instead of the image of a file one of whose usages is hidden (core#830) */
+    /** Drawn instead of the image of a file the library conceals (core#830, core#837) */
     private const string HIDDEN_PREVIEW = 'images/media-library/hidden-preview.svg';
 
     /** Refused files listed by name in the notification; the rest are counted */
@@ -113,6 +113,12 @@ final class MediaLibraryPage extends Page implements HasTable
      * @var array<string, array{0: ?string, 1: ?string}>
      */
     private array $neighbours = [];
+
+    /** One per request, like $neighbours: Livewire only keeps public properties */
+    private ?MediaLibraryQueryInterface $libraryQuery = null;
+
+    /** @var array<string, bool> whether each file drawn in this request is concealed */
+    private array $concealedFiles = [];
 
     /** Grid or list, remembered per browser session. Not `$layout`: Filament's Page has a static one */
     #[Session]
@@ -249,10 +255,10 @@ final class MediaLibraryPage extends Page implements HasTable
             ->record(fn (array $arguments): ?MediaFileModel => $this->findFile($arguments['file'] ?? null))
             ->visible(fn (?MediaFileModel $record): bool => $record instanceof MediaFileModel)
             ->slideOver()
-            // A file whose image a usage hides is not named by its id either (core#830)
+            // A concealed file is not named by its id either (core#830, core#837)
             ->modalHeading(fn (?MediaFileModel $record): string => match (true) {
                 ! $record instanceof MediaFileModel => '',
-                $record->hasHiddenUsage() => (string) __('filament.media_library.hidden_preview.alt'),
+                $this->concealed($record) => (string) __('filament.media_library.hidden_preview.alt'),
                 default => basename($record->file_id),
             })
             ->modalContent(fn (?MediaFileModel $record): ?View => $record instanceof MediaFileModel
@@ -401,17 +407,18 @@ final class MediaLibraryPage extends Page implements HasTable
     }
 
     /**
-     * The picture of the file, or the placeholder when a usage hides it: then no URL of the file reaches the
-     * page, in the cards, the list or «Ver detalles», which draws this same column.
+     * The picture of the file, or the placeholder when the library conceals it (its source does not show
+     * previews, its origin is unknown or a usage hides it): then no URL of the file reaches the page, in the
+     * cards, the list or «Ver detalles», which draws this same column.
      */
     private function thumbnailColumn(): ImageColumn
     {
         return ImageColumn::make('thumbnail')
-            ->state(fn (MediaFileModel $record): ?string => $record->hasHiddenUsage()
+            ->state(fn (MediaFileModel $record): ?string => $this->concealed($record)
                 ? null
                 : $this->urls()->mediaThumbnail($record->file_id, self::THUMBNAIL_SIZE, $record->format))
-            ->defaultImageUrl(fn (MediaFileModel $record): ?string => $record->hasHiddenUsage() ? self::hiddenPreviewUrl() : null)
-            ->tooltip(fn (MediaFileModel $record): ?string => $record->hasHiddenUsage()
+            ->defaultImageUrl(fn (MediaFileModel $record): ?string => $this->concealed($record) ? self::hiddenPreviewUrl() : null)
+            ->tooltip(fn (MediaFileModel $record): ?string => $this->concealed($record)
                 ? (string) __('filament.media_library.hidden_preview.tooltip')
                 : null);
     }
@@ -422,7 +429,7 @@ final class MediaLibraryPage extends Page implements HasTable
      */
     private function thumbnailAttributes(MediaFileModel $record, array $attributes): array
     {
-        if (! $record->hasHiddenUsage()) {
+        if (! $this->concealed($record)) {
             return $attributes;
         }
 
@@ -522,8 +529,8 @@ final class MediaLibraryPage extends Page implements HasTable
     private function detailsFooterActions(MediaFileModel $file): array
     {
         [$previous, $next] = $this->adjacentFiles($file);
-        // A file whose image a usage hides is neither opened nor its address copied
-        $original = $file->hasHiddenUsage() ? null : $this->urls()->mediaOriginal($file->file_id, $file->resource_type);
+        // A concealed file is neither opened nor its address copied
+        $original = $this->concealed($file) ? null : $this->urls()->mediaOriginal($file->file_id, $file->resource_type);
 
         return array_values(array_filter([
             ReadOnlyActions::allow(Action::make('previous')
@@ -583,7 +590,8 @@ final class MediaLibraryPage extends Page implements HasTable
             ->requiresConfirmation()
             ->modalHeading(__('filament.media_library.delete.heading'))
             ->modalDescription(fn (MediaFileModel $record): string => __('filament.media_library.delete.description', [
-                'file' => $record->file_id,
+                // A concealed file is not named by its id (core#837)
+                'file' => $this->fileName($record),
                 'size' => FileSize::format($record->bytes),
             ]))
             ->schema([
@@ -681,8 +689,12 @@ final class MediaLibraryPage extends Page implements HasTable
         }
 
         $ids = [];
+        /** @var array<string, string> $names how the notice names each file */
+        $names = [];
 
         foreach ($files as $file) {
+            $names[$file->file_id] = $this->fileName($file);
+
             try {
                 $ids[] = new MediaFileId($file->file_id);
             } catch (InvalidMediaFileIdException) {
@@ -702,10 +714,13 @@ final class MediaLibraryPage extends Page implements HasTable
             return;
         }
 
-        $this->notifyDeletion($result);
+        $this->notifyDeletion($result, $names);
     }
 
-    private function notifyDeletion(MediaDeletionResultDTO $result): void
+    /**
+     * @param  array<string, string>  $names  how to name each file asked for; a concealed one is never named by its id
+     */
+    private function notifyDeletion(MediaDeletionResultDTO $result, array $names): void
     {
         $lines = [];
 
@@ -725,7 +740,7 @@ final class MediaLibraryPage extends Page implements HasTable
 
             foreach (array_slice($result->refused, 0, self::REFUSALS_LISTED, preserve_keys: true) as $fileId => $reason) {
                 $lines[] = __('filament.media_library.notifications.refused_item', [
-                    'file' => (string) $fileId,
+                    'file' => $names[(string) $fileId] ?? (string) __('filament.media_library.hidden_preview.alt'),
                     'reason' => self::refusalText($reason),
                 ]);
             }
@@ -837,7 +852,7 @@ final class MediaLibraryPage extends Page implements HasTable
             })
             ->all();
 
-        $concealed = $file->hasHiddenUsage();
+        $concealed = $this->concealed($file);
 
         return [
             'imageUrl' => $concealed ? null : $this->urls()->mediaPreview($file->file_id, self::PREVIEW_WIDTH, $file->format),
@@ -956,9 +971,29 @@ final class MediaLibraryPage extends Page implements HasTable
         }
     }
 
+    /**
+     * One instance per request: it reads the sources' claims once for the whole page.
+     */
     private function library(): MediaLibraryQueryInterface
     {
-        return resolve(MediaLibraryQueryInterface::class);
+        return $this->libraryQuery ??= resolve(MediaLibraryQueryInterface::class);
+    }
+
+    /**
+     * Whether the library keeps the file's image out of sight (core#830, core#837), worked out once per file
+     * and request: every column, action and view of a row asks it.
+     */
+    private function concealed(MediaFileModel $file): bool
+    {
+        return $this->concealedFiles[$file->file_id] ??= $this->library()->conceals($file);
+    }
+
+    /**
+     * What names a file to people: its id, or a neutral name when its image is concealed.
+     */
+    private function fileName(MediaFileModel $file): string
+    {
+        return $this->concealed($file) ? (string) __('filament.media_library.hidden_preview.alt') : $file->file_id;
     }
 
     /**

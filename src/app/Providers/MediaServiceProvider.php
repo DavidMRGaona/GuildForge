@@ -129,21 +129,26 @@ final class MediaServiceProvider extends ServiceProvider
             return $relevant ? [(string) $user->getKey()] : [];
         }));
 
-        // Profiles are saved for every choice of their owner: only a change of banner or of the address (the
-        // title without a public name) is refreshed (core#743)
+        // Profiles are saved for every choice of their owner: only a change of banner, of the address (the
+        // title without a public name) or of the visibility (whether the banner is shown, core#837) is
+        // refreshed (core#743)
         $this->refreshOnChange(UserProfileModel::class, new RefreshMediaUsagesObserver(ProfileBannerMediaSource::TYPE, static function (Model $profile): array {
             $banner = $profile->getAttribute('banner_public_id');
             $relevant = ! $profile->exists
-                || $profile->wasChanged(['banner_public_id', 'handle'])
+                || $profile->wasChanged(['banner_public_id', 'handle', 'visibility'])
                 || ($profile->wasRecentlyCreated && is_string($banner) && $banner !== '');
 
             return $relevant ? [(string) $profile->getKey()] : [];
         }));
-        // The public name titles the banner too; a profile without a banner refreshes to nothing
+        // The public name titles the banner too and, with a deactivation or a restore, decides whether it is
+        // shown (core#837); a profile without a banner refreshes to nothing. A restore saves the account, a
+        // deactivation does not, so it is followed apart
         $this->refreshOnChange(UserModel::class, new RefreshMediaUsagesObserver(
             ProfileBannerMediaSource::TYPE,
-            static fn (Model $user): array => $user->exists && $user->wasChanged('display_name') ? [(string) $user->getKey()] : [],
+            static fn (Model $user): array => $user->exists && $user->wasChanged(['display_name', 'deleted_at']) ? [(string) $user->getKey()] : [],
         ));
+        $deactivated = new RefreshMediaUsagesObserver(ProfileBannerMediaSource::TYPE, $own);
+        UserModel::softDeleted($deactivated->deleted(...));
 
         // A module's sources come and go with it: the library syncs instead of waiting for the night (core#517)
         foreach ([ModuleEnabled::class, ModuleDisabled::class, ModuleUpdated::class, ModuleUninstalled::class, ModuleUpdateCompleted::class] as $event) {

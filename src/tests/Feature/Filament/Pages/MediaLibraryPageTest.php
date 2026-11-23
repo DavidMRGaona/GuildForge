@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament\Pages;
 
 use App\Application\Media\Contracts\MediaUsageSourceInterface;
+use App\Application\Media\Contracts\ShowsMediaPreviews;
 use App\Application\Media\Services\MediaCatalogInterface;
 use App\Application\Media\Services\MediaFileIdResolverInterface;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
@@ -24,6 +25,7 @@ use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\Testing\TestAction;
+use Filament\Notifications\Notification;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Contracts\Support\Htmlable;
@@ -36,12 +38,14 @@ use Livewire\Livewire;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
 use Tests\Support\Media\FakeMediaSource;
 use Tests\Support\Media\InMemoryMediaCatalog;
+use Tests\Support\Media\MarksMediaSourcesSynced;
 use Tests\TestCase;
 
 final class MediaLibraryPageTest extends TestCase
 {
     use CreatesUsersWithPermissions;
     use LazilyRefreshDatabase;
+    use MarksMediaSourcesSynced;
 
     private InMemoryMediaCatalog $catalog;
 
@@ -392,6 +396,44 @@ final class MediaLibraryPageTest extends TestCase
         }
     }
 
+    public function test_a_file_of_a_source_that_does_not_show_previews_is_concealed(): void
+    {
+        // Hidden by default (core#837): a module that has not declared ShowsMediaPreviews shows no image
+        $this->register(new FakeMediaSource('forum', ['forum/']));
+        $file = $this->file('forum/post');
+        MediaUsageModel::query()->create([
+            'file_id' => 'forum/post',
+            'source_type' => 'forum',
+            'record_id' => 'post-1',
+            'role' => 'Imagen',
+            'title' => 'Mensaje',
+        ]);
+        $this->actingAs($this->viewer());
+
+        $this->assertConcealed($file, 'forum/post');
+    }
+
+    public function test_a_file_of_unknown_origin_is_concealed(): void
+    {
+        $file = $this->file('unknown/a');
+        $this->actingAs($this->viewer());
+
+        $this->assertConcealed($file, 'unknown/a');
+    }
+
+    public function test_an_unused_file_of_a_source_that_shows_previews_keeps_its_thumbnail(): void
+    {
+        $file = $this->file('events/unused');
+        $this->actingAs($this->viewer());
+
+        $thumbnail = $this->table(Livewire::test(MediaLibraryPage::class))->getColumn('thumbnail');
+        $this->assertNotNull($thumbnail);
+        $thumbnail->record($file);
+        $this->assertIsString($thumbnail->getState());
+        $this->assertStringContainsString('/site/events/unused', $this->detailsHtml($file));
+        $this->assertSame('unused', $this->detailsAction($file)->getModalHeading());
+    }
+
     public function test_the_title_of_a_hidden_usage_is_still_the_one_its_source_gives(): void
     {
         $file = $this->hiddenFile();
@@ -536,6 +578,50 @@ final class MediaLibraryPageTest extends TestCase
 
         $this->assertArrayHasKey('events/a', $this->catalog->assets);
         $this->assertNotNull($file->fresh());
+    }
+
+    public function test_a_concealed_file_is_not_named_by_its_id_when_deleting(): void
+    {
+        // A source without previews whose record started using the file after the library was read
+        $this->register(new class('forum', ['forum/']) extends FakeMediaSource
+        {
+            public function usesFile(MediaFileId $file): bool
+            {
+                return true;
+            }
+        });
+        $file = $this->file('forum/secret-post');
+        $this->actingAs($this->deleter());
+
+        $description = $this->rowAction($this->listPage(), 'delete', $file)->getModalDescription();
+        $this->assertIsString($description);
+        $this->assertStringNotContainsString('forum/secret-post', $description);
+        $this->assertStringContainsString(__('filament.media_library.hidden_preview.alt'), $description);
+
+        $lines = [
+            trans_choice('filament.media_library.notifications.refused_count', 1, ['count' => 1]),
+            __('filament.media_library.notifications.refused_item', [
+                'file' => __('filament.media_library.hidden_preview.alt'),
+                'reason' => MediaLibraryPage::refusalText(MediaDeletionRefusal::InUse),
+            ]),
+        ];
+        $this->listPage()
+            ->callTableAction('delete', $file, ['confirmation' => true])
+            ->assertNotified(Notification::make()
+                ->danger()
+                ->title(__('filament.media_library.notifications.nothing_deleted'))
+                ->body(implode('<br>', array_map(e(...), $lines))));
+        $this->assertNotNull($file->fresh());
+    }
+
+    public function test_a_file_shown_in_the_library_is_still_named_by_its_id_when_deleting(): void
+    {
+        $file = $this->file('events/a');
+        $this->actingAs($this->deleter());
+
+        $description = $this->rowAction($this->listPage(), 'delete', $file)->getModalDescription();
+        $this->assertIsString($description);
+        $this->assertStringContainsString('events/a', $description);
     }
 
     public function test_every_refusal_has_a_text(): void
@@ -863,7 +949,7 @@ final class MediaLibraryPageTest extends TestCase
     private function registerSource(): void
     {
         $test = $this;
-        $events = new class('events', ['events/']) extends FakeMediaSource
+        $events = new class('events', ['events/']) extends FakeMediaSource implements ShowsMediaPreviews
         {
             /** @var \Closure(string, object): ?string */
             public \Closure $edit;
@@ -901,6 +987,7 @@ final class MediaLibraryPageTest extends TestCase
         $this->app->instance($alias, $source);
         /** @var class-string $alias */
         $this->registry->register($alias);
+        $this->markMediaSourcesSynced();
     }
 
     /**
@@ -1018,6 +1105,41 @@ final class MediaLibraryPageTest extends TestCase
             'uploaded_at' => $uploadedAt ?? CarbonImmutable::now()->subMonth(),
             'last_seen_at' => CarbonImmutable::now(),
         ]);
+    }
+
+    /**
+     * No URL nor id of the file anywhere: grid, list, row details and details, with the placeholder instead.
+     */
+    private function assertConcealed(MediaFileModel $file, string $fileId): void
+    {
+        foreach (['grid', 'list'] as $layout) {
+            $page = Livewire::test(MediaLibraryPage::class)->set('display', $layout);
+            $thumbnail = $this->table($page)->getColumn('thumbnail');
+            $this->assertNotNull($thumbnail);
+            $thumbnail->record($file);
+            $this->assertNull($thumbnail->getState(), $layout);
+
+            $html = $page->call('loadTable')->html();
+            $this->assertStringNotContainsString('res.cloudinary.com', $html, $layout);
+            $this->assertStringContainsString(MediaLibraryPage::hiddenPreviewUrl(), $html, $layout);
+        }
+
+        $content = $this->rowAction($this->listPage(), RowDetailsAction::NAME, $file)->getModalContent();
+        $this->assertInstanceOf(Htmlable::class, $content);
+        $this->assertStringNotContainsString('res.cloudinary.com', $content->toHtml());
+
+        $html = $this->detailsHtml($file);
+        $this->assertStringNotContainsString('res.cloudinary.com', $html);
+        $this->assertStringNotContainsString($fileId, $html);
+        $this->assertStringContainsString(__('filament.media_library.hidden_preview.notice'), $html);
+        $this->assertSame(__('filament.media_library.hidden_preview.alt'), $this->detailsAction($file)->getModalHeading());
+
+        $names = array_map(
+            static fn (mixed $action): ?string => $action instanceof Action ? $action->getName() : null,
+            $this->detailsAction($file)->getExtraModalFooterActions(),
+        );
+        $this->assertNotContains('openOriginal', $names);
+        $this->assertNotContains('copyUrl', $names);
     }
 
     /**

@@ -6,14 +6,15 @@ namespace App\Infrastructure\Media\Services;
 
 use App\Application\Media\Contracts\MediaUsageSourceInterface;
 use App\Application\Media\Contracts\ReleasesMediaThroughCoreInterface;
+use App\Application\Media\Contracts\ShowsMediaPreviews;
 use App\Application\Media\Services\MediaIndexerInterface;
 use App\Application\Media\Services\MediaSourceRegistryInterface;
 use App\Application\Services\TimezoneServiceInterface;
 use App\Domain\Media\Enums\MediaFileStatus;
-use App\Domain\Media\Exceptions\InvalidMediaFileIdException;
 use App\Domain\Media\MediaFileStatusRule;
 use App\Domain\Media\ValueObjects\MediaFileId;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaFileModel;
+use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaUsageModel;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Throwable;
@@ -22,13 +23,28 @@ use Throwable;
  * The media library in SQL. Which source claims a file is decided as MediaSourceRegistry::claimingSource()
  * does (longest claimed folder, minus that source's excluded subfolders, first registered on a tie), with
  * prefixes compared by substr() rather than LIKE: folders hold underscores, and LIKE ignores case on SQLite.
+ *
+ * Whether a file shows its image is worked out on reading (core#837), from the sources that claim it now and
+ * the last sync of each (MediaSourceSyncState), rather than stored in the index: a module enabled, disabled
+ * or updated changes it at once, and a source whose rows may be stale shows nothing until it is synced.
+ *
+ * Claims are read once per instance: the panel keeps one instance while it draws a page.
+ *
+ * @phpstan-type Claim array{type: string, hidden: bool, releasesThroughCore: bool, showsPreviews: bool, folder: string, excluded: list<string>}
  */
-final readonly class EloquentMediaLibraryQuery implements MediaLibraryQueryInterface
+final class EloquentMediaLibraryQuery implements MediaLibraryQueryInterface
 {
+    /** @var list<Claim>|null */
+    private ?array $claims = null;
+
+    /** @var list<string>|null types of the active sources the index is up to date with */
+    private ?array $upToDate = null;
+
     public function __construct(
-        private MediaSourceRegistryInterface $registry,
-        private MediaIndexerInterface $indexer,
-        private TimezoneServiceInterface $timezone,
+        private readonly MediaSourceRegistryInterface $registry,
+        private readonly MediaIndexerInterface $indexer,
+        private readonly TimezoneServiceInterface $timezone,
+        private readonly MediaSourceSyncState $syncState,
     ) {}
 
     public function query(): Builder
@@ -85,12 +101,20 @@ final readonly class EloquentMediaLibraryQuery implements MediaLibraryQueryInter
     public function applyReusable(Builder $query): Builder
     {
         $claims = $this->claims();
-        $reusable = array_filter($this->visible($claims), static fn (array $claim): bool => $claim['releasesThroughCore']);
+        $visible = $this->visible($claims);
+        // The picker shows thumbnails: only images the library would show are offered (core#837)
+        $reusable = array_filter($visible, static fn (array $claim): bool => $claim['releasesThroughCore'] && $claim['showsPreviews']);
+        $concealing = array_filter($visible, static fn (array $claim): bool => ! $claim['showsPreviews']);
 
         $query->where('media_files.resource_type', 'image')
             ->whereNotNull('media_files.format')
-            // The picker shows thumbnails: an image a source keeps out of sight is never offered (core#830)
-            ->whereDoesntHave('usages', static fn (Builder $usages): Builder => $usages->where('is_hidden', true));
+            // An image a usage keeps out of sight, or one with a usage the index may hold stale, is never offered
+            ->whereDoesntHave('usages', fn (Builder $usages): Builder => $this->whereConcealing($usages));
+
+        foreach ($concealing as $claim) {
+            // Nor one that any visible source claiming it would not show, winning the folder or not
+            $query->whereNot(fn (Builder $claimed): Builder => $this->whereMatches($claimed, $claim));
+        }
 
         return $this->whereClaimed($query, $reusable, $claims, negate: false);
     }
@@ -116,6 +140,22 @@ final readonly class EloquentMediaLibraryQuery implements MediaLibraryQueryInter
             uploadedAt: $file->uploaded_at->toImmutable(),
             now: CarbonImmutable::now(),
         );
+    }
+
+    public function conceals(MediaFileModel $file): bool
+    {
+        if (! $this->visibleClaimer($file->file_id) instanceof ShowsMediaPreviews) {
+            return true;
+        }
+
+        // Every visible source that claims the file must show it, not only the one that wins its folder
+        foreach ($this->visible($this->claims()) as $claim) {
+            if (! $claim['showsPreviews'] && $this->claimsFile($claim, $file->file_id)) {
+                return true;
+            }
+        }
+
+        return $this->hasConcealingUsage($file);
     }
 
     public function stats(): MediaLibraryStatsDTO
@@ -161,27 +201,95 @@ final readonly class EloquentMediaLibraryQuery implements MediaLibraryQueryInter
 
     private function isClaimed(string $fileId): bool
     {
+        return $this->visibleClaimer($fileId) instanceof MediaUsageSourceInterface;
+    }
+
+    /**
+     * The visible source that wins the file's folder, or null: none claims it, it is hidden, the id is odd or
+     * the source cannot say whether it is hidden (it claims nothing here then).
+     */
+    private function visibleClaimer(string $fileId): ?MediaUsageSourceInterface
+    {
         try {
             $claimer = $this->registry->claimingSource(new MediaFileId($fileId));
 
-            return $claimer instanceof MediaUsageSourceInterface && ! $claimer->hidden();
-        } catch (InvalidMediaFileIdException) {
-            return false;
+            return $claimer instanceof MediaUsageSourceInterface && ! $claimer->hidden() ? $claimer : null;
         } catch (Throwable) {
-            // A source that cannot say whether it is hidden claims nothing here
-            return false;
+            return null;
         }
     }
 
     /**
-     * Every claimed folder of the active sources, in registration order. A source whose folders or
-     * excluded subfolders cannot be read claims nothing, as in the registry.
+     * Whether a usage keeps the file out of sight: it is hidden (core#830), or its source is not one the index
+     * is up to date with (core#837), so its `is_hidden` may be stale. A source with no folder (rich text) or of
+     * a disabled module counts too.
+     */
+    private function hasConcealingUsage(MediaFileModel $file): bool
+    {
+        $upToDate = $this->upToDate();
+
+        if ($file->relationLoaded('usages')) {
+            return $file->usages->contains(static fn (MediaUsageModel $usage): bool => $usage->is_hidden
+                || ! in_array($usage->source_type, $upToDate, true));
+        }
+
+        return $file->usages()->where(fn (Builder $usages): Builder => $this->whereConcealing($usages))->exists();
+    }
+
+    /**
+     * The usages that keep a file out of sight, in SQL; the same rule as hasConcealingUsage().
      *
-     * @return list<array{type: string, hidden: bool, releasesThroughCore: bool, folder: string, excluded: list<string>}>
+     * @template TModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  Builder<TModel>  $usages
+     * @return Builder<TModel>
+     */
+    private function whereConcealing(Builder $usages): Builder
+    {
+        return $usages->where(fn (Builder $concealing): Builder => $concealing
+            ->where('is_hidden', true)
+            ->orWhereNotIn('source_type', $this->upToDate()));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function upToDate(): array
+    {
+        return $this->upToDate ??= $this->syncState->upToDate($this->registry->sources());
+    }
+
+    /**
+     * The same test as whereMatches(), in PHP: case sensitive, by prefix, minus the excluded subfolders.
+     *
+     * @param  Claim  $claim
+     */
+    private function claimsFile(array $claim, string $fileId): bool
+    {
+        if (! str_starts_with($fileId, $claim['folder'])) {
+            return false;
+        }
+
+        $rest = substr($fileId, strlen($claim['folder']));
+
+        return ! array_any($claim['excluded'], static fn (string $subfolder): bool => str_starts_with($rest, $subfolder));
+    }
+
+    /**
+     * Every claimed folder of the active sources, in registration order. A source whose folders or
+     * excluded subfolders cannot be read claims nothing, as in the registry. A source shows its previews
+     * only when it declares ShowsMediaPreviews and the index is up to date with it as it is now.
+     *
+     * @return list<Claim>
      */
     private function claims(): array
     {
+        if ($this->claims !== null) {
+            return $this->claims;
+        }
+
         $claims = [];
+        $upToDate = $this->upToDate();
 
         foreach ($this->registry->sources() as $source) {
             try {
@@ -199,6 +307,7 @@ final readonly class EloquentMediaLibraryQuery implements MediaLibraryQueryInter
                         'type' => $type,
                         'hidden' => $hidden,
                         'releasesThroughCore' => $source instanceof ReleasesMediaThroughCoreInterface,
+                        'showsPreviews' => $source instanceof ShowsMediaPreviews && in_array($type, $upToDate, true),
                         'folder' => $folder,
                         'excluded' => $excluded,
                     ];
@@ -206,12 +315,12 @@ final readonly class EloquentMediaLibraryQuery implements MediaLibraryQueryInter
             }
         }
 
-        return $claims;
+        return $this->claims = $claims;
     }
 
     /**
-     * @param  list<array{type: string, hidden: bool, releasesThroughCore: bool, folder: string, excluded: list<string>}>  $claims
-     * @return array<int, array{type: string, hidden: bool, releasesThroughCore: bool, folder: string, excluded: list<string>}>
+     * @param  list<Claim>  $claims
+     * @return array<int, Claim>
      */
     private function visible(array $claims): array
     {
@@ -222,8 +331,8 @@ final readonly class EloquentMediaLibraryQuery implements MediaLibraryQueryInter
      * Files claimed through any of the given claims (or, negated, through none of them).
      *
      * @param  Builder<MediaFileModel>  $query
-     * @param  array<int, array{type: string, hidden: bool, releasesThroughCore: bool, folder: string, excluded: list<string>}>  $selected  keyed by position in $claims
-     * @param  list<array{type: string, hidden: bool, releasesThroughCore: bool, folder: string, excluded: list<string>}>  $claims
+     * @param  array<int, Claim>  $selected  keyed by position in $claims
+     * @param  list<Claim>  $claims
      * @return Builder<MediaFileModel>
      */
     private function whereClaimed(Builder $query, array $selected, array $claims, bool $negate): Builder
@@ -251,8 +360,8 @@ final readonly class EloquentMediaLibraryQuery implements MediaLibraryQueryInter
     }
 
     /**
-     * @param  array{type: string, hidden: bool, releasesThroughCore: bool, folder: string, excluded: list<string>}  $other
-     * @param  array{type: string, hidden: bool, releasesThroughCore: bool, folder: string, excluded: list<string>}  $claim
+     * @param  Claim  $other
+     * @param  Claim  $claim
      */
     private function beats(array $other, int $otherPosition, array $claim, int $position): bool
     {
@@ -266,7 +375,7 @@ final readonly class EloquentMediaLibraryQuery implements MediaLibraryQueryInter
 
     /**
      * @param  Builder<MediaFileModel>  $query
-     * @param  array{type: string, hidden: bool, releasesThroughCore: bool, folder: string, excluded: list<string>}  $claim
+     * @param  Claim  $claim
      * @return Builder<MediaFileModel>
      */
     private function whereMatches(Builder $query, array $claim): Builder

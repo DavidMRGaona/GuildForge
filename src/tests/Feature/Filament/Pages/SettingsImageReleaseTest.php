@@ -15,6 +15,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\Livewire;
 use Tests\Support\Media\InMemoryMediaCatalog;
+use Tests\Support\Media\MarksMediaSourcesSynced;
 use Tests\TestCase;
 
 /**
@@ -23,6 +24,7 @@ use Tests\TestCase;
 final class SettingsImageReleaseTest extends TestCase
 {
     use LazilyRefreshDatabase;
+    use MarksMediaSourcesSynced;
 
     private InMemoryMediaCatalog $catalog;
 
@@ -36,6 +38,7 @@ final class SettingsImageReleaseTest extends TestCase
         $this->catalog = new InMemoryMediaCatalog;
         $this->app->instance(MediaCatalogInterface::class, $this->catalog);
         $this->settings = $this->app->make(SettingsServiceInterface::class);
+        $this->markMediaSourcesSynced();
         $this->actingAs(UserModel::factory()->admin()->create());
     }
 

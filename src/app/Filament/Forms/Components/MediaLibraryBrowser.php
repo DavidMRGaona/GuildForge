@@ -83,7 +83,8 @@ final class MediaLibraryBrowser extends Field
             ->get()
             ->map(fn (MediaFileModel $file): array => [
                 'fileId' => $file->file_id,
-                'thumbnailUrl' => $this->urls()->mediaThumbnail($file->file_id, self::THUMBNAIL_SIZE),
+                // The query already leaves concealed files out; no URL is built for one all the same (core#837)
+                'thumbnailUrl' => $library->conceals($file) ? null : $this->urls()->mediaThumbnail($file->file_id, self::THUMBNAIL_SIZE),
                 'title' => $this->titleOf($file),
                 'origin' => $this->originOf($file),
                 'statusLabel' => MediaLibraryPage::statusLabel($library->statusOf($file)),
@@ -120,7 +121,7 @@ final class MediaLibraryBrowser extends Field
 
         return [
             'fileId' => $file->file_id,
-            'imageUrl' => $this->urls()->mediaPreview($file->file_id, self::PREVIEW_WIDTH),
+            'imageUrl' => $this->library()->conceals($file) ? null : $this->urls()->mediaPreview($file->file_id, self::PREVIEW_WIDTH),
             'dimensions' => $file->width !== null && $file->height !== null ? $file->width.' × '.$file->height : null,
             'format' => $file->format !== null ? mb_strtoupper($file->format) : null,
             'size' => FileSize::format($file->bytes),

@@ -29,17 +29,20 @@ use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
+use Tests\Support\Media\MarksMediaSourcesSynced;
 use Tests\TestCase;
 
 final class CoreFieldsUseMediaPickerTest extends TestCase
 {
     use LazilyRefreshDatabase;
+    use MarksMediaSourcesSynced;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         Storage::fake('images');
+        $this->markMediaSourcesSynced();
         $this->actingAs(UserModel::factory()->admin()->create());
     }
 

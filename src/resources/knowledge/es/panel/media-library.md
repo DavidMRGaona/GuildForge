@@ -35,11 +35,22 @@ Las tarjetas salen de la subida más reciente a la más antigua (**Más reciente
 
 No aparecen los **avatares** de las cuentas: no se muestran y nunca se pueden borrar desde aquí.
 
-Algunos módulos ocultan la imagen de un uso concreto, como la insignia de un logro secreto. Ese archivo sigue en la lista con su tamaño y sus usos, pero en lugar de la miniatura aparece un ojo tachado, la ficha se titula «Imagen oculta» y no permite abrir el original ni copiar su dirección. Cuenta como **En uso** igual que los demás.
+## Imágenes ocultas
 
-Si un archivo lo comparten un registro visible y uno oculto, se oculta para los dos y deja de ofrecerse en **Elegir de la biblioteca**.
+Algunas imágenes salen en la lista sin miniatura. Su archivo sigue ahí con su tamaño, su carpeta y sus usos, pero en lugar de la imagen aparece un ojo tachado, la ficha se titula «Imagen oculta» y no permite abrir el original ni copiar su dirección. Tampoco se ofrecen en **Elegir de la biblioteca**. Su estado y el borrado no cambian.
 
-Sirve para no destripar sorpresas a quien gestiona la biblioteca, no para guardar un secreto: la imagen sigue siendo pública en Cloudinary.
+Una imagen sale oculta por una de estas razones:
+
+- **Su origen no la enseña.** La biblioteca solo muestra las imágenes de los orígenes que dicen que se pueden ver: los de la web (eventos, artículos, galerías, hero slides, ajustes del sitio, pie de página y banners de perfil) y los de los módulos que ya lo declaran. Las de un módulo que todavía no lo declara salen ocultas hasta que se actualice.
+- **Es de origen desconocido.** No se sabe de dónde viene, así que no se enseña.
+- **La biblioteca no está al día con su origen.** Pasa justo después de actualizar la web o un módulo, o si la última actualización de ese origen falló. Se arregla sola con la siguiente actualización; también puedes pulsar **Actualizar**.
+- **Uno de sus usos la oculta**, como la insignia de un logro secreto, la imagen de una propuesta que su autor aún no ha enviado o el banner de un perfil que no ven todas las personas registradas. Si un archivo lo comparten un registro visible y uno oculto, se oculta para los dos.
+
+Una imagen oculta tampoco se nombra por su archivo: el aviso de borrado la llama «Imagen oculta».
+
+Los archivos sin usar de un origen que sí se ve conservan su miniatura, para que puedas revisarlos antes de borrarlos.
+
+Sirve para que quien gestiona la biblioteca no vea por descuido una imagen privada o una sorpresa, no para guardar un secreto: la imagen sigue siendo pública en Cloudinary.
 
 ## Estados
 
@@ -81,7 +92,7 @@ En los formularios con imagen (eventos, artículos, fotos de galerías, hero sli
 3. Pulsa una miniatura para verla en grande, con sus medidas y dónde se usa.
 4. Pulsa **Usar esta imagen** y guarda el formulario.
 
-Solo aparecen las imágenes que ese campo admite (por ejemplo, el favicon solo admite PNG, ICO o SVG) y las de orígenes que no borran archivos por su cuenta. Las de **Origen desconocido** no se ofrecen. Para elegir hace falta el permiso de ver la biblioteca. Subir un archivo nuevo sigue funcionando como siempre.
+Solo aparecen las imágenes que ese campo admite (por ejemplo, el favicon solo admite PNG, ICO o SVG) y las de orígenes que no borran archivos por su cuenta. Las de **Origen desconocido** y las **imágenes ocultas** no se ofrecen. Para elegir hace falta el permiso de ver la biblioteca. Subir un archivo nuevo sigue funcionando como siempre.
 
 ## Imágenes compartidas
 
