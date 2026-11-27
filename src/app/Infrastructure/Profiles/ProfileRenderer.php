@@ -286,7 +286,7 @@ final class ProfileRenderer implements ProfileRendererInterface, ProfileSummaryR
 
         return new ProfileHeaderDTO(
             $owner->handle,
-            $this->filled($user?->display_name),
+            $this->publicName($user?->display_name),
             $this->filled($user?->avatar_public_id),
             $this->filled($profile?->banner_public_id),
             $memberSince,
@@ -404,7 +404,18 @@ final class ProfileRenderer implements ProfileRendererInterface, ProfileSummaryR
 
     private function filled(?string $value): ?string
     {
-        return $value === null || $value === '' ? null : $value;
+        return $value === null || trim($value) === '' ? null : $value;
+    }
+
+    /**
+     * The public name as PublicProfileDTO::shownPublicName() gives it: trimmed, and null when only
+     * spaces are left, so the header agrees with the access rule about having one.
+     */
+    private function publicName(?string $displayName): ?string
+    {
+        $name = trim((string) $displayName);
+
+        return $name === '' ? null : $name;
     }
 
     /**
