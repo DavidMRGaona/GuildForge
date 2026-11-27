@@ -84,9 +84,12 @@ const updateProfile = () => {
                             id="display_name"
                             v-model="profileForm.display_name"
                             type="text"
+                            required
+                            maxlength="255"
+                            aria-describedby="display_name-help"
                             class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary focus:border-primary-500 focus:outline-none focus:ring-primary-500"
                         />
-                        <p class="mt-1 text-sm text-base-muted">
+                        <p id="display_name-help" class="mt-1 text-sm text-base-muted">
                             {{ t('auth.profile.displayNameHelp') }}
                         </p>
                         <p v-if="profileForm.errors.display_name" class="mt-1 text-sm text-error">

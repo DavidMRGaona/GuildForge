@@ -43,7 +43,7 @@ final class RegisterController extends Controller
 
     public function store(RegisterRequest $request): RedirectResponse
     {
-        /** @var array{name: string, email: string, password: string, registration_fields?: mixed} $validated */
+        /** @var array{name: string, display_name: string, email: string, password: string, registration_fields?: mixed} $validated */
         $validated = $request->validated();
 
         $dto = CreateUserDTO::fromArray($validated);

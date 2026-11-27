@@ -700,6 +700,10 @@ export default {
             title: 'Create account',
             subtitle: 'Join our community',
             name: 'Name',
+            nameHelp: 'Not shown publicly.',
+            displayName: 'Public name',
+            displayNameHelp:
+                'This is how other people will see you on the site. It can be your name or an alias.',
             email: 'Email',
             password: 'Password',
             passwordConfirm: 'Confirm password',
@@ -758,6 +762,16 @@ export default {
             changeEmail: 'Change it in your account settings',
             logout: 'Sign out',
         },
+        choosePublicName: {
+            title: 'Choose your public name',
+            why: 'This is the name other people will see you by on the site: on your profile, on the games you play or run, and in recognitions and achievements. Without it we cannot show you in those places; for example, nobody will be able to give you a recognition for a game.',
+            consent:
+                'We never show the name you signed up with publicly without your consent. You can use your name, just your first name or an alias: whatever you prefer. You can change it at any time in “Account settings”, but not leave it empty.',
+            label: 'Public name',
+            submit: 'Save and continue',
+            error: 'The public name could not be saved. Check the field and try again.',
+            logout: 'Sign out',
+        },
         verificationBanner: {
             label: 'Email verification',
             message: 'Verify your email to sign up and use the forms. We sent a link to {email}.',
@@ -789,8 +803,9 @@ export default {
             navigation: 'Account settings sections',
             information: 'Personal information',
             name: 'Name',
-            displayName: 'Display name',
-            displayNameHelp: 'This name will be displayed publicly instead of your real name',
+            displayName: 'Public name',
+            displayNameHelp:
+                'This is how other people will see you on the site. You can change it, but not leave it empty.',
             email: 'Email',
             pendingEmailNotice:
                 'A verification email has been sent to {email}. Click the link in the email to confirm the change.',

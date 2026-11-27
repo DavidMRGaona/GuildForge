@@ -8,6 +8,10 @@ return [
     'email_verified' => 'Your email has been verified.',
     'verification_link_sent' => 'A new verification link has been sent.',
     'email_verification_required' => 'Verify your email address to continue.',
+    'public_name' => [
+        'required' => 'Choose your public name to continue.',
+        'saved' => 'Public name saved.',
+    ],
     'profile_updated' => 'Settings updated successfully.',
     'password_incorrect' => 'The current password is incorrect.',
     'password_changed' => 'Password updated successfully.',

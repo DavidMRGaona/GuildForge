@@ -15,6 +15,7 @@ use App\Http\Controllers\Auth\MailPreferencesController;
 use App\Http\Controllers\Auth\MutedMailSubjectsController;
 use App\Http\Controllers\Auth\ProfileController;
 use App\Http\Controllers\Auth\ProfileTwoFactorController;
+use App\Http\Controllers\Auth\PublicNameController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\StopImpersonationController;
@@ -250,6 +251,12 @@ Route::middleware('auth')->group(function (): void {
         ->middleware('throttle:6,1,profile')
         ->name('profile.update');
     Route::put('/perfil/contrasena', [ProfileController::class, 'changePassword'])->name('profile.password');
+
+    // «Elige tu nombre público», once, for accounts without one (core#855, EnsurePublicNameIsChosen)
+    Route::get('/perfil/nombre-publico', [PublicNameController::class, 'show'])->name('public-name.show');
+    Route::post('/perfil/nombre-publico', [PublicNameController::class, 'store'])
+        ->middleware('throttle:6,1,public-name')
+        ->name('public-name.store');
     // Two-factor authentication from «Seguridad» (core#769): the secret and the recovery codes are only in
     // the answer that creates them. Same per-account limit on all of them (codes are guessed here too)
     Route::middleware('throttle:two-factor-manage')->prefix('/perfil/doble-factor')->group(function (): void {

@@ -49,6 +49,8 @@ export interface RegistrationField {
 
 export interface RegisterFormData {
     name: string;
+    /** The public name (core#855): required, the account name is never published */
+    display_name: string;
     email: string;
     password: string;
     password_confirmation: string;

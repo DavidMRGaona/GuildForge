@@ -154,6 +154,7 @@ final class MemberRoleOnAccountCreationTest extends TestCase
     {
         return $this->post('/registro', [
             'name' => 'Nuevo usuario',
+            'display_name' => 'Nuevo',
             'email' => $email,
             'password' => 'secret-password',
             'password_confirmation' => 'secret-password',

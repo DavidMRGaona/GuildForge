@@ -239,7 +239,7 @@ final class ProfileController extends Controller
             );
         }
 
-        /** @var array{name?: string, email?: string, display_name?: string|null} $validated */
+        /** @var array{name?: string, email?: string, display_name?: string} $validated */
         $validated = $request->validated();
 
         if (! isset($validated['name'], $validated['email'])) {

@@ -52,6 +52,8 @@ final readonly class EloquentUserRepository implements UserRepositoryInterface
         $model = UserModel::query()->create([
             'id' => $id->value,
             'name' => $dto->name,
+            // Saved with the account, so its profile is born with an address that follows it
+            'display_name' => $dto->displayName,
             'email' => $dto->email,
             'password' => $dto->password,
         ]);

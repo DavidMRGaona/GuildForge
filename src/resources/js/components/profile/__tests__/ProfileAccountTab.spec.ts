@@ -57,4 +57,17 @@ describe('ProfileAccountTab', () => {
 
         expect(emailField(wrapper).value).toBe('new@example.com');
     });
+
+    // It can change, never go back to empty (core#855)
+    it('requires the public name and says it can change but not be emptied', () => {
+        const wrapper = mountTab({ ...baseUser, displayName: 'Johnny' });
+        const input = wrapper.get('input#display_name');
+
+        expect((input.element as HTMLInputElement).value).toBe('Johnny');
+        expect(input.attributes('required')).toBeDefined();
+        expect(wrapper.get('label[for="display_name"]').text()).toBe('Nombre público');
+        expect(wrapper.get('#display_name-help').text()).toBe(
+            'Es como te verán las demás personas en la web. Puedes cambiarlo, pero no dejarlo vacío.'
+        );
+    });
 });

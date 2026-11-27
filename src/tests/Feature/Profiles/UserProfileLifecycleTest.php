@@ -35,10 +35,11 @@ final class UserProfileLifecycleTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_registering_creates_the_profile_with_a_random_address(): void
+    public function test_registering_creates_the_profile_with_an_address_that_follows_the_public_name(): void
     {
         $this->post('/registro', [
             'name' => 'Nuevo usuario',
+            'display_name' => 'Ana Ruiz',
             'email' => 'nuevo@example.com',
             'password' => 'secret-password',
             'password_confirmation' => 'secret-password',
@@ -46,7 +47,7 @@ final class UserProfileLifecycleTest extends TestCase
 
         $user = UserModel::query()->where('email', 'nuevo@example.com')->firstOrFail();
         $profile = UserProfileModel::query()->findOrFail($user->id);
-        $this->assertMatchesRegularExpression('/^miembro-(?=[a-z]*[2-9])[abcdefghjkmnpqrstuvwxyz23456789]{6}$/', $profile->handle);
+        $this->assertSame('ana-ruiz', $profile->handle);
     }
 
     public function test_an_account_is_created_and_the_error_logged_when_its_profile_cannot_be(): void
@@ -70,6 +71,7 @@ final class UserProfileLifecycleTest extends TestCase
 
         $this->post('/registro', [
             'name' => 'Nuevo usuario',
+            'display_name' => 'Ana Ruiz',
             'email' => 'nuevo@example.com',
             'password' => 'secret-password',
             'password_confirmation' => 'secret-password',
@@ -93,7 +95,7 @@ final class UserProfileLifecycleTest extends TestCase
     public function test_the_public_name_set_from_the_profile_moves_the_address(): void
     {
         Notification::fake();
-        $user = UserModel::factory()->create(['display_name' => null]);
+        $user = UserModel::factory()->create(['display_name' => 'Bea']);
 
         $this->actingAs($user)->post(route('profile.update'), [
             'name' => $user->name,

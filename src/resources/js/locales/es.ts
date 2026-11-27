@@ -700,6 +700,10 @@ export default {
             title: 'Crear cuenta',
             subtitle: 'Únete a nuestra comunidad',
             name: 'Nombre',
+            nameHelp: 'No se muestra públicamente.',
+            displayName: 'Nombre público',
+            displayNameHelp:
+                'Es como te verán las demás personas en la web. Puede ser tu nombre o un alias.',
             email: 'Correo electrónico',
             password: 'Contraseña',
             passwordConfirm: 'Confirmar contraseña',
@@ -758,6 +762,16 @@ export default {
             changeEmail: 'Cámbialo en los ajustes de tu cuenta',
             logout: 'Cerrar sesión',
         },
+        choosePublicName: {
+            title: 'Elige tu nombre público',
+            why: 'Es el nombre con el que te verán las demás personas en la web: en tu perfil, en las partidas en las que juegas o diriges y en los reconocimientos y logros. Sin él no podemos mostrarte en esos sitios; por ejemplo, nadie podrá darte un reconocimiento por una partida.',
+            consent:
+                'Nunca mostramos públicamente el nombre con el que te registraste sin tu consentimiento. Puedes usar tu nombre, solo el nombre de pila o un alias: lo que prefieras. Podrás cambiarlo cuando quieras en «Ajustes de la cuenta», pero no dejarlo vacío.',
+            label: 'Nombre público',
+            submit: 'Guardar y continuar',
+            error: 'No se pudo guardar el nombre público. Revisa el campo e inténtalo de nuevo.',
+            logout: 'Cerrar sesión',
+        },
         verificationBanner: {
             label: 'Verificación de email',
             message:
@@ -790,8 +804,9 @@ export default {
             navigation: 'Secciones de los ajustes de la cuenta',
             information: 'Información personal',
             name: 'Nombre',
-            displayName: 'Nombre para mostrar',
-            displayNameHelp: 'Este nombre se mostrará públicamente en lugar de tu nombre real',
+            displayName: 'Nombre público',
+            displayNameHelp:
+                'Es como te verán las demás personas en la web. Puedes cambiarlo, pero no dejarlo vacío.',
             email: 'Correo electrónico',
             pendingEmailNotice:
                 'Se ha enviado un correo de verificación a {email}. Haz clic en el enlace del correo para confirmar el cambio.',

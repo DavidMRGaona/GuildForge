@@ -1,12 +1,12 @@
 ---
 id: core.account.complete-profile
 title: Completar tu perfil
-summary: Pon tu nombre, el nombre que verán los demás y tu foto de perfil.
+summary: Pon tu nombre, tu nombre público y tu foto de perfil.
 category: account
 audience: site
 order: 10
 featured: true
-keywords: [perfil, mi perfil, foto, foto de perfil, avatar, imagen, nombre, apodo, alias, nick, nombre para mostrar, datos personales, editar perfil, cambiar nombre]
+keywords: [perfil, mi perfil, foto, foto de perfil, avatar, imagen, nombre, apodo, alias, nick, nombre público, elegir nombre público, nombre para mostrar, datos personales, editar perfil, cambiar nombre]
 related: [core.site.public-profile, core.account.change-email, core.account.change-password]
 ---
 Tus ajustes guardan tus datos y deciden cómo te ven los demás.
@@ -19,9 +19,19 @@ Tus ajustes guardan tus datos y deciden cómo te ven los demás.
 ## Tu nombre
 
 1. En la pestaña **Cuenta**, busca la tarjeta **Información personal**.
-2. Escribe tu **Nombre**. Es obligatorio.
-3. Si quieres, rellena **Nombre para mostrar**. Los demás lo verán en lugar de tu nombre real. Si lo dejas vacío, tu perfil público no lo verá nadie más que tú y tu nombre real nunca se enseña en su lugar.
+2. Escribe tu **Nombre**. Es obligatorio y nunca se muestra públicamente.
+3. Escribe tu **Nombre público**. Es como te verán las demás personas en la web: en tu perfil, en las partidas y en los reconocimientos y logros. Puede ser tu nombre, solo el nombre de pila o un alias. Puedes cambiarlo cuando quieras, pero no dejarlo vacío.
 4. Pulsa **Guardar**.
+
+## Si te pide elegir tu nombre público
+
+Las cuentas creadas antes de que el nombre público fuera obligatorio no lo tienen. Al entrar, la web te muestra una vez la pantalla **Elige tu nombre público**:
+
+1. El campo viene relleno con la primera palabra de tu nombre, nunca con tus apellidos. No se guarda nada hasta que lo confirmes.
+2. Déjalo así o escribe el que prefieras.
+3. Pulsa **Guardar y continuar**. Vuelves a la página que ibas a abrir.
+
+Hasta que lo elijas, no puedes usar las páginas de tu cuenta, pero sí ver la web y cerrar sesión. Si la web pide verificar el email, primero tendrás que verificarlo.
 
 ## Tu foto
 

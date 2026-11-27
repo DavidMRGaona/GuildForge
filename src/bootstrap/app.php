@@ -7,6 +7,7 @@ use App\Http\Middleware\BlockBotsMiddleware;
 use App\Http\Middleware\BlockSiteWritesWhenImpersonatingReadOnly;
 use App\Http\Middleware\EnsureEmailIsVerifiedWhenRequired;
 use App\Http\Middleware\EnsureLoginIsEnabled;
+use App\Http\Middleware\EnsurePublicNameIsChosen;
 use App\Http\Middleware\EnsureRegistrationIsEnabled;
 use App\Http\Middleware\EnsureSessionPassedTwoFactor;
 use App\Http\Middleware\EnsureSiteIsNotInMaintenance;
@@ -58,6 +59,8 @@ $app = Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             EnsureSiteIsNotInMaintenance::class,
             EnsureEmailIsVerifiedWhenRequired::class,
+            // After the email: an account that must verify it can still correct it (core#855)
+            EnsurePublicNameIsChosen::class,
         ],
             prepend: [
                 SecurityHeadersMiddleware::class,

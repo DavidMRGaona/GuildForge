@@ -24,6 +24,7 @@ return [
         'login' => 'Iniciar sesión',
         'two_factor_challenge' => 'Verificación en dos pasos',
         'register' => 'Crear cuenta',
+        'choose_public_name' => 'Elige tu nombre público',
         'forgot_password' => 'Recuperar contraseña',
         'reset_password' => 'Restablecer contraseña',
         'verify_email' => 'Verificar correo',

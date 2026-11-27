@@ -6,6 +6,8 @@ namespace App\Http\Requests\Auth;
 
 use App\Application\Registration\DTOs\RegistrationFieldDTO;
 use App\Application\Registration\Services\RegistrationFieldRegistryInterface;
+use App\Domain\Profiles\PublicName;
+use App\Http\Rules\PublicNameIsFilled;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator as ValidatorFactory;
@@ -47,6 +49,9 @@ final class RegisterRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            // Every new account is shown on the site by a name it chose (core#855); the account
+            // name is never published. Blanks only are empty: TrimStrings leaves '' and then null
+            'display_name' => ['required', 'string', 'max:'.PublicName::MAX_LENGTH, new PublicNameIsFilled],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'confirmed', Password::min(8)],
             self::FIELDS => ['nullable', 'array', 'max:50'],

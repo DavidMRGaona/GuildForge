@@ -286,7 +286,7 @@ final class EnsureEmailIsVerifiedWhenRequiredTest extends TestCase
 
         $this->get(route('profile.show'))->assertOk();
         $this->from(route('profile.show'))
-            ->post(route('profile.update'), ['name' => $user->name, 'email' => 'corrected@example.com'])
+            ->post(route('profile.update'), ['name' => $user->name, 'display_name' => $user->display_name, 'email' => 'corrected@example.com'])
             ->assertRedirect(route('profile.show'))
             ->assertSessionHasNoErrors();
 
@@ -386,6 +386,7 @@ final class EnsureEmailIsVerifiedWhenRequiredTest extends TestCase
 
         $this->post(route('register'), [
             'name' => 'Nueva cuenta',
+            'display_name' => 'Nueva',
             'email' => 'new@example.com',
             'password' => 'password-123',
             'password_confirmation' => 'password-123',
@@ -402,6 +403,7 @@ final class EnsureEmailIsVerifiedWhenRequiredTest extends TestCase
 
         $this->post(route('register'), [
             'name' => 'Nueva cuenta',
+            'display_name' => 'Nueva',
             'email' => 'new@example.com',
             'password' => 'password-123',
             'password_confirmation' => 'password-123',

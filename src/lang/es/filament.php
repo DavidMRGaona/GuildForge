@@ -509,6 +509,8 @@ return [
             'status' => 'Estado',
             'emailChangeHelp' => 'Si lo cambias, la cuenta conserva el correo actual hasta que la persona confirme el nuevo con el enlace que le llegará a esa dirección.',
             'emailPendingHelp' => 'Cambio pendiente de confirmar: :email. Se aplica cuando la persona pulse el enlace enviado a esa dirección.',
+            'publicName' => 'Nombre público',
+            'publicNameHelp' => 'Es como ven a la persona en la web; su nombre de usuario nunca se publica. Se puede cambiar, pero no dejar vacío. Si la cuenta no lo tiene, la persona lo elige al entrar.',
             'markEmailVerified' => 'Marcar el correo como verificado',
             'markEmailVerifiedHelp' => 'Márcalo solo si has comprobado que la dirección es de esta persona. Si no, le llegará un enlace para verificarla. Queda registrado quién lo marca.',
         ],

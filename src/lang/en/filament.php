@@ -288,6 +288,8 @@ return [
             'rolesHelp' => 'Every account always has the "member" role, the base role: that is why it is ticked and cannot be unticked.',
             'emailChangeHelp' => 'If you change it, the account keeps its current email until the person confirms the new one with the link sent to that address.',
             'emailPendingHelp' => 'Change waiting for confirmation: :email. It applies when the person follows the link sent to that address.',
+            'publicName' => 'Public name',
+            'publicNameHelp' => 'How the person is shown on the site; the username is never published. It can be changed, but not emptied. If the account has none, the person chooses it when signing in.',
             'markEmailVerified' => 'Mark the email as verified',
             'markEmailVerifiedHelp' => 'Tick it only if you have checked the address belongs to this person. Otherwise they get a link to verify it. Who ticks it is logged.',
         ],

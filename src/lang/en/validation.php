@@ -196,7 +196,7 @@ return [
         'password' => 'password',
         'password_confirmation' => 'password confirmation',
         'current_password' => 'current password',
-        'display_name' => 'display name',
+        'display_name' => 'public name',
         'avatar' => 'avatar',
         'title' => 'title',
         'description' => 'description',
