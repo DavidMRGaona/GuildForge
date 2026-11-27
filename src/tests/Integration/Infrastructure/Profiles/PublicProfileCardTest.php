@@ -82,6 +82,17 @@ final class PublicProfileCardTest extends TestCase
         $this->assertTrue($this->card($owner->id, $owner)?->isOwner);
     }
 
+    public function test_the_owner_s_card_with_a_public_name_of_only_spaces_has_no_public_name(): void
+    {
+        $owner = $this->owner(ProfileVisibility::Public, ['display_name' => '   ']);
+
+        $card = $this->card($owner->id, $owner);
+
+        $this->assertInstanceOf(ProfileCardDTO::class, $card);
+        $this->assertNull($card->publicName);
+        $this->assertNull($this->card($owner->id, UserModel::factory()->create()));
+    }
+
     public function test_no_card_for_whoever_may_not_see_the_profile(): void
     {
         $members = $this->owner(ProfileVisibility::Members);

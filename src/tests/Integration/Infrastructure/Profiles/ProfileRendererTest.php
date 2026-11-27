@@ -291,6 +291,25 @@ final class ProfileRendererTest extends TestCase
         $this->assertSame('Ana', $profile->header->publicName);
     }
 
+    public function test_a_public_name_of_only_spaces_is_no_public_name_in_the_header(): void
+    {
+        // Forms trim it; an import, tinker or SQL do not
+        $user = UserModel::factory()->create(['display_name' => " \t  "]);
+
+        $profile = $this->render($user, $user);
+
+        $this->assertNull($profile->header->publicName);
+    }
+
+    public function test_the_header_shows_the_public_name_trimmed_as_the_rest_of_the_core_does(): void
+    {
+        $user = UserModel::factory()->create(['display_name' => '  Ana  ']);
+
+        $profile = $this->render($user, null);
+
+        $this->assertSame('Ana', $profile->header->publicName);
+    }
+
     public function test_an_empty_about_me_is_left_out_quietly(): void
     {
         $user = UserModel::factory()->create(['display_name' => 'Ana']);
