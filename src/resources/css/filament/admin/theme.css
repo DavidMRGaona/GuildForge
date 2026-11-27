@@ -289,3 +289,12 @@
 .media-library-grid:not(:has(.fi-ta-record-checkbox)) .fi-ta-content-header .fi-ta-page-checkbox {
     display: none;
 }
+
+/* The calendar of a date field and the list of a select open upwards when there is no room below the
+   field, which happens a lot on a phone. Filament draws them at z-index 20, under the sticky top bar
+   (z-index 30), which then hid the calendar's month, year and weekdays: there was no way to change
+   the month (core#856). One above the top bar; modals and notifications stay over them */
+.fi-fo-date-time-picker-panel,
+.fi-select-input .fi-dropdown-panel {
+    z-index: 31;
+}
