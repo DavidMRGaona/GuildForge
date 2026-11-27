@@ -11,6 +11,7 @@ use App\Http\Middleware\EnsurePublicNameIsChosen;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\TestCase;
@@ -154,6 +155,68 @@ final class EnsurePublicNameIsChosenTest extends TestCase
         // The email can still be corrected from the settings
         $this->get(route('profile.show'))->assertOk();
         $this->get(route('verification.notice'))->assertOk();
+    }
+
+    public function test_the_settings_update_that_chooses_a_public_name_goes_through(): void
+    {
+        // A prompt on a public page (the forum's, forum#161) saves the name with the profile
+        // update and keeps the person where they were
+        $user = $this->namelessUser();
+        $this->actingAs($user);
+
+        $this->from(self::PUBLIC_URL)
+            ->withHeaders([
+                'X-Inertia' => 'true',
+                'X-Inertia-Version' => (string) app(HandleInertiaRequests::class)->version(request()),
+            ])
+            ->post(route('profile.update'), [
+                'name' => $user->name,
+                'email' => $user->email,
+                'display_name' => 'Ana',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(self::PUBLIC_URL);
+
+        $this->assertSame('Ana', $user->refresh()->display_name);
+    }
+
+    public function test_the_settings_update_still_validates_the_public_name_it_brings(): void
+    {
+        $user = $this->namelessUser();
+        $this->actingAs($user);
+
+        $this->from(self::PUBLIC_URL)
+            ->post(route('profile.update'), [
+                'name' => $user->name,
+                'email' => $user->email,
+                'display_name' => str_repeat('a', 300),
+            ])
+            ->assertRedirect(self::PUBLIC_URL)
+            ->assertSessionHasErrors('display_name');
+
+        $this->assertNull($user->refresh()->display_name);
+    }
+
+    public function test_a_settings_update_without_a_public_name_is_sent_to_the_screen(): void
+    {
+        $user = $this->namelessUser();
+        $this->actingAs($user);
+
+        $this->post(route('profile.update'), ['name' => $user->name, 'email' => $user->email])
+            ->assertRedirect(route('public-name.show'));
+        $this->post(route('profile.update'), [
+            'name' => $user->name,
+            'email' => $user->email,
+            'display_name' => " \u{00A0} ",
+        ])->assertRedirect(route('public-name.show'));
+        // With the avatar alone the update keeps the public name as it is, whatever comes with it
+        $this->post(route('profile.update'), [
+            'display_name' => 'Ana',
+            'avatar' => UploadedFile::fake()->image('avatar.png'),
+        ])->assertRedirect(route('public-name.show'));
+
+        $this->assertNull($user->refresh()->display_name);
+        $this->assertNull($user->avatar_public_id);
     }
 
     public function test_an_impersonation_never_sees_the_screen(): void

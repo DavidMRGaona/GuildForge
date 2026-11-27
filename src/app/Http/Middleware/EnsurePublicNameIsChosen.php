@@ -31,7 +31,11 @@ use Symfony\Component\HttpFoundation\Response;
  * - a request the maintenance mode lets through only for the two-factor setup;
  * - `public-name.*` (the screen), `logout`, `verification.*`, `profile.two-factor.*`,
  *   `impersonation.stop` and `filament.*` (the panel has its own stack; should it ever join the
- *   group, its users must not be locked out of it).
+ *   group, its users must not be locked out of it);
+ * - a settings update that chooses the public name (forum#161): prompts on public pages, such as
+ *   the forum's in place of its editor, save it with `profile.update` and keep the person on the
+ *   page. Its form request still validates the name; an update without one (the avatar alone
+ *   among them, which leaves the name as it is) is stopped like any other request.
  */
 final readonly class EnsurePublicNameIsChosen
 {
@@ -71,6 +75,7 @@ final readonly class EnsurePublicNameIsChosen
             || $user->anonymized_at !== null
             || ! $this->requiresLogin($request)
             || $request->routeIs(...self::EXCLUDED_ROUTE_NAMES)
+            || $this->choosesPublicName($request)
             || $request->attributes->get(EnsureSiteIsNotInMaintenance::SECURITY_ONLY_ATTRIBUTE) === true
             || $this->impersonation->isActive()
             || $this->emailVerification->mustVerify($user)) {
@@ -92,6 +97,24 @@ final readonly class EnsurePublicNameIsChosen
         return $request->isMethod('GET')
             ? redirect()->guest(route('public-name.show'))
             : redirect()->route('public-name.show');
+    }
+
+    /**
+     * Whether this is the settings update and it sets the public name: ProfileController::update()
+     * writes it only together with the account name and email, so all three must come.
+     */
+    private function choosesPublicName(Request $request): bool
+    {
+        if (! $request->routeIs('profile.update')) {
+            return false;
+        }
+
+        $publicName = $request->input('display_name');
+
+        return is_string($request->input('name'))
+            && is_string($request->input('email'))
+            && is_string($publicName)
+            && ! PublicName::isMissing($publicName);
     }
 
     private function requiresLogin(Request $request): bool
