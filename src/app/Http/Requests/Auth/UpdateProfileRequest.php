@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Auth;
 
+use App\Domain\Profiles\PublicName;
+use App\Http\Rules\PublicNameIsFilled;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -27,7 +29,8 @@ final class UpdateProfileRequest extends FormRequest
         return [
             // The avatar may come alone (the profile header), so a pending email change is not touched
             'name' => ['required_without:avatar', 'string', 'max:255'],
-            'display_name' => ['nullable', 'string', 'max:255'],
+            // Can change, never go back to empty (core#855); the avatar alone leaves it as it is
+            'display_name' => ['required_with:name', 'string', 'max:'.PublicName::MAX_LENGTH, new PublicNameIsFilled],
             'email' => [
                 'required_with:name',
                 'string',

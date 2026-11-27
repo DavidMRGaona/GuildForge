@@ -71,6 +71,13 @@ interface AuthServiceInterface
     public function updateProfile(string $userId, UpdateUserDTO $dto): UserResponseDTO;
 
     /**
+     * Give an account without a public name the one the person chose (core#855), through the model
+     * so the profile address follows it. Never replaces one: false, and nothing saved, when the
+     * account already has a public name.
+     */
+    public function choosePublicName(string $userId, string $publicName): bool;
+
+    /**
      * Replace the user's avatar, leaving the other profile fields and any pending email change alone.
      */
     public function updateAvatar(string $userId, string $avatarPublicId): UserResponseDTO;

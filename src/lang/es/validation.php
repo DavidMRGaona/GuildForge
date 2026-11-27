@@ -196,7 +196,7 @@ return [
         'password' => 'contraseña',
         'password_confirmation' => 'confirmación de contraseña',
         'current_password' => 'contraseña actual',
-        'display_name' => 'nombre para mostrar',
+        'display_name' => 'nombre público',
         'avatar' => 'avatar',
         'title' => 'título',
         'description' => 'descripción',

@@ -24,7 +24,7 @@ Usa el buscador o los filtros de la lista:
 ## Crear una cuenta
 
 1. Pulsa **Crear usuario**.
-2. Rellena **Nombre de usuario**, **Nombre para mostrar**, **Correo electrónico** y **Contraseña** (mínimo 8 caracteres).
+2. Rellena **Nombre de usuario**, **Correo electrónico** y **Contraseña** (mínimo 8 caracteres). El **Nombre público** es como verán a la persona en la web; si lo dejas vacío, lo elegirá ella al entrar. Una vez lo tiene, se puede cambiar, pero no dejar vacío.
 3. Si puedes, marca sus roles en **Roles y permisos**.
 4. Pulsa **Crear**.
 

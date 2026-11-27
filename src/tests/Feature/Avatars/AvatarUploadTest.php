@@ -71,6 +71,7 @@ final class AvatarUploadTest extends TestCase
 
         $this->actingAs($user)->post(route('profile.update'), [
             'name' => $user->name,
+            'display_name' => $user->display_name,
             'email' => $user->email,
             'avatar' => UploadedFile::fake()->createWithContent($fileName, $contents),
         ])->assertSessionHasNoErrors();
@@ -87,6 +88,7 @@ final class AvatarUploadTest extends TestCase
 
         $this->actingAs($user)->post(route('profile.update'), [
             'name' => $user->name,
+            'display_name' => $user->display_name,
             'email' => $user->email,
             'avatar' => UploadedFile::fake()->createWithContent($fileName, $contents),
         ])->assertSessionHasNoErrors();

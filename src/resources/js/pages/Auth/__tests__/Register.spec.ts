@@ -75,6 +75,34 @@ describe('Register page', () => {
         };
     });
 
+    it('asks for a public name, required, explained and starting empty', () => {
+        const wrapper = mountPage();
+        const input = wrapper.get('#display_name');
+
+        expect(input.attributes('required')).toBeDefined();
+        expect(form().display_name).toBe('');
+        expect(wrapper.get('label[for="display_name"]').text()).toBe('Nombre público');
+        expect(wrapper.get('#display_name-help').text()).toBe(
+            'Es como te verán las demás personas en la web. Puede ser tu nombre o un alias.'
+        );
+        expect(input.attributes('aria-describedby')).toBe('display_name-help');
+    });
+
+    it('says the account name is not shown publicly', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.get('#name-help').text()).toBe('No se muestra públicamente.');
+        expect(wrapper.get('#name').attributes('aria-describedby')).toBe('name-help');
+    });
+
+    it('shows the error of the public name', async () => {
+        const wrapper = mountPage();
+        form().errors = { display_name: 'El campo nombre público es obligatorio.' };
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.text()).toContain('El campo nombre público es obligatorio.');
+    });
+
     it('draws no module fields when none are offered', () => {
         const wrapper = mountPage();
 

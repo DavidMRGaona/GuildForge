@@ -12,6 +12,7 @@ use App\Application\DTOs\AnonymizeUserDTO;
 use App\Application\DTOs\ImageOptimizationSettingsDTO;
 use App\Application\Services\ImageOptimizationServiceInterface;
 use App\Application\Services\UserServiceInterface;
+use App\Domain\Profiles\PublicName;
 use App\Filament\Actions\ImpersonateAction;
 use App\Filament\Actions\RowDetailsAction;
 use App\Filament\Resources\UserResource\Pages\CreateUser;
@@ -21,6 +22,7 @@ use App\Filament\Resources\UserResource\RelationManagers\ImpersonationsAsImperso
 use App\Filament\Resources\UserResource\RelationManagers\ImpersonationsAsTargetRelationManager;
 use App\Filament\Resources\UserResource\RelationManagers\RoleAuditRelationManager;
 use App\Filament\Support\PanelNavigationGroup;
+use App\Http\Rules\PublicNameIsFilled;
 use App\Infrastructure\Authorization\Services\InactiveRoleHolders;
 use App\Infrastructure\Authorization\Services\RoleHolderLimitGuard;
 use App\Infrastructure\Authorization\Services\TwoFactorHolders;
@@ -110,8 +112,13 @@ class UserResource extends BaseResource
                     ->maxLength(255)
                     ->unique(ignoreRecord: true),
                 TextInput::make('display_name')
-                    ->label(__('Nombre para mostrar'))
-                    ->maxLength(255),
+                    ->label(__('filament.users.fields.publicName'))
+                    // It can change, never go back to empty once the account has one (core#855);
+                    // decided from the stored record, never from the submitted state
+                    ->required(static fn (?UserModel $record): bool => $record instanceof UserModel && ! PublicName::isMissing($record->display_name))
+                    ->maxLength(PublicName::MAX_LENGTH)
+                    ->rule(new PublicNameIsFilled)
+                    ->helperText(__('filament.users.fields.publicNameHelp')),
                 TextInput::make('email')
                     ->label(__('Correo electrónico'))
                     ->email()
@@ -257,7 +264,7 @@ class UserResource extends BaseResource
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('display_name')
-                    ->label(__('Nombre para mostrar'))
+                    ->label(__('filament.users.fields.publicName'))
                     ->searchable()
                     ->sortable()
                     ->visibleFrom('2xl'),

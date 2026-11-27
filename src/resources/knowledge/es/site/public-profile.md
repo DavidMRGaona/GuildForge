@@ -51,7 +51,7 @@ En el panel, la sección **Quién puede verlo** tiene cuatro opciones. Desde la 
 Tú siempre ves tu perfil, elijas lo que elijas. Si tu cuenta está desactivada o anonimizada, nadie lo ve.
 
 > [!IMPORTANT]
-> Sin **nombre público**, tu perfil solo lo ves tú, aunque lo hayas abierto a más gente. Tu perfil te lo avisa con el botón **Elegir nombre público**, que lleva a los ajustes de la cuenta, donde está el campo **Nombre para mostrar**. Tu nombre real nunca se enseña en su lugar.
+> Sin **nombre público**, tu perfil solo lo ves tú, aunque lo hayas abierto a más gente. Las cuentas nuevas lo eligen al registrarse, y las que no lo tienen, al entrar. Tu nombre real nunca se enseña en su lugar.
 
 Tu perfil tampoco aparece en buscadores como Google, lo veas tú o cualquier otra persona.
 

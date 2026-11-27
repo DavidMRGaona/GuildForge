@@ -247,6 +247,7 @@ final class RegistrationFieldsTest extends TestCase
     {
         return [
             'name' => 'Nuevo usuario',
+            'display_name' => 'Nuevo',
             'email' => 'nuevo@example.com',
             'password' => 'secret-password',
             'password_confirmation' => 'secret-password',

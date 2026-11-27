@@ -11,6 +11,10 @@ return [
     'email_verified' => 'Tu correo electrónico ha sido verificado.',
     'verification_link_sent' => 'Se ha enviado un nuevo enlace de verificación.',
     'email_verification_required' => 'Verifica tu correo electrónico para continuar.',
+    'public_name' => [
+        'required' => 'Elige tu nombre público para continuar.',
+        'saved' => 'Nombre público guardado.',
+    ],
     'profile_updated' => 'Ajustes actualizados correctamente.',
     'password_incorrect' => 'La contraseña actual no es correcta.',
     'password_changed' => 'Contraseña actualizada correctamente.',

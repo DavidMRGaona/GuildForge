@@ -23,6 +23,7 @@ return [
         'login' => 'Sign in',
         'two_factor_challenge' => 'Two-step verification',
         'register' => 'Create account',
+        'choose_public_name' => 'Choose your public name',
         'forgot_password' => 'Forgot password',
         'reset_password' => 'Reset password',
         'verify_email' => 'Verify email',

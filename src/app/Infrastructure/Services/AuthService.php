@@ -23,6 +23,7 @@ use App\Domain\Events\UserPasswordChanged;
 use App\Domain\Events\UserProfileUpdated;
 use App\Domain\Events\UserRegistered;
 use App\Domain\Exceptions\UserNotFoundException;
+use App\Domain\Profiles\PublicName;
 use App\Domain\Repositories\UserRepositoryInterface;
 use App\Domain\ValueObjects\UserId;
 use App\Infrastructure\Images\AvatarPath;
@@ -32,6 +33,7 @@ use App\Notifications\WelcomeNotification;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -219,6 +221,33 @@ final readonly class AuthService implements AuthServiceInterface
         $freshUser = $userModel->fresh();
 
         return $this->dtoFactory->createUserDTO($freshUser);
+    }
+
+    public function choosePublicName(string $userId, string $publicName): bool
+    {
+        $chosen = DB::transaction(function () use ($userId, $publicName): bool {
+            // Locked: two tabs sending the screen at once must not both write it
+            $userModel = UserModel::query()->whereKey($userId)->lockForUpdate()->first();
+
+            if (! $userModel instanceof UserModel) {
+                throw UserNotFoundException::withId($userId);
+            }
+
+            if (! PublicName::isMissing($userModel->display_name)) {
+                return false;
+            }
+
+            // Through the model: UserProfileObserver moves the profile address to follow it
+            $userModel->update(['display_name' => $publicName]);
+
+            return true;
+        });
+
+        if ($chosen) {
+            Event::dispatch(new UserProfileUpdated($userId));
+        }
+
+        return $chosen;
     }
 
     public function updateAvatar(string $userId, string $avatarPublicId): UserResponseDTO

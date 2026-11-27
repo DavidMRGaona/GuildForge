@@ -87,6 +87,7 @@ final class SiteNameTest extends TestCase
 
         $this->post('/registro', [
             'name' => 'John Doe',
+            'display_name' => 'John',
             'email' => 'john@example.com',
             'password' => 'secret-password',
             'password_confirmation' => 'secret-password',

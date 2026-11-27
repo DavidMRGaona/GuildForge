@@ -29,12 +29,14 @@ final class ProfileControllerTest extends TestCase
         for ($attempt = 1; $attempt <= 6; $attempt++) {
             $this->post(route('profile.update'), [
                 'name' => $user->name,
+                'display_name' => $user->display_name,
                 'email' => "new{$attempt}@example.com",
             ])->assertRedirect();
         }
 
         $this->post(route('profile.update'), [
             'name' => $user->name,
+            'display_name' => $user->display_name,
             'email' => 'new7@example.com',
         ])->assertTooManyRequests();
     }
@@ -52,6 +54,7 @@ final class ProfileControllerTest extends TestCase
 
         $this->post(route('profile.update'), [
             'name' => $user->name,
+            'display_name' => $user->display_name,
             'email' => 'corrected@example.com',
         ])->assertRedirect()->assertSessionHasNoErrors();
     }
@@ -63,6 +66,7 @@ final class ProfileControllerTest extends TestCase
 
         $this->actingAs($user)->post(route('profile.update'), [
             'name' => 'Renamed',
+            'display_name' => $user->display_name,
             'email' => 'new@example.com',
         ])->assertRedirect()->assertSessionHasNoErrors();
 
@@ -79,6 +83,7 @@ final class ProfileControllerTest extends TestCase
 
         $this->actingAs($user)->post(route('profile.update'), [
             'name' => $user->name,
+            'display_name' => $user->display_name,
             'email' => $user->email,
         ])->assertRedirect()->assertSessionHasNoErrors();
 
@@ -93,6 +98,7 @@ final class ProfileControllerTest extends TestCase
 
         $this->actingAs($user)->post(route('profile.update'), [
             'name' => $user->name,
+            'display_name' => $user->display_name,
             'email' => 'other@example.com',
         ])->assertRedirect()->assertSessionHasNoErrors();
 
@@ -153,6 +159,35 @@ final class ProfileControllerTest extends TestCase
 
         $this->actingAs($user)->post(route('profile.update'), ['name' => 'Renamed'])
             ->assertSessionHasErrors(['email']);
+    }
+
+    public function test_the_public_name_can_be_changed(): void
+    {
+        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+
+        $this->actingAs($user)->post(route('profile.update'), [
+            'name' => $user->name,
+            'display_name' => 'Lady Ana',
+            'email' => $user->email,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame('Lady Ana', $user->refresh()->display_name);
+    }
+
+    public function test_the_public_name_cannot_be_emptied_from_the_settings(): void
+    {
+        $user = UserModel::factory()->create(['display_name' => 'Ana']);
+        $this->actingAs($user);
+
+        foreach ([['display_name' => ''], ['display_name' => '   '], ['display_name' => null], []] as $field) {
+            $this->post(route('profile.update'), [
+                'name' => $user->name,
+                'email' => $user->email,
+                ...$field,
+            ])->assertSessionHasErrors('display_name');
+        }
+
+        $this->assertSame('Ana', $user->refresh()->display_name);
     }
 
     public function test_the_account_page_gets_the_banner_of_the_own_public_profile(): void

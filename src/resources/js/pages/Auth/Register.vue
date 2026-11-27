@@ -35,6 +35,7 @@ type RegisterForm = RegisterFormData & { registration_fields: Record<string, boo
 
 const form = useForm<RegisterForm>({
     name: '',
+    display_name: '',
     email: '',
     password: '',
     password_confirmation: '',
@@ -93,10 +94,36 @@ const submit = () => {
                 type="text"
                 required
                 autocomplete="name"
+                aria-describedby="name-help"
                 class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary placeholder-neutral-400 dark:placeholder-neutral-500 focus:border-primary-500 focus:outline-none focus:ring-primary-500"
             />
+            <p id="name-help" class="mt-1 text-sm text-base-muted">
+                {{ t('auth.register.nameHelp') }}
+            </p>
             <p v-if="form.errors.name" class="mt-1 text-sm text-error">
                 {{ form.errors.name }}
+            </p>
+        </div>
+
+        <div>
+            <label for="display_name" class="block text-sm font-medium text-base-secondary">
+                {{ t('auth.register.displayName') }}
+            </label>
+            <input
+                id="display_name"
+                v-model="form.display_name"
+                type="text"
+                required
+                maxlength="255"
+                autocomplete="nickname"
+                aria-describedby="display_name-help"
+                class="mt-1 block w-full rounded-md border border-default bg-surface px-3 py-2 text-base-primary placeholder-neutral-400 dark:placeholder-neutral-500 focus:border-primary-500 focus:outline-none focus:ring-primary-500"
+            />
+            <p id="display_name-help" class="mt-1 text-sm text-base-muted">
+                {{ t('auth.register.displayNameHelp') }}
+            </p>
+            <p v-if="form.errors.display_name" class="mt-1 text-sm text-error">
+                {{ form.errors.display_name }}
             </p>
         </div>
 

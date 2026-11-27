@@ -381,6 +381,7 @@ final class TwoFactorChallengeControllerTest extends TestCase
     {
         $this->post('/registro', [
             'name' => 'Persona de prueba',
+            'display_name' => 'Persona',
             'email' => 'nueva@example.com',
             'password' => self::PASSWORD,
             'password_confirmation' => self::PASSWORD,
