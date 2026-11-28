@@ -97,16 +97,17 @@ final class SiteSettingsMediaSourceTest extends TestCase
         $this->assertNull($source->editUrl('unknown', $settings));
     }
 
-    public function test_editor_content_folder_is_unclaimed_until_editor_uploads_move_there(): void
+    public function test_each_folder_goes_to_the_source_that_reads_it(): void
     {
         $registry = app(MediaSourceRegistryInterface::class);
 
-        $this->assertNull($registry->claimingSource(new MediaFileId('articles/content/2026/11/x')));
+        // The editor folder of a core text belongs to the source that reads the text (core#838)
+        $this->assertSame('rich_text', $registry->claimingSource(new MediaFileId('articles/content/2026/11/x'))?->type());
         $this->assertSame('articles', $registry->claimingSource(new MediaFileId('articles/2026/11/x'))?->type());
         $this->assertSame('settings', $registry->claimingSource(new MediaFileId('branding/x'))?->type());
         $this->assertSame('avatars', $registry->claimingSource(new MediaFileId('users/x'))?->type());
-        // The rich text source claims no folder
-        $this->assertSame('rich_text', $registry->source('rich_text')?->type());
+        // «Nosotros» keeps its editor images with the settings
+        $this->assertSame('settings', $registry->claimingSource(new MediaFileId('about/content/2026/11/x'))?->type());
         // The footer source claims the footer's folders, editor images included (core#698)
         $this->assertSame('footer', $registry->claimingSource(new MediaFileId('footer/content/2026/11/x'))?->type());
         // The banners of public profiles (core#743)

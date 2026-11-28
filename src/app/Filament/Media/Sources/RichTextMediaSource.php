@@ -11,6 +11,7 @@ use App\Application\Media\Contracts\ShowsMediaPreviews;
 use App\Application\Media\DTOs\MediaUsageDTO;
 use App\Application\Media\Services\MediaUrlExtractorInterface;
 use App\Application\Services\SettingsServiceInterface;
+use App\Domain\Content\Enums\EditorImageOrigin;
 use App\Domain\Knowledge\Enums\GuideSource;
 use App\Domain\Media\ValueObjects\MediaFileId;
 use App\Filament\Pages\Settings\AboutPageSettings;
@@ -32,8 +33,10 @@ use Illuminate\Support\Str;
  * the body of the site's own guides, the legal texts and the «Nosotros» history. Any URL counts, in an
  * attribute (src, href, srcset) or as bare text, whatever its transformation or version.
  *
- * The record id is `<kind>:<id>` (`events:<uuid>`, `settings:legal_terms_content`). It claims no folder:
- * the images it protects belong to the folders of other sources.
+ * The record id is `<kind>:<id>` (`events:<uuid>`, `settings:legal_terms_content`). It claims the editor
+ * folders of the texts it reads that no other source claims (core#838): the column sources leave `content/`
+ * out, and «Nosotros» and the footer belong to the settings and footer sources. Its files are public content,
+ * so they show their previews; any other image it protects belongs to the folder of another source.
  */
 final readonly class RichTextMediaSource implements MediaUsageSourceInterface, ReleasesMediaThroughCoreInterface, ShowsMediaPreviews
 {
@@ -46,6 +49,14 @@ final readonly class RichTextMediaSource implements MediaUsageSourceInterface, R
         'legal_cookies_content' => LegalPagesSettings::class,
         'legal_terms_content' => LegalPagesSettings::class,
         'about_history' => AboutPageSettings::class,
+    ];
+
+    /** The editor images of these origins are claimed here; «Nosotros» and the footer have their own sources */
+    public const array CLAIMED_ORIGINS = [
+        EditorImageOrigin::Events,
+        EditorImageOrigin::Articles,
+        EditorImageOrigin::Knowledge,
+        EditorImageOrigin::Legal,
     ];
 
     /** Both settings pages are behind the same permission */
@@ -74,7 +85,7 @@ final readonly class RichTextMediaSource implements MediaUsageSourceInterface, R
 
     public function folders(): array
     {
-        return [];
+        return array_map(static fn (EditorImageOrigin $origin): string => $origin->folder()->claim(), self::CLAIMED_ORIGINS);
     }
 
     public function excludedSubfolders(): array
@@ -144,7 +155,8 @@ final readonly class RichTextMediaSource implements MediaUsageSourceInterface, R
             }
         }
 
-        return array_any(array_keys(self::SETTING_PAGES), fn (string $key): bool => isset($this->urls->fileIdsIn($this->settings->get($key))[$file->value]));
+        // A deletion is decided on this answer: read the table, never a cache that may lag behind a save
+        return array_any(array_keys(self::SETTING_PAGES), fn (string $key): bool => isset($this->urls->fileIdsIn($this->settings->getStored($key))[$file->value]));
     }
 
     public function editUrl(string $recordId, object $user): ?string
