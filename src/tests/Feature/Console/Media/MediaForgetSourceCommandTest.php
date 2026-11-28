@@ -158,7 +158,7 @@ final class MediaForgetSourceCommandTest extends TestCase
 
         $this->artisanCommand('media:forget-source', ['type' => 'gametables.tables', '--force' => true])
             ->expectsOutputToContain('Deleted 1 usage rows of type "gametables.tables".')
-            ->expectsOutputToContain('Its refresh failure could not be cleared')
+            ->expectsOutputToContain('The refresh failure of "gametables.tables" could not be cleared')
             ->doesntExpectOutputToContain('Stack trace')
             ->assertFailed();
 

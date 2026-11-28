@@ -6,6 +6,7 @@ namespace Tests\Unit\Filament\Media;
 
 use App\Application\Media\Contracts\ReleasesMediaThroughCoreInterface;
 use App\Filament\Media\Sources\ArticleMediaSource;
+use App\Filament\Media\Sources\ArticleTextImageMediaSource;
 use App\Filament\Media\Sources\EventMediaSource;
 use App\Filament\Media\Sources\FooterMediaSource;
 use App\Filament\Media\Sources\GalleryPhotoMediaSource;
@@ -21,6 +22,7 @@ final class CoreSourcesReleaseThroughCoreTest extends TestCase
     {
         foreach ([
             ArticleMediaSource::class,
+            ArticleTextImageMediaSource::class,
             EventMediaSource::class,
             FooterMediaSource::class,
             GalleryPhotoMediaSource::class,

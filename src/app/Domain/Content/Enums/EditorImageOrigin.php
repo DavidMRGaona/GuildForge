@@ -10,7 +10,9 @@ use DateTimeInterface;
 /**
  * Where an image inserted with a rich text editor comes from. Its file lives in
  * "<origin>/content/<year>/<month>", apart from the images of columns ("<origin>/<year>/<month>"),
- * so the media library never offers it for deletion (core#481).
+ * so the media library tells it apart from them (core#481) and a text counts it as used while it names it.
+ * Its folder is claimed by RichTextMediaSource for events, knowledge and legal, by ArticleTextImageMediaSource
+ * for articles, and by the settings and footer sources for about and footer (core#838).
  */
 enum EditorImageOrigin: string
 {

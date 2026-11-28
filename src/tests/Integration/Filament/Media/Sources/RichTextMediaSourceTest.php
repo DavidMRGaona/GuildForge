@@ -23,6 +23,7 @@ use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaFileModel;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaUsageModel;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
+use App\Infrastructure\Persistence\Eloquent\Models\SettingModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -63,7 +64,10 @@ final class RichTextMediaSourceTest extends TestCase
         return $rows;
     }
 
-    private function siteGuide(string $body, string $source = 'site'): KnowledgeGuideModel
+    /**
+     * @param  array<string, mixed>  $conditions
+     */
+    private function siteGuide(string $body, string $source = 'site', array $conditions = []): KnowledgeGuideModel
     {
         return KnowledgeGuideModel::query()->create([
             'guide_id' => $source === 'site' ? 'site.normas-'.Str::random(6) : 'core.site.example-'.Str::random(6),
@@ -79,7 +83,7 @@ final class RichTextMediaSourceTest extends TestCase
             'body_format' => 'html',
             'body' => $body,
             'body_text' => 'Cuerpo.',
-            'conditions' => [],
+            'conditions' => $conditions,
             'related' => [],
             'featured' => false,
             'content_hash' => str_repeat('b', 40),
@@ -87,22 +91,24 @@ final class RichTextMediaSourceTest extends TestCase
         ]);
     }
 
-    public function test_declares_its_type_label_and_claims_no_folder(): void
+    public function test_declares_its_type_label_and_claims_the_editor_folders_of_its_texts(): void
     {
         $source = $this->source();
 
         $this->assertSame('rich_text', $source->type());
         $this->assertSame('Textos', $source->label());
-        $this->assertSame([], $source->folders());
+        // «Nosotros», the footer and the articles' editor images have their own sources (core#838)
+        $this->assertSame(['events/content/', 'knowledge/content/', 'legal/content/'], $source->folders());
         $this->assertSame([], $source->excludedSubfolders());
         $this->assertFalse($source->hidden());
     }
 
-    public function test_it_is_registered_without_claiming_any_folder(): void
+    public function test_it_is_registered_and_claims_only_the_editor_folders(): void
     {
         $registry = app(MediaSourceRegistryInterface::class);
 
         $this->assertInstanceOf(RichTextMediaSource::class, $registry->source('rich_text'));
+        $this->assertSame('rich_text', $registry->claimingSource(new MediaFileId('events/content/2026/11/a'))?->type());
         $this->assertSame('events', $registry->claimingSource(new MediaFileId('events/2026/11/a'))?->type());
     }
 
@@ -219,6 +225,19 @@ final class RichTextMediaSourceTest extends TestCase
         $this->assertSame([], $this->source()->usagesFor('settings:guild_name'));
     }
 
+    public function test_a_legal_text_is_read_from_the_table_when_deciding_a_deletion(): void
+    {
+        $settings = app(SettingsServiceInterface::class);
+        $settings->set('legal_notice_content', '<p>Sin imágenes</p>');
+        // Cached by this request, as another request may still have it
+        $this->assertSame('<p>Sin imágenes</p>', $settings->get('legal_notice_content'));
+        // Written by another request: this one's cache lags behind
+        SettingModel::query()->where('key', 'legal_notice_content')
+            ->update(['value' => '<p><img src="'.self::BASE.'guildforge/legal/content/2026/11/firma.png"></p>']);
+
+        $this->assertTrue($this->source()->usesFile(new MediaFileId('legal/content/2026/11/firma')));
+    }
+
     public function test_the_about_history_counts(): void
     {
         app(SettingsServiceInterface::class)->set('about_history', '<p><img src="'.self::BASE.'guildforge/about/local.jpg"></p>');
@@ -234,6 +253,48 @@ final class RichTextMediaSourceTest extends TestCase
         $this->assertTrue($this->source()->usesFile(new MediaFileId('events/guia')));
         $this->assertFalse($this->source()->usesFile(new MediaFileId('events/oficial')));
         $this->assertSame([['events/guia', 'guides:'.$guide->id, 'En el texto', 'Normas del local']], $this->usages());
+    }
+
+    /**
+     * @return iterable<string, array{0: array<string, mixed>}>
+     */
+    public static function restrictingConditions(): iterable
+    {
+        yield 'a permission' => [['permissions' => ['any' => ['events.update']]]];
+        yield 'a capability' => [['capabilities' => ['gametables.campaigns']]];
+        yield 'association members only' => [['association_member' => true]];
+        yield 'a module' => [['modules' => ['game-tables']]];
+    }
+
+    /**
+     * @param  array<string, mixed>  $conditions
+     */
+    #[DataProvider('restrictingConditions')]
+    public function test_the_images_of_a_guide_not_everybody_sees_are_hidden_but_still_used(array $conditions): void
+    {
+        // Only some people may read it: whoever opens the library may not be one of them (core#838)
+        $guide = $this->siteGuide('<p><img src="'.self::BASE.'guildforge/knowledge/content/2026/11/r.jpg"></p>', conditions: $conditions);
+
+        $this->assertTrue($this->source()->usesFile(new MediaFileId('knowledge/content/2026/11/r')));
+        $usage = $this->source()->usagesFor('guides:'.$guide->id)[0];
+        $this->assertTrue($usage->hidden);
+        $this->assertSame('Normas del local', $usage->title);
+    }
+
+    public function test_the_images_of_a_guide_without_conditions_are_shown(): void
+    {
+        $guide = $this->siteGuide('<p><img src="'.self::BASE.'guildforge/knowledge/content/2026/11/o.jpg"></p>');
+
+        $this->assertFalse($this->source()->usagesFor('guides:'.$guide->id)[0]->hidden);
+    }
+
+    public function test_a_guide_whose_conditions_cannot_be_read_hides_its_images(): void
+    {
+        $guide = $this->siteGuide('<p><img src="'.self::BASE.'guildforge/knowledge/content/2026/11/u.jpg"></p>');
+        // Written by other means: not the JSON list the model casts
+        KnowledgeGuideModel::query()->whereKey($guide->id)->toBase()->update(['conditions' => '"not a list"']);
+
+        $this->assertTrue($this->source()->usagesFor('guides:'.$guide->id)[0]->hidden);
     }
 
     public function test_usages_for_one_record_and_unknown_records(): void
