@@ -103,8 +103,8 @@ final class EditorImageMediaTest extends TestCase
         $source = app(MediaSourceRegistryInterface::class)->claimingSource(new MediaFileId('articles/content/2026/11/a'));
 
         $this->assertInstanceOf(ArticleTextImageMediaSource::class, $source);
-        $this->assertContains(ConcealsUnusedMediaFiles::class, (array) class_implements($source));
-        $this->assertContains(ShowsMediaPreviews::class, (array) class_implements($source));
+        $this->assertContains(ConcealsUnusedMediaFiles::class, class_implements($source));
+        $this->assertContains(ShowsMediaPreviews::class, class_implements($source));
     }
 
     public function test_the_web_editor_uploads_into_the_articles_folder_only(): void
