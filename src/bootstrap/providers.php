@@ -6,6 +6,7 @@ use App\Infrastructure\Mail\Providers\DynamicMailServiceProvider;
 use App\Providers\ActivityServiceProvider;
 use App\Providers\AppServiceProvider;
 use App\Providers\AuthorizationServiceProvider;
+use App\Providers\BotsServiceProvider;
 use App\Providers\Filament\AdminPanelProvider;
 use App\Providers\ImpersonationServiceProvider;
 use App\Providers\KnowledgeServiceProvider;
@@ -28,6 +29,7 @@ return [
     ActivityServiceProvider::class,
     AppServiceProvider::class,
     AuthorizationServiceProvider::class,
+    BotsServiceProvider::class,
     DynamicMailServiceProvider::class,
     AdminPanelProvider::class,
     ImpersonationServiceProvider::class,

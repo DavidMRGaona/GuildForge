@@ -7,6 +7,7 @@ namespace App\Modules;
 use App\Application\Activity\Services\ActivitySourceRegistryInterface;
 use App\Application\Authorization\DTOs\PermissionDefinitionDTO;
 use App\Application\Authorization\Services\PermissionRegistryInterface;
+use App\Application\Bots\Services\BotRegistryInterface;
 use App\Application\Calendar\Services\CalendarAttendanceSourceRegistryInterface;
 use App\Application\Calendar\Services\CalendarSourceRegistryInterface;
 use App\Application\Content\Services\EditorTextSourceRegistryInterface;
@@ -138,6 +139,9 @@ final class ModuleLoader
 
         // Register site blocks from the provider
         $this->registerProviderSiteBlocks($provider, $module->name()->value);
+
+        // Register bots from the provider
+        $this->registerProviderBots($provider, $module->name()->value);
 
         // Register public profile sections and stats from the provider
         $this->registerProviderProfileSections($provider, $module->name()->value);
@@ -375,6 +379,22 @@ final class ModuleLoader
 
         if ($this->app->bound(SiteBlockRegistryInterface::class)) {
             $this->app->make(SiteBlockRegistryInterface::class)->registerMany($blocks, $moduleName);
+        }
+    }
+
+    /**
+     * Register bots (accounts that are not people) from a module provider.
+     */
+    private function registerProviderBots(ModuleServiceProvider $provider, string $moduleName): void
+    {
+        $bots = $provider->registerBots();
+
+        if ($bots === []) {
+            return;
+        }
+
+        if ($this->app->bound(BotRegistryInterface::class)) {
+            $this->app->make(BotRegistryInterface::class)->registerMany($bots, $moduleName);
         }
     }
 
