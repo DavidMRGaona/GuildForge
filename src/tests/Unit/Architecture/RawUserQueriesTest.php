@@ -21,9 +21,9 @@ final class RawUserQueriesTest extends TestCase
 {
     use ReadsFiles;
 
-    private const string PATTERN = '/DB::table\(\s*[\'"]users(?:\s+as\s+\w+)?[\'"]'
-        .'|->from\(\s*[\'"]users(?:\s+as\s+\w+)?[\'"]'
-        .'|(?i:join)\(\s*[\'"]users(?:\s+as\s+\w+)?[\'"]'
+    private const string PATTERN = '/DB::table\(\s*[\'"](?:\w+\.)?users(?:\s+(?i:as)\s+\w+)?[\'"]'
+        .'|->from\(\s*[\'"](?:\w+\.)?users(?:\s+(?i:as)\s+\w+)?[\'"]'
+        .'|(?i:join(?:where)?)\(\s*[\'"](?:\w+\.)?users(?:\s+(?i:as)\s+\w+)?[\'"]'
         .'|UserModel::(?:query\(\)->)?withoutGlobalScopes\(\s*\)/';
 
     /**
@@ -98,6 +98,13 @@ final class RawUserQueriesTest extends TestCase
         yield 'aliased table' => ["DB::table('users as u')->count();"];
         yield 'aliased from' => ["\$db->from('users as u')"];
         yield 'aliased join' => ["->leftJoin('users as u', 'u.id', '=', 'x.user_id')"];
+        yield 'upper case alias keyword' => ["DB::table('users AS u')->count();"];
+        yield 'join where' => ["->joinWhere('users', 'users.id', '=', 'x.user_id')"];
+        yield 'left join where' => ["->leftJoinWhere('users', 'users.id', '=', 'x.user_id')"];
+        yield 'right join where' => ["->rightJoinWhere('users as u', 'u.id', '=', 'x.user_id')"];
+        yield 'schema qualified table' => ["DB::table('public.users')->count();"];
+        yield 'schema qualified join' => ["->join('public.users', 'users.id', '=', 'x.user_id')"];
+        yield 'schema qualified alias' => ["->from('public.users as u')"];
         yield 'all scopes dropped' => ['UserModel::withoutGlobalScopes()->get();'];
         yield 'all scopes dropped after query' => ['UserModel::query()->withoutGlobalScopes()->get();'];
     }
@@ -111,6 +118,7 @@ final class RawUserQueriesTest extends TestCase
         yield 'with bots' => ['UserModel::query()->withBots()->get();'];
         yield 'one scope dropped' => ['UserModel::withoutGlobalScope(SoftDeletingScope::class)->get();'];
         yield 'similar table name' => ["DB::table('users_archive')->count();"];
+        yield 'schema qualified similar name' => ["DB::table('public.users_archive')->count();"];
         yield 'other table' => ["DB::table('user_role')->count();"];
         yield 'other model' => ['ArticleModel::query()->withoutGlobalScopes()->get();'];
     }
