@@ -84,7 +84,7 @@ final class MediaForgetSourceCommand extends Command
 
         // Nothing of the type is left to conceal; a failure left behind only keeps it concealed
         if (! $syncState->forgetRefreshFailure($type)) {
-            $this->error('Its refresh failure could not be cleared: the type stays concealed until a sync reads its source again.');
+            $this->error(sprintf('The refresh failure of "%s" could not be cleared: the type stays concealed until a sync reads its source again.', $type));
 
             return self::FAILURE;
         }
