@@ -4,15 +4,24 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Bots;
 
+use App\Application\Activity\Services\ActivityPublisherInterface;
+use App\Application\Authorization\Services\AuthorizationServiceInterface;
+use App\Application\Authorization\Services\RoleAuditLoggerInterface;
 use App\Application\Bots\DTOs\BotDefinitionDTO;
 use App\Application\Bots\DTOs\BotDTO;
+use App\Application\Bots\Services\BotAdoptionRule;
 use App\Application\Bots\Services\BotRegistryInterface;
 use App\Application\Bots\Services\BotsInterface;
+use App\Application\Profiles\Services\UserProfileServiceInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
+use App\Application\WebPush\Services\WebPushSubscriptionServiceInterface;
+use App\Domain\Authorization\Enums\RoleAuditSource;
 use App\Domain\Bots\Exceptions\UnknownBotException;
 use App\Domain\Bots\ValueObjects\BotKey;
+use App\Infrastructure\Authorization\Services\RoleAuditContext;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -27,6 +36,13 @@ class EloquentBots implements BotsInterface
     public function __construct(
         private readonly BotRegistryInterface $registry,
         private readonly SiteBrandingServiceInterface $branding,
+        private readonly BotAdoptionRule $adoptionRule,
+        private readonly UserProfileServiceInterface $profiles,
+        private readonly ActivityPublisherInterface $activity,
+        private readonly WebPushSubscriptionServiceInterface $webPush,
+        private readonly RoleAuditLoggerInterface $audit,
+        private readonly RoleAuditContext $auditContext,
+        private readonly AuthorizationServiceInterface $authorization,
     ) {}
 
     public function id(string $key): string
@@ -85,6 +101,79 @@ class EloquentBots implements BotsInterface
         }
 
         return $result;
+    }
+
+    public function adopt(string $key, string $accountId): bool
+    {
+        if (! $this->registry->find($key) instanceof BotDefinitionDTO) {
+            throw UnknownBotException::forKey($key);
+        }
+        BotKey::of($key);
+
+        if (! Str::isUuid($accountId)) {
+            return false;
+        }
+        $id = strtolower($accountId);
+
+        $adopted = DB::transaction(function () use ($key, $id): ?UserModel {
+            // The row is locked before the rule reads it, so nothing changes between check and effects
+            $account = UserModel::query()->withBots()->withTrashed()->whereKey($id)->lockForUpdate()->first();
+            if (! $account instanceof UserModel) {
+                return null;
+            }
+            if ($account->bot_key === $key) {
+                return null;
+            }
+            if (! $this->adoptionRule->allows($account, $key)) {
+                return null;
+            }
+
+            $email = (string) $account->email;
+
+            // Before the profile is forgotten: nothing is announced automatically once bot_key is set
+            $this->removeEveryRole($account);
+            $account->forceFill([
+                'bot_key' => $key,
+                // A password nobody knows, and no session or remember cookie left
+                'password' => Hash::make(Str::random(64)),
+                'remember_token' => null,
+                'deleted_at' => null,
+            ])->saveQuietly();
+
+            $this->profiles->forget($id);
+            DB::table('site_notifications')->where('user_id', $id)->delete();
+            DB::table('user_site_notification_seen')->where('user_id', $id)->delete();
+            $this->webPush->forgetUser($id);
+            DB::table('password_reset_tokens')->where('email', $email)->delete();
+
+            return $account;
+        });
+
+        if (! $adopted instanceof UserModel) {
+            // Idempotent: the bot of this very key is a success, nothing more is done
+            return UserModel::query()->withBots()->withTrashed()->whereKey($id)->where('bot_key', $key)->exists();
+        }
+
+        $this->authorization->invalidateCacheFor($adopted);
+        // Achievements stop counting the account: the observers no longer announce a bot
+        $this->activity->recorded('core.account', $id);
+        $this->activity->recorded('core.profile-completed', $id);
+
+        return true;
+    }
+
+    private function removeEveryRole(UserModel $account): void
+    {
+        /** @var list<string> $names */
+        $names = $account->roles()->pluck('roles.name')->all();
+
+        $this->auditContext->actingFor(null, function () use ($account, $names): void {
+            foreach ($names as $name) {
+                $this->audit->roleRemoved($account, $name);
+            }
+        }, RoleAuditSource::System);
+
+        $account->roles()->detach();
     }
 
     /**

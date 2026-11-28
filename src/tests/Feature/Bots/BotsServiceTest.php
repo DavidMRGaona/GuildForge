@@ -4,13 +4,21 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Bots;
 
+use App\Application\Activity\Services\ActivityPublisherInterface;
+use App\Application\Authorization\Services\AuthorizationServiceInterface;
+use App\Application\Authorization\Services\RoleAuditLoggerInterface;
+use App\Application\Bots\Services\BotAdoptionRule;
 use App\Application\Bots\Services\BotRegistryInterface;
 use App\Application\Bots\Services\BotsInterface;
+use App\Application\Profiles\Services\UserProfileServiceInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
+use App\Application\WebPush\Services\WebPushSubscriptionServiceInterface;
 use App\Domain\Bots\Exceptions\UnknownBotException;
+use App\Infrastructure\Authorization\Services\RoleAuditContext;
 use App\Infrastructure\Bots\BotRegistry;
 use App\Infrastructure\Bots\EloquentBots;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -72,9 +80,24 @@ final class BotsServiceTest extends TestCase
 
     public function test_the_second_read_inside_the_lock_prevents_a_duplicate(): void
     {
-        $bots = new class($this->app->make(BotRegistryInterface::class), $this->app->make(SiteBrandingServiceInterface::class)) extends EloquentBots
+        $bots = new class($this->app) extends EloquentBots
         {
             public ?string $racedId = null;
+
+            public function __construct(Application $app)
+            {
+                parent::__construct(
+                    $app->make(BotRegistryInterface::class),
+                    $app->make(SiteBrandingServiceInterface::class),
+                    $app->make(BotAdoptionRule::class),
+                    $app->make(UserProfileServiceInterface::class),
+                    $app->make(ActivityPublisherInterface::class),
+                    $app->make(WebPushSubscriptionServiceInterface::class),
+                    $app->make(RoleAuditLoggerInterface::class),
+                    $app->make(RoleAuditContext::class),
+                    $app->make(AuthorizationServiceInterface::class),
+                );
+            }
 
             /** Simulates another process creating the bot between the first read and the lock */
             protected function afterFirstLookup(string $key): void

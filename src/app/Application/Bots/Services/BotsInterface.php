@@ -30,4 +30,13 @@ interface BotsInterface
      * @return array<string, BotDTO>
      */
     public function describe(array $ids): array;
+
+    /**
+     * Turns an existing account that never belonged to a person into the bot's account (the forum's
+     * old system account). Refuses, changing nothing, any account BotAdoptionRule does not allow: false.
+     * Already the bot of this key: true, nothing done again.
+     *
+     * @throws UnknownBotException when no enabled module registers the key
+     */
+    public function adopt(string $key, string $accountId): bool;
 }
