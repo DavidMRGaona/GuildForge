@@ -18,7 +18,7 @@ Requires core ≥ the release with #863; set `requires.core` to it.
 
 ## What a bot is
 
-A bot is a row in `users` whose `bot_key` is set (`<module>.<name>`, unique); people have `bot_key` null. Its password is random and never kept, its email is `bot-<id>@bots.invalid`, and it has no roles, no profile and no sessions. Its public name (`display_name`) is null by default, which means **the site's name** (`SiteBrandingServiceInterface::siteName()`); a bot that declares its own `name()` keeps that instead. `bot_key` is not mass assignable: only `BotsInterface` sets it.
+A bot is a row in `users` whose `bot_key` is set (`<module>.<name>`, unique); people have `bot_key` null. Its password is random and never kept, its email is `bot-<id>@bots.invalid` (an adopted account keeps its own email, which the adoption rule requires to be on an `.invalid` domain), and it has no roles, no profile and no sessions. Its public name (`display_name`) is null by default, which means **the site's name** (`SiteBrandingServiceInterface::siteName()`); a bot that declares its own `name()` gets it written as `display_name` when the account is created or adopted. `bot_key` is not mass assignable: only `BotsInterface` sets it.
 
 The core has no bots of its own: only enabled modules offer them. The account is created the first time a module asks for it and stays when the module is disabled (its posts keep an author); it can be recognised and described then, but not asked for by key until the module is enabled again.
 
@@ -82,7 +82,7 @@ The registry (`BotRegistryInterface`) fails closed and never throws. It leaves a
 $authorId = $this->bots->id('forum.publisher');
 ```
 
-Creation takes a lock per key, so two callers at once get the same account. Call `id()` **outside a database transaction when you can**: an outer transaction keeps the new row uncommitted after the lock is released, and a concurrent caller may then not see it and try to create the account again, hitting the unique index on `bot_key`. A module that calls it at the start of a job or request, before opening its own transaction, never sees this.
+Creation takes a lock per key, so two callers at once get the same account. The lock is released when `id()` returns, not when a caller's transaction commits: inside an outer transaction the new row stays uncommitted for a while, and a concurrent caller may not see it and try to create the account again, hitting the unique index on `bot_key`. The insert therefore runs in its own (nested, so a savepoint) transaction and, on that unique violation, `id()` reads the row that won and returns it: the caller's transaction stays usable (on PostgreSQL a failed statement would otherwise abort all of it). Even so, **call `id()` outside a database transaction when you can**, for example at the start of a job or request.
 
 The service is bound `scoped`: inject it, never keep it between requests.
 
@@ -117,7 +117,7 @@ A site that had a system account before bots existed (the forum's old author) tu
 $adopted = $this->bots->adopt('forum.publisher', $accountId); // bool
 ```
 
-`adopt()` throws `UnknownBotException` for an unregistered key, and returns `false`, changing nothing, for a malformed or unknown id, an account taken meanwhile by the same key on another account, or any account `App\Infrastructure\Bots\BotAdoptionRule` does not allow. Adopting wipes the login, so the rule only takes an account that could never have belonged to a person:
+`adopt()` throws `UnknownBotException` for an unregistered key, and returns `false`, changing nothing, for a malformed or unknown id, a key another account already holds, or any account `App\Infrastructure\Bots\BotAdoptionRule` does not allow. Every refusal is warned once a day (`bots:warned:`, context `user_id`, `key` and `reason`: `domain`, `verified`, `two_factor`, `roles`, `anonymized`, `other_bot` or `key_taken`; never the email). Adopting wipes the login, so the rule only takes an account that could never have belonged to a person:
 
 - the email is on an `.invalid` domain (`.invalid` itself or a subdomain);
 - the email was never verified, and the account is not anonymized;
@@ -125,7 +125,7 @@ $adopted = $this->bots->adopt('forum.publisher', $accountId); // bool
 - it holds no role but the base role `member` (deactivated accounts count);
 - it is not the account of another bot (the same key again is allowed).
 
-The account is locked first and everything happens in one transaction. It removes every role (written to the role history, source `system`), replaces the password by a random one and clears the remember token and the deactivation, forgets the public profile (and the banner), and deletes the account's notices, their seen mark, push subscriptions and pending password reset. Afterwards it invalidates the account's authorization cache and publishes `core.account` and `core.profile-completed` for it, so consumers stop counting the account. Already the bot of this key: `true`, nothing done again. After `adopt()`, `id()` returns that account.
+The account is locked first and everything happens in one transaction. It removes every role (written to the role history, source `system`), replaces the password by a random one, clears the remember token and the deactivation, and sets the name like a new bot (`name` is the bot's label and `display_name` its declared name or null, so the account follows a rename of the site), forgets the public profile (and the banner), and deletes the account's notices, their seen mark, push subscriptions and pending password reset. Afterwards it publishes `core.account` and `core.profile-completed` for it, so consumers stop counting the account, and then invalidates the account's authorization cache (in that order: if the cache fails, a retry finds the bot already done, so the activity must be out first). Already the bot of this key: `true`, nothing done again. After `adopt()`, `id()` returns that account.
 
 ## What bots are kept out of
 
@@ -140,6 +140,7 @@ The account is locked first and everything happens in one transaction. It remove
 | Profiles | No profile row is created, and an adopted account's is forgotten. |
 | Activity | Creating, changing, deactivating or restoring a bot announces nothing, and `ActivityReaderInterface` drops the facts of bots, so achievements never count them. |
 | Notices and mail | The notification centre stores nothing for a bot (`SiteNotificationChannel`) and the mail preferences listener cancels the mail channel for one (`FilterMailByPreferences`), even when a module loads it with `withBots()` and calls `notify()`. |
+| Media library | A bot's avatar still counts as used: `AvatarMediaSource` queries with the scopes removed on purpose, so a file a bot uses is never offered for deletion. |
 | Push | No subscription can exist for a bot, and adoption deletes any the account had. |
 
 ## Rules for module code
