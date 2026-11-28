@@ -35,8 +35,10 @@ use Illuminate\Support\Str;
  *
  * The record id is `<kind>:<id>` (`events:<uuid>`, `settings:legal_terms_content`). It claims the editor
  * folders of the texts it reads that no other source claims (core#838): the column sources leave `content/`
- * out, and «Nosotros» and the footer belong to the settings and footer sources. Its files are public content,
- * so they show their previews; any other image it protects belongs to the folder of another source.
+ * out, and «Nosotros» and the footer belong to the settings and footer sources. Only the panel's editors upload
+ * to these folders, so their files are public content and show their previews. The articles' folder, where the
+ * web editor uploads too, has a source of its own (ArticleTextImageMediaSource). Any other image it protects
+ * belongs to the folder of another source.
  */
 final readonly class RichTextMediaSource implements MediaUsageSourceInterface, ReleasesMediaThroughCoreInterface, ShowsMediaPreviews
 {
@@ -51,10 +53,14 @@ final readonly class RichTextMediaSource implements MediaUsageSourceInterface, R
         'about_history' => AboutPageSettings::class,
     ];
 
-    /** The editor images of these origins are claimed here; «Nosotros» and the footer have their own sources */
+    /**
+     * The editor images of these origins are claimed here. Only the panel uploads to them: the web editor stores
+     * into the articles' folder alone (EditorImageUploadController), and a web event proposal keeps only images
+     * already in the events' folder (RichTextSanitizerInterface). «Nosotros», the footer and the articles have
+     * sources of their own.
+     */
     public const array CLAIMED_ORIGINS = [
         EditorImageOrigin::Events,
-        EditorImageOrigin::Articles,
         EditorImageOrigin::Knowledge,
         EditorImageOrigin::Legal,
     ];

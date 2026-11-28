@@ -102,7 +102,8 @@ final class SiteSettingsMediaSourceTest extends TestCase
         $registry = app(MediaSourceRegistryInterface::class);
 
         // The editor folder of a core text belongs to the source that reads the text (core#838)
-        $this->assertSame('rich_text', $registry->claimingSource(new MediaFileId('articles/content/2026/11/x'))?->type());
+        $this->assertSame('rich_text', $registry->claimingSource(new MediaFileId('events/content/2026/11/x'))?->type());
+        $this->assertSame('core.article-text-images', $registry->claimingSource(new MediaFileId('articles/content/2026/11/x'))?->type());
         $this->assertSame('articles', $registry->claimingSource(new MediaFileId('articles/2026/11/x'))?->type());
         $this->assertSame('settings', $registry->claimingSource(new MediaFileId('branding/x'))?->type());
         $this->assertSame('avatars', $registry->claimingSource(new MediaFileId('users/x'))?->type());
@@ -116,6 +117,6 @@ final class SiteSettingsMediaSourceTest extends TestCase
         $this->assertSame('core.proposal-images', $registry->claimingSource(new MediaFileId('events/proposals/2026/11/x'))?->type());
         $this->assertSame('core.proposal-images', $registry->claimingSource(new MediaFileId('articles/proposals/2026/11/x'))?->type());
         $this->assertSame('events', $registry->claimingSource(new MediaFileId('events/2026/11/x'))?->type());
-        $this->assertCount(10, $registry->sources());
+        $this->assertCount(11, $registry->sources());
     }
 }

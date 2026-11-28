@@ -1451,6 +1451,7 @@ return [
             'footer' => 'Pie de página',
             'profile_banners' => 'Banners de perfil',
             'proposal_images' => 'Propuestas desde la web',
+            'article_text_images' => 'Textos de artículos',
         ],
         'footer_titles' => [
             'logo' => 'Pie de página · logotipo «:alt»',

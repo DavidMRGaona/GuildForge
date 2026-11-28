@@ -94,8 +94,8 @@ final class RichTextMediaSourceTest extends TestCase
 
         $this->assertSame('rich_text', $source->type());
         $this->assertSame('Textos', $source->label());
-        // «Nosotros» and the footer have their own sources (core#838)
-        $this->assertSame(['events/content/', 'articles/content/', 'knowledge/content/', 'legal/content/'], $source->folders());
+        // «Nosotros», the footer and the articles' editor images have their own sources (core#838)
+        $this->assertSame(['events/content/', 'knowledge/content/', 'legal/content/'], $source->folders());
         $this->assertSame([], $source->excludedSubfolders());
         $this->assertFalse($source->hidden());
     }

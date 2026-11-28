@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Media;
 
+use App\Application\Media\Contracts\ConcealsUnusedMediaFiles;
+use App\Application\Media\Contracts\ShowsMediaPreviews;
 use App\Application\Media\DTOs\MediaDeletionResultDTO;
 use App\Application\Media\Services\MediaCatalogInterface;
 use App\Application\Media\Services\MediaDeletionServiceInterface;
@@ -14,7 +16,9 @@ use App\Domain\Content\Enums\EditorImageOrigin;
 use App\Domain\Media\Enums\MediaDeletionRefusal;
 use App\Domain\Media\Enums\MediaFileStatus;
 use App\Domain\Media\ValueObjects\MediaFileId;
+use App\Filament\Media\Sources\ArticleTextImageMediaSource;
 use App\Filament\Media\Sources\RichTextMediaSource;
+use App\Http\Controllers\EditorImageUploadController;
 use App\Infrastructure\Knowledge\Persistence\Eloquent\Models\KnowledgeGuideModel;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaDeletionModel;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaFileModel;
@@ -23,7 +27,11 @@ use App\Infrastructure\Media\Services\MediaLibraryQueryInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Routing\Route as LaravelRoute;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\Authorization\CreatesUsersWithPermissions;
@@ -34,6 +42,10 @@ use Tests\TestCase;
  * The images inserted with the editor of the core texts live in "<origin>/content/" (core#481). The rich text
  * source reads those texts, so it claims the folders no other source claims (core#838): their files are shown
  * with their thumbnail, count as unused when no text names them, and can be deleted as any other file.
+ *
+ * The articles' folder also takes the images of the web editor, where members write their proposals: one left
+ * unused may come from a draft only its author saw, so a source of its own conceals the unused ones, as for
+ * the images of the web proposal forms (core#841). Used ones show and every one is deleted alike.
  */
 final class EditorImageMediaTest extends TestCase
 {
@@ -54,6 +66,7 @@ final class EditorImageMediaTest extends TestCase
         config(['media.delete_enabled' => true]);
         $this->catalog = new InMemoryMediaCatalog;
         $this->app->instance(MediaCatalogInterface::class, $this->catalog);
+        Storage::fake('images');
     }
 
     /**
@@ -61,18 +74,53 @@ final class EditorImageMediaTest extends TestCase
      */
     public static function claimedOrigins(): iterable
     {
-        yield 'event descriptions' => ['events'];
+        yield from self::panelOnlyOrigins();
         yield 'article contents' => ['articles'];
+    }
+
+    /**
+     * Folders only the panel's editors upload to: the web editor stores into the articles' one alone.
+     *
+     * @return iterable<string, array{0: string}>
+     */
+    public static function panelOnlyOrigins(): iterable
+    {
+        yield 'event descriptions' => ['events'];
         yield 'site guides' => ['knowledge'];
         yield 'legal texts' => ['legal'];
     }
 
-    #[DataProvider('claimedOrigins')]
+    #[DataProvider('panelOnlyOrigins')]
     public function test_the_rich_text_source_claims_the_editor_folder(string $origin): void
     {
         $registry = app(MediaSourceRegistryInterface::class);
 
         $this->assertSame(RichTextMediaSource::TYPE, $registry->claimingSource(new MediaFileId($origin.'/content/2026/11/a'))?->type());
+    }
+
+    public function test_the_articles_editor_folder_has_a_source_that_conceals_its_unused_files(): void
+    {
+        $source = app(MediaSourceRegistryInterface::class)->claimingSource(new MediaFileId('articles/content/2026/11/a'));
+
+        $this->assertInstanceOf(ArticleTextImageMediaSource::class, $source);
+        $this->assertContains(ConcealsUnusedMediaFiles::class, (array) class_implements($source));
+        $this->assertContains(ShowsMediaPreviews::class, (array) class_implements($source));
+    }
+
+    public function test_the_web_editor_uploads_into_the_articles_folder_only(): void
+    {
+        // Were another route to store the web editor's images, its folder would need the articles' treatment
+        $uploads = array_values(array_filter(
+            Route::getRoutes()->getRoutes(),
+            static fn (LaravelRoute $route): bool => $route->getActionName() === EditorImageUploadController::class,
+        ));
+
+        $this->assertSame(['editor-images.articles.store'], array_map(static fn (LaravelRoute $route): ?string => $route->getName(), $uploads));
+
+        $this->actingAs($this->editorWithPermissions(['articles.create']))
+            ->post('/editor/imagenes/articulos', ['image' => UploadedFile::fake()->image('foto.png')])
+            ->assertCreated()
+            ->assertJsonPath('id', fn (string $id): bool => str_starts_with($id, EditorImageOrigin::Articles->folder()->claim()));
     }
 
     public function test_every_editor_folder_has_a_source(): void
@@ -98,7 +146,7 @@ final class EditorImageMediaTest extends TestCase
         $this->assertNull($registry->claimingSource(new MediaFileId('legal/2026/11/a')));
     }
 
-    #[DataProvider('claimedOrigins')]
+    #[DataProvider('panelOnlyOrigins')]
     public function test_an_image_no_text_names_is_unused_shown_and_deleted(string $origin): void
     {
         $file = $origin.'/content/2026/11/'.Str::uuid()->toString();
@@ -114,6 +162,25 @@ final class EditorImageMediaTest extends TestCase
         $this->assertSame([], $result->refused);
         $this->assertArrayNotHasKey($file, $this->catalog->assets);
         $this->assertSame(1, MediaDeletionModel::query()->where('file_id', $file)->count());
+    }
+
+    public function test_an_unused_image_of_the_articles_folder_is_concealed_and_deleted(): void
+    {
+        // Uploaded from the web editor for a draft that was never saved, or taken out of it
+        $file = 'articles/content/2026/11/'.Str::uuid()->toString();
+        $this->catalog->add($file, uploadedAt: '2026-11-01 10:00:00');
+        $this->sync();
+
+        $this->assertSame(MediaFileStatus::Unused, $this->library()->statusOf($this->file($file)));
+        $this->assertTrue($this->library()->conceals($this->file($file)));
+        $this->assertSame([], $this->library()->applyReusable($this->library()->query())->pluck('file_id')->all());
+
+        $result = $this->deleteFile($file);
+
+        $this->assertSame(1, $result->deleted);
+        $this->assertArrayNotHasKey($file, $this->catalog->assets);
+        // The deletions list never names it either
+        $this->assertTrue(MediaDeletionModel::query()->where('file_id', $file)->sole()->is_hidden);
     }
 
     #[DataProvider('claimedOrigins')]

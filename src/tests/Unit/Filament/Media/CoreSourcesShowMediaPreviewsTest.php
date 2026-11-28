@@ -6,6 +6,7 @@ namespace Tests\Unit\Filament\Media;
 
 use App\Application\Media\Contracts\ShowsMediaPreviews;
 use App\Filament\Media\Sources\ArticleMediaSource;
+use App\Filament\Media\Sources\ArticleTextImageMediaSource;
 use App\Filament\Media\Sources\EventMediaSource;
 use App\Filament\Media\Sources\FooterMediaSource;
 use App\Filament\Media\Sources\GalleryPhotoMediaSource;
@@ -34,6 +35,7 @@ final class CoreSourcesShowMediaPreviewsTest extends TestCase
             SiteSettingsMediaSource::class,
             ProfileBannerMediaSource::class,
             ProposalImageMediaSource::class,
+            ArticleTextImageMediaSource::class,
         ] as $source) {
             $this->assertContains(ShowsMediaPreviews::class, (array) class_implements($source), $source);
         }
