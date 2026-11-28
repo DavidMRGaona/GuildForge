@@ -9,6 +9,7 @@ use App\Application\Profiles\DTOs\VisibleProfileDTO;
 use App\Application\Profiles\Services\VisibleProfilesInterface;
 use App\Application\Services\EmailVerificationPolicyInterface;
 use App\Application\Services\UserServiceInterface;
+use App\Domain\Profiles\Exceptions\VisibleProfilesUnavailableException;
 use App\Domain\Profiles\ProfileVisibility;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserProfileModel;
@@ -25,7 +26,8 @@ use Tests\TestCase;
 
 /**
  * VisibleProfilesInterface::among() (core#840): which of many accounts' public profiles one person may
- * see, decided by the profile page's own rule in one call, with only what that page shows them.
+ * see, decided by the profile page's own rule in one call, with only what that page shows them; and
+ * amongOrFail() (core#871), the same answer, except that a failed read throws instead of giving none.
  */
 final class VisibleProfilesTest extends TestCase
 {
@@ -229,6 +231,92 @@ final class VisibleProfilesTest extends TestCase
         $log->shouldHaveReceived('warning')->once();
     }
 
+    public function test_the_strict_read_answers_what_among_answers(): void
+    {
+        $public = $this->owner('Ana', ProfileVisibility::Public);
+        $members = $this->owner('Berta', ProfileVisibility::Members);
+        $hidden = $this->owner('Diana', ProfileVisibility::Hidden);
+        $ids = [$hidden->id, strtoupper($members->id), $public->id, 'no es un id', $public->id];
+        $viewer = UserModel::factory()->create();
+
+        $this->assertEquals($this->among($ids, $viewer), $this->strictly($ids, $viewer));
+        $this->assertSame([$members->id, $public->id], array_map(
+            static fn (VisibleProfileDTO $profile): string => $profile->userId,
+            $this->strictly($ids, $viewer),
+        ));
+    }
+
+    public function test_the_strict_read_gives_an_empty_list_only_when_nobody_is_visible(): void
+    {
+        $hidden = $this->owner('Diana', ProfileVisibility::Hidden);
+        $withoutRow = UserModel::factory()->create();
+        UserProfileModel::query()->whereKey($withoutRow->id)->delete();
+
+        $this->assertSame([], $this->strictly([], null));
+        $this->assertSame([], $this->strictly(['no es un id'], null));
+        $this->assertSame([], $this->strictly([$hidden->id, $withoutRow->id], null));
+    }
+
+    public function test_the_strict_read_throws_when_the_profiles_cannot_be_read(): void
+    {
+        $log = Log::spy();
+        $owner = $this->owner('Ana', ProfileVisibility::Public);
+        $this->app->bind(StoredProfiles::class, static fn (): never => throw new RuntimeException('ana@example.com is gone'));
+
+        try {
+            $this->app->make(VisibleProfilesInterface::class)->amongOrFail([$owner->id], null);
+            $this->fail('A failed read must not answer a list.');
+        } catch (VisibleProfilesUnavailableException $exception) {
+            // Neither the cause nor anything it says reaches whoever catches it
+            $this->assertNull($exception->getPrevious());
+            $this->assertStringNotContainsString('ana@example.com', $exception->getMessage());
+            $this->assertStringNotContainsString($owner->id, $exception->getMessage());
+        }
+
+        $log->shouldHaveReceived('warning')->once()->withArgs(
+            static fn (string $message, array $context): bool => $context === ['exception' => RuntimeException::class],
+        );
+    }
+
+    public function test_the_strict_read_throws_on_a_stored_row_the_page_would_not_answer(): void
+    {
+        $broken = $this->owner('Ana', ProfileVisibility::Public);
+        $other = $this->owner('Berta', ProfileVisibility::Public);
+        DB::table('user_profiles')->where('user_id', $broken->id)->update(['handle' => 'Not A Handle']);
+
+        $this->expectException(VisibleProfilesUnavailableException::class);
+
+        $this->strictly([$other->id, $broken->id], null);
+    }
+
+    public function test_the_strict_read_keeps_the_access_rule_failing_closed_per_profile(): void
+    {
+        // The access rule decides alike in both reads: a membership check it cannot make hides the
+        // profiles that need it and leaves the others, as the profile page does; the read itself worked
+        $public = $this->owner('Ana', ProfileVisibility::Public);
+        $association = $this->owner('Berta', ProfileVisibility::Association);
+        $membership = Mockery::mock(AssociationMembershipServiceInterface::class);
+        $membership->shouldReceive('isAssociationMember')->andThrow(new RuntimeException('roles unreadable'));
+        $this->app->instance(AssociationMembershipServiceInterface::class, $membership);
+
+        $profiles = $this->strictly([$public->id, $association->id], UserModel::factory()->create());
+
+        $this->assertSame([$public->id], array_map(static fn (VisibleProfileDTO $profile): string => $profile->userId, $profiles));
+    }
+
+    public function test_the_strict_read_refuses_more_than_the_limit_before_reading(): void
+    {
+        $ids = [];
+        for ($i = 0; $i <= VisibleProfilesInterface::MAX_IDS; $i++) {
+            $ids[] = sprintf('0195f3a2-7c1e-7d4b-9a8e-%012x', $i);
+        }
+        $this->app->bind(StoredProfiles::class, static fn (): never => throw new RuntimeException('read'));
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->strictly($ids, null);
+    }
+
     private function owner(string $name, ProfileVisibility $visibility, ?string $avatar = null): UserModel
     {
         $owner = UserModel::factory()->create(['display_name' => $name, 'avatar_public_id' => $avatar]);
@@ -248,6 +336,17 @@ final class VisibleProfilesTest extends TestCase
         $this->app->forgetScopedInstances();
 
         return $this->app->make(VisibleProfilesInterface::class)->among($ids, $viewer);
+    }
+
+    /**
+     * @param  list<string>  $ids
+     * @return list<VisibleProfileDTO>
+     */
+    private function strictly(array $ids, ?Authenticatable $viewer): array
+    {
+        $this->app->forgetScopedInstances();
+
+        return $this->app->make(VisibleProfilesInterface::class)->amongOrFail($ids, $viewer);
     }
 
     /**

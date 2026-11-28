@@ -8,6 +8,7 @@ use App\Application\Profiles\DTOs\PublicProfileDTO;
 use App\Application\Profiles\DTOs\VisibleProfileDTO;
 use App\Application\Profiles\Services\ProfileAccessRule;
 use App\Application\Profiles\Services\VisibleProfilesInterface;
+use App\Domain\Profiles\Exceptions\VisibleProfilesUnavailableException;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use App\Infrastructure\Profiles\StoredProfiles;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -21,7 +22,8 @@ use Throwable;
  * The public profiles of many accounts one person may see (core#840): the profile rows and their
  * accounts in one query each, described as the profile page describes them, then ProfileAccessRule for
  * all of them at once. The request's rows are bound scoped, so they are asked for on each call: a module
- * may keep this service longer than one request or job.
+ * may keep this service longer than one request or job. among() is amongOrFail() failing closed
+ * (core#871), so both read, decide and log alike.
  */
 final readonly class VisibleProfiles implements VisibleProfilesInterface
 {
@@ -32,6 +34,16 @@ final readonly class VisibleProfiles implements VisibleProfilesInterface
     ) {}
 
     public function among(array $userIds, ?Authenticatable $viewer): array
+    {
+        try {
+            return $this->amongOrFail($userIds, $viewer);
+        } catch (VisibleProfilesUnavailableException) {
+            // Already logged; fails closed
+            return [];
+        }
+    }
+
+    public function amongOrFail(array $userIds, ?Authenticatable $viewer): array
     {
         $ids = $this->ids($userIds);
 
@@ -93,7 +105,8 @@ final readonly class VisibleProfiles implements VisibleProfilesInterface
                 'exception' => $exception::class,
             ]);
 
-            return [];
+            // No cause and no previous, for the same reason
+            throw VisibleProfilesUnavailableException::unreadable();
         }
     }
 

@@ -572,11 +572,30 @@ $rows = array_map(static fn (VisibleProfileDTO $profile): array => [
 - **Decided by the profile page's rule** (`ProfileAccessRule::visibleAmong()`): never a profile hidden from the viewer, deactivated, anonymized or without a profile row; a profile without a public name only for its owner. The owner always sees their own, whatever its visibility.
 - **Batched.** The profile rows and their accounts are read with one query each and the rule asks about the viewer (email verification, membership) at most once, whatever the number of accounts.
 - At most `VisibleProfilesInterface::MAX_IDS` (500) accounts in one call: more throws `InvalidArgumentException` before anything is read, nothing is cut in silence. Ask a longer list in chunks, as above.
-- **Fails closed.** Any other failure (a query, a stored row the page would not answer) gives an empty list and a warning with the exception's class only; it never throws. An access check that throws hides the profiles that need it, as on the page.
+- **Fails closed.** Any other failure (a query, a stored row the page would not answer) gives an empty list and a warning with the exception's class only; it never throws. An access check that throws hides the profiles that need it, as on the page. So for `among()` a failure and «nobody is visible» look alike: when the page must tell them apart, use `amongOrFail()` (below).
 - `VisibleProfileDTO` (`App\Application\Profiles\DTOs`) carries what the page shows that person and nothing else: `userId` (lower case), `handle` (the page is `/miembros/<handle>`), `publicName` (as the page shows it; `null` only on the owner's own profile while they have none) and `avatarPublicId` (the avatar's Cloudinary public id, drawn like the page's; `null` without one). Never the account name, the email or the roles. It is checked when built and throws `InvalidArgumentException` on an id that is not a UUID, an address without the form of one, a blank public name or one with blanks around it, or a blank avatar.
 - An interface of its own, apart from `PublicProfileServiceInterface` and `ProfileCardServiceInterface`, so a module's test doubles of those keep working.
 - It answers for one viewer: what it gave is for that person only. Never keep it in a cache shared between viewers.
 - It only says who may be named. Whether showing that an account did something is allowed (an NPC author, a private sign-up, an owner who opted out of a list) is still the module's own rule.
+
+### Telling a failure apart: `amongOrFail()`
+
+A list that says something about who is missing from it («Nobody is on the leaderboard yet», «You are not listed because you have no public name») must not say it when the profiles could not be read. `amongOrFail()` (core ≥ the release with #871) answers exactly what `among()` answers, except that a failed read throws `VisibleProfilesUnavailableException` (`App\Domain\Profiles\Exceptions`) instead of giving an empty list, so an empty list then always means that nobody among them is visible:
+
+```php
+use App\Domain\Profiles\Exceptions\VisibleProfilesUnavailableException;
+
+try {
+    $visible = $this->profiles->amongOrFail($chunk, $request->user());
+} catch (VisibleProfilesUnavailableException) {
+    return $this->unavailable();   // «not available right now», never «nobody»
+}
+```
+
+- `amongOrFail(list<string> $userIds, ?Authenticatable $viewer): list<VisibleProfileDTO>`: the same ids, the same order, the same DTO and the same rule (`ProfileAccessRule::visibleAmong()`) as `among()`; `among()` is `amongOrFail()` failing closed.
+- More than `MAX_IDS` accounts still throws `InvalidArgumentException` before anything is read: asking wrongly is not a failed read.
+- The exception carries no cause (`getPrevious()` is `null`) and no detail: a message may hold what a person can see. The failure is logged once, as for `among()`, with the class of what failed only. Never log or show anything more from it.
+- An access check the rule cannot make (whether the viewer is an association member) is not a failed read: it hides the profiles that need it and the others come back, as on the page.
 
 ## Failing closed
 
@@ -637,10 +656,13 @@ $this->assertSame(['achievements.first-game'], array_map(fn (ProfileBadgeDTO $ba
 $this->assertTrue(ProfileBadgeIcons::isKnown($badges[$ana->id][0]->icon));
 ```
 
-- Lists of people: the core's `VisibleProfilesInterface` works in a module's tests as it is (create the accounts, set each profile's visibility). Where only the module's own logic matters, bind the double `Tests\Support\Profiles\FakeVisibleProfiles`: it reads the ids as the core does (lower case, each once, more than 500 refused), answers the profiles it was given in the order asked, optionally filtered by a closure per viewer, and remembers every call.
+- Lists of people: the core's `VisibleProfilesInterface` works in a module's tests as it is (create the accounts, set each profile's visibility). Where only the module's own logic matters, bind the double `Tests\Support\Profiles\FakeVisibleProfiles`: it reads the ids as the core does (lower case, each once, more than 500 refused), answers the profiles it was given in the order asked, optionally filtered by a closure per viewer, and remembers every call. `failing()` makes it fail to read as the core can (core#871): `among()` then gives an empty list and `amongOrFail()` throws `VisibleProfilesUnavailableException`, so a module can test what its page says then.
 
 ```php
 $this->app->instance(VisibleProfilesInterface::class, new FakeVisibleProfiles([
     FakeVisibleProfiles::profile($ana->id, 'ana-garcia', 'Ana García'),
 ]));
+
+// The profiles cannot be read
+$this->app->instance(VisibleProfilesInterface::class, (new FakeVisibleProfiles)->failing());
 ```

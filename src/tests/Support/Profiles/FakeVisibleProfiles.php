@@ -6,6 +6,7 @@ namespace Tests\Support\Profiles;
 
 use App\Application\Profiles\DTOs\VisibleProfileDTO;
 use App\Application\Profiles\Services\VisibleProfilesInterface;
+use App\Domain\Profiles\Exceptions\VisibleProfilesUnavailableException;
 use Closure;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Str;
@@ -22,6 +23,9 @@ use InvalidArgumentException;
  *     $this->app->instance(VisibleProfilesInterface::class, new FakeVisibleProfiles([
  *         FakeVisibleProfiles::profile($ana->id, 'ana-garcia', 'Ana García'),
  *     ]));
+ *
+ * failing() makes it fail to read as the core can (core#871): among() then gives no profile and
+ * amongOrFail() throws VisibleProfilesUnavailableException, after the ids are read and the call kept.
  */
 final class FakeVisibleProfiles implements VisibleProfilesInterface
 {
@@ -30,6 +34,8 @@ final class FakeVisibleProfiles implements VisibleProfilesInterface
 
     /** @var array<string, VisibleProfileDTO> */
     private array $profiles = [];
+
+    private bool $fails = false;
 
     /**
      * @param  list<VisibleProfileDTO>  $profiles
@@ -49,7 +55,24 @@ final class FakeVisibleProfiles implements VisibleProfilesInterface
         return new VisibleProfileDTO($userId, $handle, $publicName, $avatarPublicId);
     }
 
+    /** From now on every read fails, as the core's does when the database cannot be read */
+    public function failing(): self
+    {
+        $this->fails = true;
+
+        return $this;
+    }
+
     public function among(array $userIds, ?Authenticatable $viewer): array
+    {
+        try {
+            return $this->amongOrFail($userIds, $viewer);
+        } catch (VisibleProfilesUnavailableException) {
+            return [];
+        }
+    }
+
+    public function amongOrFail(array $userIds, ?Authenticatable $viewer): array
     {
         $ids = [];
         foreach ($userIds as $userId) {
@@ -65,6 +88,10 @@ final class FakeVisibleProfiles implements VisibleProfilesInterface
         }
 
         $this->calls[] = ['userIds' => $ids, 'viewer' => $viewer];
+
+        if ($this->fails) {
+            throw VisibleProfilesUnavailableException::unreadable();
+        }
 
         $visible = [];
         foreach ($ids as $userId) {
