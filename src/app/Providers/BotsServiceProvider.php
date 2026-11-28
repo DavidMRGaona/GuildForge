@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Application\Bots\Services\BotRegistryInterface;
+use App\Application\Bots\Services\BotsInterface;
 use App\Infrastructure\Bots\BotRegistry;
+use App\Infrastructure\Bots\EloquentBots;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -18,5 +20,6 @@ final class BotsServiceProvider extends ServiceProvider
     {
         // Built by hand so the cache is only asked for when warning, not at boot
         $this->app->singleton(BotRegistryInterface::class, static fn ($app): BotRegistry => new BotRegistry($app));
+        $this->app->scoped(BotsInterface::class, EloquentBots::class);
     }
 }
