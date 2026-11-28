@@ -236,6 +236,18 @@ final class EditorImageMediaTest extends TestCase
         $this->assertSame([$file => MediaDeletionRefusal::InUse], $this->deleteFile($file)->refused);
     }
 
+    public function test_an_image_of_a_guide_only_some_people_read_stays_concealed_and_in_use(): void
+    {
+        $file = 'knowledge/content/2026/11/'.Str::uuid()->toString();
+        $this->catalog->add($file, uploadedAt: '2026-11-01 10:00:00');
+        $this->writeText('knowledge', '<p><img src="'.self::BASE.'guildforge/'.$file.'.jpg" alt=""></p>', ['permissions' => ['any' => ['events.update']]]);
+        $this->sync();
+
+        $this->assertSame(MediaFileStatus::InUse, $this->library()->statusOf($this->file($file)));
+        $this->assertTrue($this->library()->conceals($this->file($file)));
+        $this->assertSame([$file => MediaDeletionRefusal::InUse], $this->deleteFile($file)->refused);
+    }
+
     public function test_an_image_inside_the_grace_period_is_recent_and_never_deleted(): void
     {
         $file = 'events/content/2026/11/'.Str::uuid()->toString();
@@ -247,7 +259,10 @@ final class EditorImageMediaTest extends TestCase
         $this->assertArrayHasKey($file, $this->catalog->assets);
     }
 
-    private function writeText(string $origin, string $html): void
+    /**
+     * @param  array<string, mixed>  $conditions  of a site guide
+     */
+    private function writeText(string $origin, string $html, array $conditions = []): void
     {
         match ($origin) {
             'events' => EventModel::factory()->create(['title' => 'Torneo', 'description' => $html]),
@@ -266,7 +281,7 @@ final class EditorImageMediaTest extends TestCase
                 'body_format' => 'html',
                 'body' => $html,
                 'body_text' => 'Cuerpo.',
-                'conditions' => [],
+                'conditions' => $conditions,
                 'related' => [],
                 'featured' => false,
                 'content_hash' => str_repeat('b', 40),

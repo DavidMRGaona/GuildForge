@@ -27,6 +27,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
+use JsonException;
 
 /**
  * Files of this site whose delivery URL sits inside a core rich text: event descriptions, article contents,
@@ -257,8 +258,30 @@ final readonly class RichTextMediaSource implements MediaUsageSourceInterface, R
             $record->getAttribute($this->models()[$kind]['column']),
             $kind.':'.(is_scalar($key) ? (string) $key : ''),
             $unsubmitted ? (string) __('filament.media_library.unsubmitted_proposal') : (string) $record->getAttribute('title'),
-            $unsubmitted,
+            $unsubmitted || ($record instanceof KnowledgeGuideModel && $this->isRestricted($record)),
         );
+    }
+
+    /**
+     * A site guide with any condition (permissions, capabilities, membership, modules) is read only by some
+     * people, and whoever opens the library may not be one of them: its images stay out of sight, still in use
+     * (core#838). Read from the stored value, so conditions that cannot be read hide them too.
+     */
+    private function isRestricted(KnowledgeGuideModel $guide): bool
+    {
+        $stored = $guide->getRawOriginal('conditions');
+
+        if ($stored === null || $stored === '') {
+            return false;
+        }
+
+        try {
+            $conditions = is_string($stored) ? json_decode($stored, true, 16, JSON_THROW_ON_ERROR) : null;
+        } catch (JsonException) {
+            return true;
+        }
+
+        return $conditions !== [];
     }
 
     /**
