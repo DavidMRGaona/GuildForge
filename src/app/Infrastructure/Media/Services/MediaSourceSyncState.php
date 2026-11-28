@@ -12,7 +12,9 @@ use App\Application\Services\SettingsServiceInterface;
 use App\Application\Updates\Services\CoreVersionServiceInterface;
 use App\Domain\Modules\Entities\Module;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaSourceRefreshFailureModel;
+use App\Infrastructure\Persistence\Eloquent\Models\SettingModel;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
@@ -28,6 +30,9 @@ use Throwable;
  * A failed refresh of one record (core#844) leaves its type out too, in a table of its own so failures written
  * at once never lose each other: the row may still say what the source no longer says (a usage now hidden).
  * Only a sync that read the source completely brings it back, and only if no refresh failed while it ran.
+ *
+ * Fingerprints are written from the stored row, locked, never from the settings cache (core#853): a sync and
+ * media:forget-source may run at once, and neither may bring back what the other took away.
  */
 final readonly class MediaSourceSyncState
 {
@@ -144,11 +149,54 @@ final readonly class MediaSourceSyncState
     }
 
     /**
-     * Drops a type's refresh failure: only when its usage rows are forgotten (media:forget-source).
+     * Drops a type's refresh failure: only when its usage rows are forgotten (media:forget-source). Never
+     * throws: false when it could not be dropped, which only keeps the type concealed.
      */
-    public function forgetRefreshFailure(string $type): void
+    public function forgetRefreshFailure(string $type): bool
     {
-        MediaSourceRefreshFailureModel::query()->where('source_type', $type)->delete();
+        try {
+            // In a savepoint of its own: a failed statement must not abort a transaction the caller holds
+            DB::transaction(static fn (): mixed => MediaSourceRefreshFailureModel::query()->where('source_type', $type)->delete());
+
+            return true;
+        } catch (Throwable $e) {
+            Log::warning('[Media] A media refresh failure could not be forgotten; the type stays concealed until its next sync.', [
+                'type' => $type,
+                'exception' => $e,
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Drops a type's fingerprint, so only a complete sync that does not fail counts it as up to date again
+     * (media:forget-source, core#853). Never throws: false when it could not be dropped. An unreadable state
+     * already trusts no source, so it is left as it is.
+     */
+    public function forgetFingerprint(string $type): bool
+    {
+        try {
+            DB::transaction(function () use ($type): void {
+                $state = $this->lockStored();
+
+                if ($state === null || ! array_key_exists($type, $state)) {
+                    return;
+                }
+
+                unset($state[$type]);
+                $this->write($state);
+            });
+
+            return true;
+        } catch (Throwable $e) {
+            Log::warning('[Media] A media source fingerprint could not be forgotten.', [
+                'type' => $type,
+                'exception' => $e,
+            ]);
+
+            return false;
+        }
     }
 
     /**
@@ -171,24 +219,11 @@ final readonly class MediaSourceSyncState
     {
         try {
             $stored = $this->settings->get(self::KEY);
-            $decoded = is_string($stored) && $stored !== '' ? json_decode($stored, true, 3, JSON_THROW_ON_ERROR) : [];
         } catch (Throwable) {
             return [];
         }
 
-        if (! is_array($decoded)) {
-            return [];
-        }
-
-        $state = [];
-
-        foreach ($decoded as $type => $fingerprint) {
-            if (is_string($type) && is_string($fingerprint)) {
-                $state[$type] = $fingerprint;
-            }
-        }
-
-        return $state;
+        return $this->decode($stored) ?? [];
     }
 
     /**
@@ -203,18 +238,70 @@ final readonly class MediaSourceSyncState
      */
     public function record(array $synced, array $failed, array $refreshFailuresBefore = []): void
     {
-        $state = [...$this->all(), ...$synced];
+        DB::transaction(function () use ($synced, $failed): void {
+            // An unreadable state is replaced: what it held was trusted by nobody
+            $state = [...$this->lockStored() ?? [], ...$synced];
 
-        foreach ($failed as $type) {
-            unset($state[$type]);
-        }
+            foreach ($failed as $type) {
+                unset($state[$type]);
+            }
 
-        ksort($state);
-        $this->settings->set(self::KEY, (string) json_encode($state, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+            $this->write($state);
+        });
 
         foreach (array_diff_key(array_intersect_key($refreshFailuresBefore, $synced), array_flip($failed)) as $type => $token) {
             $this->clearRefreshFailure((string) $type, $token);
         }
+    }
+
+    /**
+     * The stored fingerprints, read from the table with the row locked until the transaction ends; null when
+     * the value cannot be read. The row is written by set() in the same transaction.
+     *
+     * @return array<string, string>|null
+     */
+    private function lockStored(): ?array
+    {
+        return $this->decode(SettingModel::query()->where('key', self::KEY)->lockForUpdate()->value('value'));
+    }
+
+    /**
+     * @param  array<string, string>  $state
+     */
+    private function write(array $state): void
+    {
+        ksort($state);
+        $this->settings->set(self::KEY, (string) json_encode($state, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * @return array<string, string>|null null when the value is not a JSON object of fingerprints
+     */
+    private function decode(mixed $stored): ?array
+    {
+        if ($stored === null || $stored === '') {
+            return [];
+        }
+
+        try {
+            $decoded = is_string($stored) ? json_decode($stored, true, 3, JSON_THROW_ON_ERROR) : null;
+        } catch (Throwable) {
+            return null;
+        }
+
+        if (! is_array($decoded)) {
+            return null;
+        }
+
+        $state = [];
+
+        foreach ($decoded as $type => $fingerprint) {
+            if (is_string($type) && is_string($fingerprint)) {
+                $state[$type] = $fingerprint;
+            }
+        }
+
+        return $state;
     }
 
     /**

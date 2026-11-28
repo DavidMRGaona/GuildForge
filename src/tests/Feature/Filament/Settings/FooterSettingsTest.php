@@ -16,6 +16,7 @@ use App\Domain\Footer\ValueObjects\FooterLayout;
 use App\Domain\Navigation\Enums\MenuLocation;
 use App\Filament\Pages\Settings\FooterSettings;
 use App\Filament\Support\PanelNavigationGroup;
+use App\Infrastructure\Media\Services\MediaSourceSyncState;
 use App\Infrastructure\Navigation\Persistence\Eloquent\Models\MenuItemModel;
 use App\Infrastructure\Persistence\Eloquent\Models\PermissionModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -23,6 +24,7 @@ use Filament\Forms\Components\Builder;
 use Filament\Forms\Components\Builder\Block;
 use Filament\Forms\Components\TextInput;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Mockery\MockInterface;
@@ -319,6 +321,37 @@ final class FooterSettingsTest extends TestCase
             ->assertHasNoFormErrors();
 
         $this->assertSame(['footer/logos/keep.png'], array_column(app(FooterLayoutServiceInterface::class)->layout()->columns[0]->blocks[0]->settings['logos'], 'image'));
+    }
+
+    public function test_a_logo_that_cannot_be_released_never_costs_the_refresh(): void
+    {
+        $this->actingAs(UserModel::factory()->admin()->create());
+        Storage::fake('images');
+        Storage::disk('images')->put('footer/logos/gone.png', 'x');
+        app(FooterLayoutServiceInterface::class)->save(FooterLayout::of([
+            new FooterColumn([new FooterBlock('core.logos', null, ['logos' => [
+                ['image' => 'footer/logos/gone.png', 'alt' => 'Se va', 'url' => ''],
+            ]])]),
+        ]));
+        $this->mock(MediaFileReleaserInterface::class, static function (MockInterface $releaser): void {
+            $releaser->shouldReceive('release')->once()->with('footer/logos/gone.png')->andThrow(new RuntimeException('catalog down'));
+        });
+        // The library learns that the logo left even though the file was kept
+        $this->mock(MediaIndexerInterface::class, static function (MockInterface $indexer): void {
+            $indexer->shouldReceive('refresh')->once()->with('footer', 'layout');
+        });
+        $log = Log::spy();
+
+        Livewire::test(FooterSettings::class)
+            ->fillForm(['columns' => [['blocks' => [['type' => 'core.text', 'data' => ['title' => null, 'settings' => ['content' => '<p>Hola</p>']]]]]]])
+            ->call('save')
+            ->assertHasNoFormErrors()
+            ->assertNotified('Pie de página guardado');
+
+        $this->assertSame('core.text', app(FooterLayoutServiceInterface::class)->layout()->columns[0]->blocks[0]->key);
+        $log->shouldHaveReceived('warning')->withArgs(static fn (string $message): bool => str_contains($message, 'Could not release the logos'))->once();
+        // A release that failed keeps the file, but the refresh went through: the footer is not concealed
+        $this->assertArrayNotHasKey('footer', app(MediaSourceSyncState::class)->refreshFailures() ?? []);
     }
 
     public function test_a_media_failure_never_fails_the_save(): void

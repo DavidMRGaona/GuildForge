@@ -6,12 +6,14 @@ namespace Tests\Feature\Media;
 
 use App\Application\Media\Services\MediaCatalogInterface;
 use App\Application\Media\Services\MediaIndexerInterface;
+use App\Application\Services\SettingsServiceInterface;
 use App\Filament\Pages\Settings\AboutPageSettings;
 use App\Filament\Pages\Settings\LegalPagesSettings;
 use App\Filament\Pages\SiteSettings;
 use App\Infrastructure\Media\Jobs\RefreshMediaUsagesJob;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaFileModel;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaUsageModel;
+use App\Infrastructure\Media\Services\MediaSourceSyncState;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\PhotoModel;
@@ -256,6 +258,45 @@ final class RefreshMediaOnSaveTest extends TestCase
             $indexer->shouldHaveReceived('refresh')->with('settings', $key)->once();
         }
         $indexer->shouldNotHaveReceived('refresh', ['settings', 'guild_name']);
+    }
+
+    public function test_a_settings_refresh_that_fails_never_fails_the_save_and_conceals_the_type(): void
+    {
+        $indexer = Mockery::mock(MediaIndexerInterface::class);
+        $indexer->shouldReceive('refresh')->andThrow(new RuntimeException('index down'));
+        $this->app->instance(MediaIndexerInterface::class, $indexer);
+        $log = Log::spy();
+        $this->actingAs(UserModel::factory()->admin()->create());
+
+        Livewire::test(SiteSettings::class)
+            ->fillForm(['guild_name' => 'Gremio de ejemplo'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('Gremio de ejemplo', app(SettingsServiceInterface::class)->getStored('guild_name'));
+        $log->shouldHaveReceived('warning')->withArgs(
+            static fn (string $message, array $context): bool => str_contains($message, 'media usages of the saved settings')
+                && in_array(['settings', 'site_logo_light'], $context['records'], true),
+        )->once();
+        // The nightly sync settles it; until then its images are concealed (core#844)
+        $this->assertArrayHasKey('settings', app(MediaSourceSyncState::class)->refreshFailures() ?? []);
+    }
+
+    public function test_an_indexer_that_cannot_be_built_never_fails_the_save_and_conceals_the_types(): void
+    {
+        $this->app->bind(MediaIndexerInterface::class, static fn (): never => throw new RuntimeException('indexer unavailable'));
+        $log = Log::spy();
+
+        $event = EventModel::factory()->create(['image_public_id' => 'events/2026/11/a.jpg']);
+
+        $this->assertTrue(EventModel::query()->whereKey($event->id)->exists());
+        $log->shouldHaveReceived('warning')->withArgs(
+            static fn (string $message, array $context): bool => str_contains($message, 'media usages of a saved record') && $context['type'] === 'events',
+        )->once();
+        // Its image and its text: both types are concealed until the next sync
+        $failures = app(MediaSourceSyncState::class)->refreshFailures() ?? [];
+        $this->assertArrayHasKey('events', $failures);
+        $this->assertArrayHasKey('rich_text', $failures);
     }
 
     public function test_saving_the_legal_pages_refreshes_their_texts(): void

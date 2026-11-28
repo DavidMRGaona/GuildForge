@@ -27,6 +27,9 @@ final class InMemoryMediaCatalog implements MediaCatalogInterface
     /** @var list<string> Ids looked up with find(), in order */
     public array $lookups = [];
 
+    /** @var list<string> Ids asked to destroy(), in order, whether they existed or not */
+    public array $destroyed = [];
+
     public function add(string $id, int $bytes = 1000, string $uploadedAt = '2026-11-01 10:00:00'): MediaAssetDTO
     {
         $asset = new MediaAssetDTO(
@@ -62,6 +65,7 @@ final class InMemoryMediaCatalog implements MediaCatalogInterface
 
     public function destroy(MediaFileId $id, string $resourceType): MediaDestroyOutcome
     {
+        $this->destroyed[] = $id->value;
         $this->failIfUnavailable();
 
         if (! isset($this->assets[$id->value])) {
