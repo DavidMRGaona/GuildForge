@@ -107,7 +107,7 @@ $bots = $this->bots->describe($authorIds); // array<id, BotDTO>
 
 ## Recognising a bot
 
-`BotsInterface::isBot(?string $accountId)` tells whether an account is a bot, even one whose module is now disabled (`null` and malformed ids are false). On a model, `UserModel::isBot()` does the same from `bot_key`. Use them to decide what a bot never does: it never receives mail, never has preferences and never joins a table.
+`BotsInterface::isBot(?string $accountId)` tells whether an account is a bot, even one whose module is now disabled (`null` and malformed ids are false). On a model, `UserModel::isBot()` does the same from `bot_key`. Use them to decide what a bot never does: it never receives mail or notices and never gets roles.
 
 ## Adopting an existing account
 
@@ -136,16 +136,17 @@ The account is locked first and everything happens in one transaction. It remove
 | Password reset | Never. |
 | Panel | `canAccessPanel()` is false even with `admin.access` given by hand. |
 | Impersonation | Never a valid target. |
-| Roles | `users:assign-member-role` and every path that gives the base role skip them. |
+| Roles | `users:assign-member-role` skips them and `MemberRoleServiceInterface::assignTo()` does nothing for a bot (no role, no history row). |
 | Profiles | No profile row is created, and an adopted account's is forgotten. |
 | Activity | Creating, changing, deactivating or restoring a bot announces nothing, and `ActivityReaderInterface` drops the facts of bots, so achievements never count them. |
-| Notices | The notification centre, mail and push never deliver to them; adoption deletes what was stored. |
+| Notices and mail | The notification centre stores nothing for a bot (`SiteNotificationChannel`) and the mail preferences listener cancels the mail channel for one (`FilterMailByPreferences`), even when a module loads it with `withBots()` and calls `notify()`. |
+| Push | No subscription can exist for a bot, and adoption deletes any the account had. |
 
 ## Rules for module code
 
 - **Never call `withoutGlobalScopes()` without arguments on `UserModel`**: it drops `WithoutBots` and brings every bot into the query. Name the scope you want to drop (`withoutGlobalScope(SoftDeletingScope::class)`, `withTrashed()`) or use `withBots()` when you mean bots.
 - **A raw query on `users`** (`DB::table('users')`, `->from('users')`, a join) skips the scope: filter `bot_key` yourself (`whereNull('users.bot_key')`, or `whereNotNull` when you want bots only). The core's architecture test (`RawUserQueriesTest`) scans only the core's `app/`; nothing checks a module, so review yours.
-- Never sign a bot in, give it roles or a profile, or send it mail. It acts only when module code writes in its name, with the id from `BotsInterface::id()`.
+- Never sign a bot in, give it roles or a profile, or send it mail (the core's guards refuse notices, mail and the base role, but a module must not rely on them for anything else). It acts only when module code writes in its name, with the id from `BotsInterface::id()`.
 - Show a bot's name through `display_name` or the site's name, never through `name` (the account name is the bot's label).
 
 ## Testing

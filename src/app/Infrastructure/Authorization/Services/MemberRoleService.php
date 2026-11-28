@@ -27,6 +27,11 @@ final readonly class MemberRoleService implements MemberRoleServiceInterface
 
     public function assignTo(object $user): void
     {
+        // A bot (core#863) is not a person: it never gets the base role
+        if ($user instanceof UserModel && $user->isBot()) {
+            return;
+        }
+
         if (! RoleModel::query()->where('name', UserRole::Member->value)->exists()) {
             /** @var UserModel $user */
             Log::warning('The member role does not exist; user '.$user->getKey().' was created without it. Create the role and run users:assign-member-role');

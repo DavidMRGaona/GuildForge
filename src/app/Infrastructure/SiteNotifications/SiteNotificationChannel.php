@@ -56,7 +56,8 @@ final class SiteNotificationChannel
     public function send(object $notifiable, Notification $notification): void
     {
         // Only accounts have a notification centre; deactivated and anonymized ones are nobody now
-        if (! $notifiable instanceof UserModel || $notifiable->anonymized_at !== null || $notifiable->trashed()) {
+        // A bot (core#863) is not a person either: nothing is stored for it
+        if (! $notifiable instanceof UserModel || $notifiable->anonymized_at !== null || $notifiable->trashed() || $notifiable->isBot()) {
             return;
         }
 

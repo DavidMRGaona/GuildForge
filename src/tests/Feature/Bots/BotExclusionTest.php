@@ -10,13 +10,17 @@ use App\Application\Activity\DTOs\ActivitySubjectFactsDTO;
 use App\Application\Activity\Services\ActivityPublisherInterface;
 use App\Application\Activity\Services\ActivityReaderInterface;
 use App\Application\Activity\Services\ActivitySourceRegistryInterface;
+use App\Application\Authorization\Services\MemberRoleServiceInterface;
 use App\Application\Bots\Services\BotRegistryInterface;
 use App\Application\Bots\Services\BotsInterface;
 use App\Application\DTOs\LoginAttemptOutcome;
 use App\Application\Impersonation\Services\ImpersonationAccountsInterface;
 use App\Application\Impersonation\Services\ImpersonationEligibilityRule;
+use App\Application\Mail\DTOs\MailCategoryDTO;
+use App\Application\Mail\Services\MailCategoryRegistryInterface;
 use App\Application\Services\AuthServiceInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
+use App\Application\SiteNotifications\DTOs\SiteNotificationDTO;
 use App\Domain\Activity\ActivityRole;
 use App\Domain\Impersonation\Enums\ImpersonationRefusal;
 use App\Domain\Profiles\Events\ProfileMembershipDisplayChanged;
@@ -26,12 +30,15 @@ use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use DateTimeImmutable;
 use Filament\Panel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Notifications\Events\NotificationSent;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Mockery;
 use Tests\Support\Activity\FakeActivitySource;
 use Tests\Support\Bots\FakeBot;
+use Tests\Support\Mail\CategorizedTestNotification;
+use Tests\Support\SiteNotifications\SiteTestNotification;
 use Tests\TestCase;
 
 /**
@@ -218,5 +225,57 @@ final class BotExclusionTest extends TestCase
         $this->artisanCommand('users:assign-member-role')->assertSuccessful();
 
         $this->assertSame(0, DB::table('user_role')->where('user_id', $id)->count());
+    }
+
+    public function test_a_bot_gets_no_site_notice(): void
+    {
+        $this->registerCategory(site: true);
+        $bot = $this->bot($this->botId());
+
+        $bot->notify(new SiteTestNotification('example.replies', new SiteNotificationDTO(
+            title: 'Aviso',
+            url: '/foro',
+            body: 'Texto',
+            icon: 'bell',
+        )));
+
+        $this->assertSame(0, DB::table('site_notifications')->where('user_id', $bot->getKey())->count());
+    }
+
+    public function test_a_bot_gets_no_mail(): void
+    {
+        $this->registerCategory(site: false);
+        $sent = [];
+        Event::listen(NotificationSent::class, function (NotificationSent $event) use (&$sent): void {
+            $sent[] = $event->notification::class;
+        });
+
+        $this->bot($this->botId())->notify(new CategorizedTestNotification('example.replies'));
+
+        $this->assertSame([], $sent);
+    }
+
+    public function test_the_base_role_is_never_given_to_a_bot(): void
+    {
+        RoleModel::query()->firstOrCreate(['name' => 'member'], ['display_name' => 'Member']);
+        $bot = $this->bot($this->botId());
+
+        $this->app->make(MemberRoleServiceInterface::class)->assignTo($bot);
+
+        $this->assertSame(0, DB::table('user_role')->where('user_id', $bot->getKey())->count());
+        $this->assertSame(0, DB::table('role_audit_log')->count());
+    }
+
+    private function registerCategory(bool $site): void
+    {
+        $this->app->make(MailCategoryRegistryInterface::class)->registerMany([
+            MailCategoryDTO::optional(
+                key: 'example.replies',
+                section: 'Example section',
+                label: 'Replies',
+                description: 'Replies',
+                site: $site,
+            ),
+        ], 'example');
     }
 }
