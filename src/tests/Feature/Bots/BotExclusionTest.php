@@ -37,6 +37,7 @@ use Illuminate\Support\Facades\Hash;
 use Mockery;
 use Tests\Support\Activity\FakeActivitySource;
 use Tests\Support\Bots\FakeBot;
+use Tests\Support\Bots\RecordingActivityPublisher;
 use Tests\Support\Mail\CategorizedTestNotification;
 use Tests\Support\SiteNotifications\SiteTestNotification;
 use Tests\TestCase;
@@ -50,8 +51,7 @@ final class BotExclusionTest extends TestCase
 
     private const string KEY = 'forum.publisher';
 
-    /** @var list<array{string, string}> */
-    private array $recorded = [];
+    private RecordingActivityPublisher $publisher;
 
     protected function setUp(): void
     {
@@ -78,18 +78,8 @@ final class BotExclusionTest extends TestCase
 
     private function recordPublications(): void
     {
-        $this->recorded = [];
-        $recorded = &$this->recorded;
-        $this->app->instance(ActivityPublisherInterface::class, new class($recorded) implements ActivityPublisherInterface
-        {
-            /** @param list<array{string, string}> $calls */
-            public function __construct(private array &$calls) {}
-
-            public function recorded(string $sourceType, string $subjectId): void
-            {
-                $this->calls[] = [$sourceType, $subjectId];
-            }
-        });
+        $this->publisher = new RecordingActivityPublisher;
+        $this->app->instance(ActivityPublisherInterface::class, $this->publisher);
     }
 
     public function test_creating_a_bot_creates_no_profile_and_publishes_nothing(): void
@@ -101,7 +91,7 @@ final class BotExclusionTest extends TestCase
 
         $this->assertSame(0, DB::table('user_profiles')->where('user_id', $id)->count());
         $this->assertSame(0, DB::table('user_profile_handles')->count());
-        $this->assertSame([], $this->recorded);
+        $this->assertSame([], $this->publisher->calls);
         Event::assertNotDispatched(ProfileMembershipDisplayChanged::class);
     }
 
@@ -118,7 +108,7 @@ final class BotExclusionTest extends TestCase
         $bot->restore();
 
         $this->assertSame(0, DB::table('user_profiles')->where('user_id', $id)->count());
-        $this->assertSame([], $this->recorded);
+        $this->assertSame([], $this->publisher->calls);
         Event::assertNotDispatched(ProfileMembershipDisplayChanged::class);
     }
 
@@ -131,7 +121,7 @@ final class BotExclusionTest extends TestCase
         $person->update(['display_name' => 'Persona nueva']);
 
         $this->assertSame(1, DB::table('user_profiles')->where('user_id', $person->id)->count());
-        $this->assertContains(['core.account', strtolower((string) $person->id)], $this->recorded);
+        $this->assertContains(['core.account', strtolower((string) $person->id)], $this->publisher->calls);
         Event::assertDispatched(ProfileMembershipDisplayChanged::class);
     }
 
