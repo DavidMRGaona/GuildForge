@@ -50,8 +50,15 @@ final class MediaForgetSourceCommand extends Command
 
         $count = MediaUsageModel::query()->where('source_type', $type)->count();
 
-        // Without rows nothing tells whose type it is: its failure is kept, so it fails closed
+        // Without rows nothing tells whose type it is: its failure is kept, so it fails closed. Its fingerprint
+        // goes all the same: that only conceals its files until a sync reads the source again
         if ($count === 0) {
+            if (! $syncState->forgetFingerprint($type)) {
+                $this->error(sprintf('No usage rows of type "%s", but its sync state could not be updated. Run the command again.', $type));
+
+                return self::FAILURE;
+            }
+
             $this->info(sprintf('No usage rows of type "%s".', $type));
 
             return self::SUCCESS;
@@ -64,11 +71,23 @@ final class MediaForgetSourceCommand extends Command
             return self::SUCCESS;
         }
 
-        $deleted = MediaUsageModel::query()->where('source_type', $type)->delete();
-        // Nothing of the type is left to conceal
-        $syncState->forgetRefreshFailure($type);
+        // First, so that only a complete sync that does not fail counts the type as up to date again: a module
+        // installed again with the same version and its data kept would otherwise count with no rows (core#853)
+        if (! $syncState->forgetFingerprint($type)) {
+            $this->error(sprintf('The sync state of "%s" could not be updated; nothing was deleted. Run the command again.', $type));
 
+            return self::FAILURE;
+        }
+
+        $deleted = MediaUsageModel::query()->where('source_type', $type)->delete();
         $this->info(sprintf('Deleted %d usage rows of type "%s".', $deleted, $type));
+
+        // Nothing of the type is left to conceal; a failure left behind only keeps it concealed
+        if (! $syncState->forgetRefreshFailure($type)) {
+            $this->error('Its refresh failure could not be cleared: the type stays concealed until a sync reads its source again.');
+
+            return self::FAILURE;
+        }
 
         return self::SUCCESS;
     }

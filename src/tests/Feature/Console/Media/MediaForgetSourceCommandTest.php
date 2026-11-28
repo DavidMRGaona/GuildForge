@@ -8,6 +8,7 @@ use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaUsageModel;
 use App\Infrastructure\Media\Services\MediaSourceSyncState;
 use App\Infrastructure\Persistence\Eloquent\Models\ModuleModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 final class MediaForgetSourceCommandTest extends TestCase
@@ -109,5 +110,60 @@ final class MediaForgetSourceCommandTest extends TestCase
 
         // A type without rows keeps it: nothing tells whether its module is still installed
         $this->assertSame(['events', 'nothing.here'], array_keys($state->refreshFailures() ?? []));
+    }
+
+    public function test_forgetting_a_type_drops_its_fingerprint(): void
+    {
+        // Reinstalled with the same version and its data kept, it must not count as up to date without rows
+        $state = $this->app->make(MediaSourceSyncState::class);
+        $state->record(['gametables.tables' => 'fingerprint', 'events' => 'other'], []);
+        $this->usage('gametables.tables', 't1');
+
+        $this->artisanCommand('media:forget-source', ['type' => 'gametables.tables', '--force' => true])->assertSuccessful();
+
+        $this->assertSame(['events' => 'other'], $state->all());
+    }
+
+    public function test_forgetting_a_type_without_rows_drops_its_fingerprint_too(): void
+    {
+        // Forgetting a fingerprint only conceals until the next sync, so it is safe whoever owns the type
+        $state = $this->app->make(MediaSourceSyncState::class);
+        $state->record(['gametables.tables' => 'fingerprint', 'events' => 'other'], []);
+
+        $this->artisanCommand('media:forget-source', ['type' => 'gametables.tables', '--force' => true])
+            ->expectsOutputToContain('No usage rows of type "gametables.tables".')
+            ->assertSuccessful();
+
+        $this->assertSame(['events' => 'other'], $state->all());
+    }
+
+    public function test_a_fingerprint_that_cannot_be_forgotten_keeps_every_row(): void
+    {
+        $this->usage('gametables.tables', 't1');
+        Schema::drop('settings');
+
+        $this->artisanCommand('media:forget-source', ['type' => 'gametables.tables', '--force' => true])
+            ->expectsOutputToContain('The sync state of "gametables.tables" could not be updated; nothing was deleted.')
+            ->assertFailed();
+
+        $this->assertSame(1, MediaUsageModel::query()->where('source_type', 'gametables.tables')->count());
+    }
+
+    public function test_a_refresh_failure_that_cannot_be_dropped_ends_with_a_clear_message(): void
+    {
+        $state = $this->app->make(MediaSourceSyncState::class);
+        $state->record(['gametables.tables' => 'fingerprint'], []);
+        $this->usage('gametables.tables', 't1');
+        Schema::drop('media_source_refresh_failures');
+
+        $this->artisanCommand('media:forget-source', ['type' => 'gametables.tables', '--force' => true])
+            ->expectsOutputToContain('Deleted 1 usage rows of type "gametables.tables".')
+            ->expectsOutputToContain('Its refresh failure could not be cleared')
+            ->doesntExpectOutputToContain('Stack trace')
+            ->assertFailed();
+
+        // The rows are gone and the type is out of date: the failure left behind only keeps it concealed
+        $this->assertFalse(MediaUsageModel::query()->where('source_type', 'gametables.tables')->exists());
+        $this->assertSame([], $state->all());
     }
 }

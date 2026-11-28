@@ -16,6 +16,7 @@ use App\Application\Proposals\Services\ProposalSettingsServiceInterface;
 use App\Domain\Impersonation\Enums\ImpersonationMode;
 use App\Domain\Proposals\Enums\ProposalStatus;
 use App\Domain\Proposals\Exceptions\InvalidProposalDataException;
+use App\Infrastructure\Media\Jobs\ReleaseMediaFileJob;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaDeletionModel;
 use App\Infrastructure\Media\Persistence\Eloquent\Models\MediaFileModel;
 use App\Infrastructure\Media\Services\CloudinaryMediaFileIdResolver;
@@ -23,8 +24,11 @@ use App\Infrastructure\Media\Services\MediaLibraryQueryInterface;
 use App\Infrastructure\Persistence\Eloquent\Models\ArticleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\EventModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use ArrayObject;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Queue\Events\JobProcessed;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Mockery;
 use Mockery\MockInterface;
@@ -127,31 +131,44 @@ final class ProposalImageMediaTest extends TestCase
                 throw new RuntimeException('failed after saving');
             });
         });
+        $released = $this->recordReleases();
+        $checked = $this->recordReleaseChecks();
 
         $this->actingAs($user)
             ->post('/propuestas/eventos', $this->eventForm(['image' => UploadedFile::fake()->image('cartel.png')]))
             ->assertServerError();
 
+        $path = (string) EventModel::query()->includingUnsubmittedProposals()->sole()->image_public_id;
+        $this->assertMatchesRegularExpression('~^events/proposals/\d{4}/\d{2}/[0-9a-f-]{36}\.png$~', $path);
+        // The failed save let go of its image, and the live check ran and kept it
+        $this->assertSame([$path], $released->getArrayCopy());
+        $this->assertSame([substr($path, 0, -4)], $checked->getArrayCopy());
+        $this->assertSame([], $this->catalog->destroyed);
         $this->assertSame(0, MediaDeletionModel::query()->count());
-        Storage::disk('images')->assertExists((string) EventModel::query()->includingUnsubmittedProposals()->sole()->image_public_id);
     }
 
     public function test_a_refused_proposal_while_simulating_an_account_releases_nothing(): void
     {
-        // The safety net rolls the request back and neutralises the queue: nothing is queued nor deleted
+        // The safety net rolls the request back and neutralises the queue: the release is asked for, yet no
+        // check runs and nothing is deleted
         $this->configure(maxDrafts: 1);
         $admin = UserModel::factory()->admin()->create();
         $target = UserModel::factory()->create();
         EventModel::factory()->proposal(ProposalStatus::Draft, $target)->create();
         $this->actingAs($admin);
         $this->app->make(ImpersonationServiceInterface::class)->start($admin, $target, ImpersonationMode::Simulate);
+        $released = $this->recordReleases();
+        $checked = $this->recordReleaseChecks();
 
         $this->from('/propuestas/eventos/nuevo')
             ->post('/propuestas/eventos', $this->eventForm(['image' => UploadedFile::fake()->image('cartel.png')]))
             ->assertSessionHas('error');
 
+        $this->assertCount(1, $released);
+        $this->assertMatchesRegularExpression('~^events/proposals/\d{4}/\d{2}/[0-9a-f-]{36}\.png$~', (string) $released[0]);
+        $this->assertSame([], $checked->getArrayCopy());
+        $this->assertSame([], $this->catalog->destroyed);
         $this->assertSame(0, MediaDeletionModel::query()->count());
-        $this->assertSame([], $this->catalog->lookups);
     }
 
     public function test_a_deletion_whose_concealment_cannot_be_told_is_recorded_hidden(): void
@@ -215,6 +232,56 @@ final class ProposalImageMediaTest extends TestCase
             articles: new ProposalTypeSettingsDTO(enabled: true),
             maxOpenDrafts: $maxDrafts,
         ));
+    }
+
+    /**
+     * Every path the real releaser is asked to let go of, in order.
+     *
+     * @return ArrayObject<int, string>
+     */
+    private function recordReleases(): ArrayObject
+    {
+        /** @var ArrayObject<int, string> $released */
+        $released = new ArrayObject;
+        $real = $this->app->make(MediaFileReleaserInterface::class);
+        $this->app->instance(MediaFileReleaserInterface::class, new readonly class($real, $released) implements MediaFileReleaserInterface
+        {
+            /**
+             * @param  ArrayObject<int, string>  $released
+             */
+            public function __construct(
+                private MediaFileReleaserInterface $real,
+                private ArrayObject $released,
+            ) {}
+
+            public function release(string $storedPath): void
+            {
+                $this->released->append($storedPath);
+                $this->real->release($storedPath);
+            }
+        });
+
+        return $released;
+    }
+
+    /**
+     * The file id of every live check of a released file that ran, in order.
+     *
+     * @return ArrayObject<int, string>
+     */
+    private function recordReleaseChecks(): ArrayObject
+    {
+        /** @var ArrayObject<int, string> $checked */
+        $checked = new ArrayObject;
+        Queue::after(static function (JobProcessed $event) use ($checked): void {
+            $job = unserialize($event->job->payload()['data']['command']);
+
+            if ($job instanceof ReleaseMediaFileJob) {
+                $checked->append($job->fileId);
+            }
+        });
+
+        return $checked;
     }
 
     private function spyOnReleases(): MockInterface

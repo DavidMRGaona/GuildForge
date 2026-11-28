@@ -124,7 +124,7 @@ trait ColumnSourceContractTests
         $this->assertNull($this->source()->editUrl((string) Str::uuid(), $with));
     }
 
-    public function test_content_folder_is_excluded_from_the_claim(): void
+    public function test_it_declares_its_excluded_subfolders_and_is_not_hidden(): void
     {
         $this->assertSame($this->excludedSubfolders(), $this->source()->excludedSubfolders());
         $this->assertFalse($this->source()->hidden());

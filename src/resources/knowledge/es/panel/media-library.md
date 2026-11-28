@@ -103,4 +103,4 @@ Estos borrados automáticos aparecen en **Borrados** como «al quitarlo de un re
 
 ## Registro de borrados
 
-Pulsa **Borrados** para ver los últimos archivos borrados: cuál era, quién lo borró y cuándo. Si el archivo ya no existía en Cloudinary, aparece como «ya no existía». Un archivo que la biblioteca ocultaba al borrarlo aparece como «Imagen oculta», sin su nombre.
+Pulsa **Borrados** para ver los últimos archivos borrados: cuál era, quién lo borró y cuándo. Si el archivo ya no existía en Cloudinary, aparece como «ya no existía». Un archivo que la biblioteca ocultaba al borrarlo aparece como «Imagen oculta», sin su nombre y sin quién lo borró («Por —»): podría delatar de quién era un borrador.
