@@ -36,8 +36,8 @@ use Throwable;
  * anything it throws and checks what it returns against the DTOs' rules. Anything wrong is a
  * `Failed` result, warned once a day per type and reason, never an empty answer: a consumer only
  * replaces what it keeps with what was read. `Missing` is only for a type no module registers.
- * Facts of anonymized accounts are dropped (one query per call), so a recalculation never brings
- * back what was erased; deactivated accounts keep theirs. Bound scoped, so a long-running worker
+ * Facts of anonymized accounts and of bots (core#863: not people) are dropped (one query per call),
+ * so a recalculation never brings back what was erased; deactivated accounts keep theirs. Bound scoped, so a long-running worker
  * warns again the next day.
  */
 final readonly class ActivityReader implements ActivityReaderInterface
@@ -317,7 +317,7 @@ final readonly class ActivityReader implements ActivityReaderInterface
     }
 
     /**
-     * The subjects without the facts of anonymized accounts, or null (warned) when that cannot be
+     * The subjects without the facts of anonymized accounts and bots, or null (warned) when that cannot be
      * known: never keep what may have been erased.
      *
      * @param  list<ActivitySubjectFactsDTO>  $subjects
@@ -340,7 +340,9 @@ final readonly class ActivityReader implements ActivityReaderInterface
 
         try {
             foreach (array_chunk(array_map(strval(...), array_keys($userIds)), self::ACCOUNT_QUERY_CHUNK) as $chunk) {
-                $found = UserModel::withTrashed()->whereIn('id', $chunk)->whereNotNull('anonymized_at')->pluck('id');
+                $found = UserModel::query()->withBots()->withTrashed()->whereIn('id', $chunk)
+                    ->where(static fn ($query) => $query->whereNotNull('anonymized_at')->orWhereNotNull('bot_key'))
+                    ->pluck('id');
 
                 foreach ($found as $id) {
                     $anonymized[strtolower((string) $id)] = true;

@@ -29,6 +29,8 @@ use WeakMap;
  * - anonymized, deactivated, restored or deleted: the account, its profile and its approved
  *   proposals start or stop counting.
  *
+ * Bots (core#863) are not people and publish nothing.
+ *
  * Never fails the save: a failure is logged and the next change publishes again. The queries that
  * can fail run in a savepoint of their own, so they cannot abort the caller's transaction
  * (PostgreSQL would refuse every later statement); the publications run in the caller's, so the
@@ -47,11 +49,19 @@ final class UserActivityObserver
 
     public function created(UserModel $user): void
     {
+        if ($user->isBot()) {
+            return;
+        }
+
         $this->safely($user, fn () => $this->activity->recorded(AccountActivitySource::TYPE, $this->id($user)));
     }
 
     public function updated(UserModel $user): void
     {
+        if ($user->isBot()) {
+            return;
+        }
+
         if ($user->wasChanged('anonymized_at')) {
             $this->everythingOf($user, readProposals: true);
 
@@ -83,6 +93,10 @@ final class UserActivityObserver
      */
     public function forceDeleting(UserModel $user): void
     {
+        if ($user->isBot()) {
+            return;
+        }
+
         $this->safely($user, function () use ($user): void {
             $this->deletions()[$user] = $this->approvedProposalsOf((string) $user->getKey());
         });
@@ -90,6 +104,10 @@ final class UserActivityObserver
 
     public function forceDeleted(UserModel $user): void
     {
+        if ($user->isBot()) {
+            return;
+        }
+
         $subjects = $this->deletions()[$user] ?? [];
         unset($this->deletions()[$user]);
 
@@ -103,12 +121,20 @@ final class UserActivityObserver
     /** Soft or permanent: either way the account stops counting */
     public function deleted(UserModel $user): void
     {
+        if ($user->isBot()) {
+            return;
+        }
+
         // A permanent deletion has no proposals left to read: forceDeleted announces what forceDeleting read
         $this->everythingOf($user, readProposals: ! $user->isForceDeleting());
     }
 
     public function restored(UserModel $user): void
     {
+        if ($user->isBot()) {
+            return;
+        }
+
         $this->everythingOf($user, readProposals: true);
     }
 

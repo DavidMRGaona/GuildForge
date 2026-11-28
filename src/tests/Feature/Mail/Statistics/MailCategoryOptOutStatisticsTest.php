@@ -64,6 +64,25 @@ final class MailCategoryOptOutStatisticsTest extends TestCase
         $this->assertSame(100.0, $row->percentage);
     }
 
+    public function test_bot_accounts_are_not_counted(): void
+    {
+        $this->registerNews();
+        $person = UserModel::factory()->create();
+        $bot = UserModel::factory()->create();
+        DB::table('users')->where('id', $bot->id)->update(['bot_key' => 'forum.publisher']);
+        $this->optOut($person, 'test.news');
+        $this->optOut($bot, 'test.news');
+        $this->pause($person, null);
+        $this->pause($bot, null);
+
+        $report = $this->service()->report();
+        $row = $this->row('test.news');
+
+        $this->assertSame(1, $row->optedOut);
+        $this->assertSame(1, $row->eligible);
+        $this->assertSame(1, $report->pausedAccounts);
+    }
+
     public function test_an_enabled_row_is_not_an_opt_out(): void
     {
         $this->registerNews();

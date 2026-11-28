@@ -12,12 +12,17 @@ final readonly class EloquentImpersonationAccounts implements ImpersonationAccou
 {
     public function find(string $id): ?Authenticatable
     {
-        return UserModel::withTrashed()->find($id);
+        return UserModel::query()->withBots()->withTrashed()->find($id);
     }
 
     public function isDeactivated(Authenticatable $account): bool
     {
         return ! $account instanceof UserModel || $account->trashed();
+    }
+
+    public function isBot(Authenticatable $account): bool
+    {
+        return $account instanceof UserModel && $account->isBot();
     }
 
     public function isAnonymized(Authenticatable $account): bool

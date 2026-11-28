@@ -169,10 +169,15 @@ class UserModel extends Authenticatable implements FilamentUser, HasAvatar, Must
 
     /**
      * The panel opens for admin.access from any role, never for a role name: Filament, the
-     * maintenance bypass and UserService::canAccessPanel() must give the same answer.
+     * maintenance bypass and UserService::canAccessPanel() must give the same answer. A bot never opens it.
      */
     public function canAccessPanel(Panel $panel): bool
     {
+        // A bot never signs in (core#863), whatever it was given by hand
+        if ($this->isBot()) {
+            return false;
+        }
+
         return app(AuthorizationServiceInterface::class)->can($this, 'admin.access');
     }
 

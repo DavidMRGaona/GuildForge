@@ -15,11 +15,14 @@ interface ImpersonationAccountsInterface
 {
     /**
      * The account with that id, deactivated ones included (so the rule can tell why it may
-     * not be impersonated); null when there is none.
+     * not be impersonated) and bots (so the rule can name the reason); null when there is none.
      */
     public function find(string $id): ?Authenticatable;
 
     public function isDeactivated(Authenticatable $account): bool;
 
     public function isAnonymized(Authenticatable $account): bool;
+
+    /** Whether the account is a bot (core#863); never a valid target */
+    public function isBot(Authenticatable $account): bool;
 }
