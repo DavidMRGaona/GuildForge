@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Mockery;
 use Tests\Support\Bots\FakeBot;
+use Tests\Support\Bots\NamedFakeBot;
 use Tests\TestCase;
 
 final class BotsServiceTest extends TestCase
@@ -118,6 +119,72 @@ final class BotsServiceTest extends TestCase
 
         $this->assertSame($bots->racedId, $id);
         $this->assertSame(1, $this->botRows());
+    }
+
+    public function test_a_bot_that_declares_a_name_is_created_with_it(): void
+    {
+        $registry = new BotRegistry($this->app);
+        $registry->register(NamedFakeBot::class, 'forum');
+        $this->app->instance(BotRegistryInterface::class, $registry);
+
+        $id = $this->bots()->id('forum.publisher');
+
+        $this->assertSame('Heraldo', UserModel::query()->withBots()->findOrFail($id)->display_name);
+        $this->assertSame('Heraldo', $this->bots()->describe([$id])[$id]->name);
+    }
+
+    public function test_a_unique_violation_inside_a_callers_transaction_returns_the_existing_account(): void
+    {
+        $raced = new \stdClass;
+        $raced->id = null;
+        $bots = $this->racingBots($raced);
+
+        $id = DB::transaction(function () use ($bots): string {
+            $id = $bots->id('forum.publisher');
+            // The caller's transaction is still usable afterwards
+            $this->assertSame(1, DB::table('users')->where('id', $id)->count());
+
+            return $id;
+        });
+
+        $this->assertSame($raced->id, $id);
+        $this->assertSame(1, $this->botRows());
+    }
+
+    private function racingBots(\stdClass $raced): EloquentBots
+    {
+        return new class($this->app, $raced) extends EloquentBots
+        {
+            public function __construct(Application $app, private readonly \stdClass $raced)
+            {
+                parent::__construct(
+                    $app->make(BotRegistryInterface::class),
+                    $app->make(SiteBrandingServiceInterface::class),
+                    $app->make(BotAdoptionRule::class),
+                    $app->make(UserProfileServiceInterface::class),
+                    $app->make(ActivityPublisherInterface::class),
+                    $app->make(WebPushSubscriptionServiceInterface::class),
+                    $app->make(RoleAuditLoggerInterface::class),
+                    $app->make(RoleAuditContext::class),
+                    $app->make(AuthorizationServiceInterface::class),
+                );
+            }
+
+            /** Simulates a row created after the second read and before the insert */
+            protected function beforeInsert(string $key): void
+            {
+                $this->raced->id = (string) Str::uuid();
+                DB::table('users')->insert([
+                    'id' => $this->raced->id,
+                    'name' => 'Racer',
+                    'email' => "bot-{$this->raced->id}@bots.invalid",
+                    'password' => 'x',
+                    'bot_key' => $key,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        };
     }
 
     public function test_an_unregistered_key_throws(): void

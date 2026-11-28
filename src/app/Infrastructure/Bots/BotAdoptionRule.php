@@ -30,28 +30,40 @@ final readonly class BotAdoptionRule
 
     public function allows(UserModel $account, string $key): bool
     {
-        if ($account->anonymized_at !== null || $account->email_verified_at !== null) {
-            return false;
+        return $this->refusal($account, $key) === null;
+    }
+
+    /**
+     * Why the account may not become the bot of this key, or null when it may. One of: anonymized,
+     * verified, other_bot, domain, roles, two_factor.
+     */
+    public function refusal(UserModel $account, string $key): ?string
+    {
+        if ($account->anonymized_at !== null) {
+            return 'anonymized';
+        }
+        if ($account->email_verified_at !== null) {
+            return 'verified';
         }
 
         $botKey = $account->bot_key;
         if ($botKey !== null && $botKey !== '') {
-            return $botKey === $key;
+            return $botKey === $key ? null : 'other_bot';
         }
 
         if (! $this->hasInvalidDomain((string) $account->email)) {
-            return false;
+            return 'domain';
         }
 
         /** @var list<string> $roles */
         $roles = $account->roles()->pluck('roles.name')->all();
         foreach ($roles as $role) {
             if (! $this->baseRole->isBaseRoleName($role)) {
-                return false;
+                return 'roles';
             }
         }
 
-        return ! $this->hasTwoFactor(strtolower((string) $account->getKey()));
+        return $this->hasTwoFactor(strtolower((string) $account->getKey())) ? 'two_factor' : null;
     }
 
     /**

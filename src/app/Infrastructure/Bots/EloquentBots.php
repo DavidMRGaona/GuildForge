@@ -17,8 +17,12 @@ use App\Application\WebPush\Services\WebPushSubscriptionServiceInterface;
 use App\Domain\Authorization\Enums\RoleAuditSource;
 use App\Domain\Bots\Exceptions\UnknownBotException;
 use App\Domain\Bots\ValueObjects\BotKey;
+use App\Infrastructure\Activity\Sources\AccountActivitySource;
+use App\Infrastructure\Activity\Sources\ProfileCompletedActivitySource;
 use App\Infrastructure\Authorization\Services\RoleAuditContext;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
+use App\Infrastructure\Support\DailyWarnings;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -32,6 +36,8 @@ class EloquentBots implements BotsInterface
 {
     public const string EMAIL_DOMAIN = 'bots.invalid';
 
+    private readonly DailyWarnings $warnings;
+
     public function __construct(
         private readonly BotRegistryInterface $registry,
         private readonly SiteBrandingServiceInterface $branding,
@@ -42,7 +48,9 @@ class EloquentBots implements BotsInterface
         private readonly RoleAuditLoggerInterface $audit,
         private readonly RoleAuditContext $auditContext,
         private readonly AuthorizationServiceInterface $authorization,
-    ) {}
+    ) {
+        $this->warnings = new DailyWarnings(BotRegistry::WARNING_PREFIX, static fn () => Cache::store());
+    }
 
     public function id(string $key): string
     {
@@ -51,7 +59,7 @@ class EloquentBots implements BotsInterface
             throw UnknownBotException::forKey($key);
         }
 
-        $account = $this->find($key) ?? $this->create($key, $definition->label);
+        $account = $this->find($key) ?? $this->create($definition);
 
         return strtolower((string) $account->getKey());
     }
@@ -104,7 +112,8 @@ class EloquentBots implements BotsInterface
 
     public function adopt(string $key, string $accountId): bool
     {
-        if (! $this->registry->find($key) instanceof BotDefinitionDTO) {
+        $definition = $this->registry->find($key);
+        if (! $definition instanceof BotDefinitionDTO) {
             throw UnknownBotException::forKey($key);
         }
         BotKey::of($key);
@@ -114,7 +123,7 @@ class EloquentBots implements BotsInterface
         }
         $id = strtolower($accountId);
 
-        $adopted = DB::transaction(function () use ($key, $id): ?UserModel {
+        $adopted = DB::transaction(function () use ($key, $id, $definition): ?UserModel {
             // The row is locked before the rule reads it, so nothing changes between check and effects
             $account = UserModel::query()->withBots()->withTrashed()->whereKey($id)->lockForUpdate()->first();
             if (! $account instanceof UserModel) {
@@ -127,9 +136,14 @@ class EloquentBots implements BotsInterface
             $taken = UserModel::query()->withBots()->withTrashed()
                 ->where('bot_key', $key)->whereKeyNot($id)->exists();
             if ($taken) {
+                $this->refused($id, $key, 'key_taken');
+
                 return null;
             }
-            if (! $this->adoptionRule->allows($account, $key)) {
+            $refusal = $this->adoptionRule->refusal($account, $key);
+            if ($refusal !== null) {
+                $this->refused($id, $key, $refusal);
+
                 return null;
             }
 
@@ -139,6 +153,9 @@ class EloquentBots implements BotsInterface
             $this->removeEveryRole($account);
             $account->forceFill([
                 'bot_key' => $key,
+                // The bot's own name or, when null, the site's name read when shown (never frozen here)
+                'name' => $definition->label,
+                'display_name' => $definition->name,
                 // A password nobody knows, and no session or remember cookie left
                 'password' => Hash::make(Str::random(64)),
                 'remember_token' => null,
@@ -159,12 +176,22 @@ class EloquentBots implements BotsInterface
             return UserModel::query()->withBots()->withTrashed()->whereKey($id)->where('bot_key', $key)->exists();
         }
 
+        // Achievements stop counting the account: the observers no longer announce a bot. First, because
+        // the publisher never throws and the cache refresh may: a retry finds the bot already done.
+        $this->activity->recorded(AccountActivitySource::TYPE, $id);
+        $this->activity->recorded(ProfileCompletedActivitySource::TYPE, $id);
         $this->authorization->invalidateCacheFor($adopted);
-        // Achievements stop counting the account: the observers no longer announce a bot
-        $this->activity->recorded('core.account', $id);
-        $this->activity->recorded('core.profile-completed', $id);
 
         return true;
+    }
+
+    private function refused(string $accountId, string $key, string $reason): void
+    {
+        $this->warnings->warn(
+            "adoption-refused:{$accountId}:{$key}:{$reason}",
+            'Bot adoption refused',
+            ['user_id' => $accountId, 'key' => $key, 'reason' => $reason],
+        );
     }
 
     private function removeEveryRole(UserModel $account): void
@@ -187,33 +214,52 @@ class EloquentBots implements BotsInterface
      */
     protected function afterFirstLookup(string $key): void {}
 
+    /**
+     * Test seam: runs after the read inside the lock and before the insert, where a process that did
+     * not wait for the lock may create the same bot. Does nothing in production.
+     */
+    protected function beforeInsert(string $key): void {}
+
     private function find(string $key): ?UserModel
     {
         return UserModel::query()->withBots()->withTrashed()->where('bot_key', $key)->first();
     }
 
-    private function create(string $key, string $label): UserModel
+    private function create(BotDefinitionDTO $definition): UserModel
     {
+        $key = $definition->key;
         BotKey::of($key);
         $this->afterFirstLookup($key);
 
         // Two calls at once create one account: the second finds the first's after waiting for the lock
-        return Cache::lock('bots:create:'.$key, 10)->block(10, function () use ($key, $label): UserModel {
+        return Cache::lock('bots:create:'.$key, 10)->block(10, function () use ($key, $definition): UserModel {
             $existing = $this->find($key);
             if ($existing instanceof UserModel) {
                 return $existing;
             }
 
+            $this->beforeInsert($key);
+
             $id = (string) Str::uuid();
             $account = new UserModel;
             $account->forceFill([
                 'id' => $id,
-                'name' => $label,
+                'name' => $definition->label,
+                // null: the site's name, read when shown
+                'display_name' => $definition->name,
                 'email' => "bot-{$id}@".self::EMAIL_DOMAIN,
                 // A password nobody knows: the secret is never kept
                 'password' => Hash::make(Str::random(64)),
                 'bot_key' => $key,
-            ])->save();
+            ]);
+
+            try {
+                // Its own (nested: savepoint) transaction, so a unique violation does not abort a caller's
+                DB::transaction(static fn (): bool => $account->save());
+            } catch (UniqueConstraintViolationException $e) {
+                // Another process made it meanwhile (the lock is released before a caller's commit)
+                return $this->find($key) ?? throw $e;
+            }
 
             return $this->find($key) ?? throw new InvalidArgumentException('The bot account could not be read back.');
         });

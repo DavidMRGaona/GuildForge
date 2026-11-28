@@ -16,6 +16,9 @@ use Tests\Support\Files\ReadsFiles;
  * Bots (core#863) are hidden from every Eloquent query on users by the `WithoutBots` global scope. A query
  * that skips Eloquent (`DB::table('users')`, a join on `users`) or drops every global scope sees them again,
  * so each one in `app/` must be known here with the reason a bot cannot slip through it.
+ *
+ * The dynamic `$class::query()->withoutGlobalScopes()` of `EloquentColumnMediaSource` (used by `AvatarMediaSource`) is not
+ * matched by the pattern and sees bots on purpose: a bot's avatar must count as used in the media library.
  */
 final class RawUserQueriesTest extends TestCase
 {

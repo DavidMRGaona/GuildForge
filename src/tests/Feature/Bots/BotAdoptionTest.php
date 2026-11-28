@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace Tests\Feature\Bots;
 
 use App\Application\Activity\Services\ActivityPublisherInterface;
+use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Bots\Services\BotRegistryInterface;
 use App\Application\Bots\Services\BotsInterface;
 use App\Application\Services\SiteBrandingServiceInterface;
 use App\Application\TwoFactor\Services\TwoFactorStatusReaderInterface;
 use App\Domain\Bots\Exceptions\UnknownBotException;
 use App\Domain\Events\UserRestored;
+use App\Infrastructure\Activity\Sources\AccountActivitySource;
+use App\Infrastructure\Activity\Sources\ProfileCompletedActivitySource;
 use App\Infrastructure\Bots\BotRegistry;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
@@ -25,6 +28,7 @@ use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\Support\Bots\FakeBot;
+use Tests\Support\Bots\NamedFakeBot;
 use Tests\Support\Bots\RecordingActivityPublisher;
 use Tests\TestCase;
 
@@ -40,12 +44,14 @@ final class BotAdoptionTest extends TestCase
 
     private RecordingActivityPublisher $publisher;
 
+    private string $siteName = 'Asociación de ejemplo';
+
     protected function setUp(): void
     {
         parent::setUp();
 
         $branding = Mockery::mock(SiteBrandingServiceInterface::class);
-        $branding->shouldReceive('siteName')->andReturn('Asociación de ejemplo');
+        $branding->shouldReceive('siteName')->andReturnUsing(fn (): string => $this->siteName);
         $this->app->instance(SiteBrandingServiceInterface::class, $branding);
 
         $registry = new BotRegistry($this->app);
@@ -216,13 +222,15 @@ final class BotAdoptionTest extends TestCase
             'notified_at' => now(), 'sort_key' => 1, 'created_at' => now(), 'updated_at' => now(),
         ]);
         DB::table('user_site_notification_seen')->insert(['user_id' => $id, 'seen_key' => 5]);
+        DB::table('password_reset_tokens')->insert(['email' => $user->email, 'token' => 't', 'created_at' => now()]);
+        $user->delete();
+        // After the deactivation, which forgets push subscriptions itself
         DB::table('web_push_subscriptions')->insert([
             'id' => (string) Str::uuid(), 'user_id' => $id, 'endpoint' => 'https://fcm.googleapis.com/x',
             'endpoint_hash' => str_repeat('a', 64), 'p256dh' => 'p', 'auth' => 'a', 'browser' => 'chrome',
             'platform' => 'linux', 'created_at' => now(), 'updated_at' => now(),
         ]);
-        DB::table('password_reset_tokens')->insert(['email' => $user->email, 'token' => 't', 'created_at' => now()]);
-        $user->delete();
+        $this->assertSame(1, DB::table('web_push_subscriptions')->where('user_id', $id)->count());
         $this->publisher->calls = [];
         Event::fake([UserRestored::class]);
 
@@ -288,6 +296,9 @@ final class BotAdoptionTest extends TestCase
         Log::shouldReceive('warning')->once()->withArgs(
             fn (string $message, array $context): bool => $context === ['user_id' => $this->id($first), 'exception' => RuntimeException::class],
         );
+        Log::shouldReceive('warning')->once()->withArgs(
+            fn (string $message, array $context): bool => ($context['reason'] ?? null) === 'two_factor',
+        );
         $this->twoFactor(new RuntimeException('secret detail ana@example.com'));
 
         $this->assertFalse($this->bots()->adopt(self::KEY, $this->id($first)));
@@ -311,5 +322,117 @@ final class BotAdoptionTest extends TestCase
         $this->assertSame(0, DB::table('role_audit_log')->count());
         $this->assertSame([], $this->publisher->calls);
         $this->assertSame($botId, $this->bots()->id(self::KEY));
+    }
+
+    public function test_it_gives_the_adopted_account_the_declared_name_and_follows_the_site_name(): void
+    {
+        $user = $this->adoptable(['display_name' => 'Old site name']);
+        $id = $this->id($user);
+
+        $this->assertTrue($this->bots()->adopt(self::KEY, $id));
+
+        $adopted = $this->fresh($id);
+        $this->assertNull($adopted->display_name);
+        $this->assertSame('Publicador del foro', $adopted->name);
+        $this->assertSame('Asociación de ejemplo', $this->bots()->describe([$id])[$id]->name);
+
+        $this->siteName = 'Nombre nuevo';
+        $this->assertSame('Nombre nuevo', $this->bots()->describe([$id])[$id]->name);
+    }
+
+    public function test_it_gives_the_adopted_account_the_name_a_bot_declares(): void
+    {
+        $registry = new BotRegistry($this->app);
+        $registry->register(NamedFakeBot::class, 'forum');
+        $this->app->instance(BotRegistryInterface::class, $registry);
+        $user = $this->adoptable(['display_name' => 'Old site name']);
+
+        $this->assertTrue($this->bots()->adopt(self::KEY, $this->id($user)));
+
+        $this->assertSame('Heraldo', $this->fresh($this->id($user))->display_name);
+    }
+
+    /** @return array<string, array{string, array<string, mixed>, bool}> */
+    public static function warnedRefusals(): array
+    {
+        return [
+            'domain' => ['domain', ['email' => 'ana@example.com'], false],
+            'verified' => ['verified', ['email_verified_at' => '2026-01-01 00:00:00'], false],
+            'anonymized' => ['anonymized', ['anonymized_at' => '2026-01-01 00:00:00'], false],
+            'two factor' => ['two_factor', [], true],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    #[DataProvider('warnedRefusals')]
+    public function test_a_refusal_warns_with_its_reason_once_a_day(string $reason, array $overrides, bool $twoFactor): void
+    {
+        Cache::flush();
+        $user = $this->adoptable($overrides);
+        $this->twoFactor($twoFactor);
+        $this->expectWarning($this->id($user), $reason);
+
+        $this->assertFalse($this->bots()->adopt(self::KEY, $this->id($user)));
+        $this->assertFalse($this->bots()->adopt(self::KEY, $this->id($user)));
+    }
+
+    public function test_a_refusal_for_roles_warns_with_its_reason(): void
+    {
+        Cache::flush();
+        $user = $this->adoptable();
+        $user->roles()->attach($this->role('editor')->id);
+        $this->expectWarning($this->id($user), 'roles');
+
+        $this->assertFalse($this->bots()->adopt(self::KEY, $this->id($user)));
+        $this->assertFalse($this->bots()->adopt(self::KEY, $this->id($user)));
+    }
+
+    public function test_a_refusal_for_another_bots_account_warns_with_its_reason(): void
+    {
+        Cache::flush();
+        $user = $this->adoptable();
+        $user->forceFill(['bot_key' => 'other.thing'])->save();
+        $this->expectWarning($this->id($user), 'other_bot');
+
+        $this->assertFalse($this->bots()->adopt(self::KEY, $this->id($user)));
+        $this->assertFalse($this->bots()->adopt(self::KEY, $this->id($user)));
+    }
+
+    public function test_a_taken_key_warns_with_its_reason(): void
+    {
+        Cache::flush();
+        $this->bots()->id(self::KEY);
+        $other = $this->adoptable();
+        $this->expectWarning($this->id($other), 'key_taken');
+
+        $this->assertFalse($this->bots()->adopt(self::KEY, $this->id($other)));
+        $this->assertFalse($this->bots()->adopt(self::KEY, $this->id($other)));
+    }
+
+    private function expectWarning(string $userId, string $reason): void
+    {
+        Log::shouldReceive('warning')->once()->withArgs(
+            fn (string $message, array $context): bool => $context === ['user_id' => $userId, 'key' => self::KEY, 'reason' => $reason],
+        );
+    }
+
+    public function test_the_activity_is_published_even_when_the_cache_refresh_fails(): void
+    {
+        $authorization = Mockery::mock(AuthorizationServiceInterface::class);
+        $authorization->shouldReceive('invalidateCacheFor')->andThrow(new RuntimeException('cache down'));
+        $this->app->instance(AuthorizationServiceInterface::class, $authorization);
+        $user = $this->adoptable();
+        $id = $this->id($user);
+
+        try {
+            $this->bots()->adopt(self::KEY, $id);
+            $this->fail('The cache failure should reach the caller');
+        } catch (RuntimeException) {
+        }
+
+        $this->assertContains([AccountActivitySource::TYPE, $id], $this->publisher->calls);
+        $this->assertContains([ProfileCompletedActivitySource::TYPE, $id], $this->publisher->calls);
     }
 }

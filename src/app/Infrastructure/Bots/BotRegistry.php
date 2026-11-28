@@ -19,7 +19,8 @@ use Throwable;
  * It fails closed: a class that cannot be built, is not a BotInterface, has an invalid key or one
  * that is not its module's, or shares its key with another class is left out with a warning once
  * a day per class and reason (DailyWarnings). Warnings name class, module, key and reason, and an
- * exception only by its class. A singleton built at boot; classes are resolved once per request.
+ * exception only by its class. A singleton built at boot; classes are resolved once per process: once per
+ * request under php-fpm, once per worker in queue workers (a worker keeps its bots until it restarts).
  */
 final class BotRegistry implements BotRegistryInterface
 {
