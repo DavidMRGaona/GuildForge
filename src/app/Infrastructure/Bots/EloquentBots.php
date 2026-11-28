@@ -9,7 +9,6 @@ use App\Application\Authorization\Services\AuthorizationServiceInterface;
 use App\Application\Authorization\Services\RoleAuditLoggerInterface;
 use App\Application\Bots\DTOs\BotDefinitionDTO;
 use App\Application\Bots\DTOs\BotDTO;
-use App\Application\Bots\Services\BotAdoptionRule;
 use App\Application\Bots\Services\BotRegistryInterface;
 use App\Application\Bots\Services\BotsInterface;
 use App\Application\Profiles\Services\UserProfileServiceInterface;
@@ -122,6 +121,12 @@ class EloquentBots implements BotsInterface
                 return null;
             }
             if ($account->bot_key === $key) {
+                return null;
+            }
+            // The key is unique: another account (a bot made by id() first) already holds it
+            $taken = UserModel::query()->withBots()->withTrashed()
+                ->where('bot_key', $key)->whereKeyNot($id)->exists();
+            if ($taken) {
                 return null;
             }
             if (! $this->adoptionRule->allows($account, $key)) {

@@ -15,9 +15,11 @@ use App\Infrastructure\Bots\BotRegistry;
 use App\Infrastructure\Persistence\Eloquent\Models\RoleModel;
 use App\Infrastructure\Persistence\Eloquent\Models\UserModel;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -277,5 +279,37 @@ final class BotAdoptionTest extends TestCase
 
         $this->assertSame($this->id($user), $this->bots()->id(self::KEY));
         $this->assertSame($count, UserModel::query()->withBots()->withTrashed()->count());
+    }
+
+    public function test_an_unreadable_two_factor_state_refuses_and_warns_once_a_day(): void
+    {
+        Cache::flush();
+        $first = $this->adoptable();
+        Log::shouldReceive('warning')->once()->withArgs(
+            fn (string $message, array $context): bool => $context === ['user_id' => $this->id($first), 'exception' => RuntimeException::class],
+        );
+        $this->twoFactor(new RuntimeException('secret detail ana@example.com'));
+
+        $this->assertFalse($this->bots()->adopt(self::KEY, $this->id($first)));
+        $this->assertFalse($this->bots()->adopt(self::KEY, $this->id($first)));
+    }
+
+    public function test_a_key_already_held_by_another_account_refuses_without_effects(): void
+    {
+        $botId = $this->bots()->id(self::KEY);
+        $other = $this->adoptable();
+        $other->roles()->attach($this->role('member')->id);
+        $password = $other->password;
+        $this->publisher->calls = [];
+
+        $this->assertFalse($this->bots()->adopt(self::KEY, $this->id($other)));
+
+        $after = $this->fresh($this->id($other));
+        $this->assertNull($after->bot_key);
+        $this->assertSame($password, $after->password);
+        $this->assertSame(1, DB::table('user_role')->where('user_id', $other->id)->count());
+        $this->assertSame(0, DB::table('role_audit_log')->count());
+        $this->assertSame([], $this->publisher->calls);
+        $this->assertSame($botId, $this->bots()->id(self::KEY));
     }
 }
