@@ -12,6 +12,7 @@ use App\Domain\Events\UserRestored;
 use App\Infrastructure\Media\Sources\AvatarMediaSource;
 use App\Infrastructure\Persistence\Eloquent\Concerns\DeletesCloudinaryImages;
 use App\Infrastructure\Persistence\Eloquent\Concerns\StoresInstantsInStorageTimezone;
+use App\Infrastructure\Persistence\Eloquent\Scopes\WithoutBots;
 use App\Infrastructure\Seo\CloudinaryImageUrlBuilder;
 use App\Notifications\Contracts\NamesMailRecipient;
 use Database\Factories\UserFactory;
@@ -19,6 +20,7 @@ use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasAvatar;
 use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -44,6 +46,7 @@ use Illuminate\Support\Facades\Storage;
  * @property Carbon|null $email_verified_at
  * @property Carbon|null $deleted_at
  * @property Carbon|null $anonymized_at
+ * @property string|null $bot_key `<module>.<name>` of the module owning a bot account (core#863); null for people
  * @property string|null $session_seal what each session must hold to stay signed in (core#768); null for an account that never had one
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -68,6 +71,8 @@ class UserModel extends Authenticatable implements FilamentUser, HasAvatar, Must
      */
     protected static function booted(): void
     {
+        static::addGlobalScope(new WithoutBots);
+
         static::deleted(static function (self $user): void {
             if ($user->isForceDeleting()) {
                 return;
@@ -204,6 +209,23 @@ class UserModel extends Authenticatable implements FilamentUser, HasAvatar, Must
      * counts as not held, like everywhere else. Code that must tell a stored administrator apart
      * (an account others may not manage) reads the stored roles instead.
      */
+    /**
+     * Bot accounts too (core#863): `UserModel::query()->withBots()`.
+     *
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopeWithBots(Builder $query): Builder
+    {
+        return $query->withoutGlobalScope(WithoutBots::class);
+    }
+
+    /** Whether the account is a bot rather than a person (core#863) */
+    public function isBot(): bool
+    {
+        return $this->bot_key !== null;
+    }
+
     public function isAdmin(): bool
     {
         return app(AuthorizationServiceInterface::class)->hasRole($this, UserRole::Admin->value);
