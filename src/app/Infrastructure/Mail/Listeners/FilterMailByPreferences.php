@@ -47,8 +47,8 @@ final class FilterMailByPreferences
             return null;
         }
 
-        // An anonymized account is nobody any more: its address is a placeholder
-        if ($event->notifiable->anonymized_at !== null) {
+        // An anonymized account is nobody any more: its address is a placeholder; a bot (core#863) has none to mail
+        if ($event->notifiable->anonymized_at !== null || $event->notifiable->isBot()) {
             return false;
         }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules;
 
 use App\Application\Activity\Contracts\ActivitySourceInterface;
+use App\Application\Bots\Contracts\BotInterface;
 use App\Application\Calendar\Contracts\CalendarAttendanceSourceInterface;
 use App\Application\Calendar\Contracts\CalendarEntrySourceInterface;
 use App\Application\Content\Contracts\EditorTextSourceInterface;
@@ -358,6 +359,18 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * @return array<class-string<SiteBlockInterface>>
      */
     public function registerSiteBlocks(): array
+    {
+        return [];
+    }
+
+    /**
+     * Register the bots this module offers (core#863): accounts that are not people and act for the
+     * site. Each key starts with the module name and a dot (`<module>.<name>`); a bot whose key is
+     * not the module's, or that cannot be built, is left out with a warning.
+     *
+     * @return array<class-string<BotInterface>>
+     */
+    public function registerBots(): array
     {
         return [];
     }

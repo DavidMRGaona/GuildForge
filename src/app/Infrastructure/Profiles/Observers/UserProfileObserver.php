@@ -23,6 +23,11 @@ final readonly class UserProfileObserver
 
     public function created(UserModel $user): void
     {
+        // A bot is not a person: no public profile (core#863)
+        if ($user->isBot()) {
+            return;
+        }
+
         try {
             $this->profiles->createFor((string) $user->getKey());
         } catch (Throwable $e) {
@@ -35,7 +40,7 @@ final readonly class UserProfileObserver
 
     public function updated(UserModel $user): void
     {
-        if (! $user->wasChanged('display_name') || $user->anonymized_at !== null) {
+        if ($user->isBot() || ! $user->wasChanged('display_name') || $user->anonymized_at !== null) {
             return;
         }
 

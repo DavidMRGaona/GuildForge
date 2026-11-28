@@ -84,7 +84,7 @@ final readonly class MailCategoryOptOutStatistics implements MailCategoryOptOutS
 
     private function activeAccounts(): Builder
     {
-        return DB::table('users')->whereNull('deleted_at')->whereNull('anonymized_at');
+        return DB::table('users')->whereNull('deleted_at')->whereNull('anonymized_at')->whereNull('bot_key');
     }
 
     /**
@@ -97,6 +97,7 @@ final readonly class MailCategoryOptOutStatistics implements MailCategoryOptOutS
             ->join('users', 'users.id', '=', 'user_mail_preferences.user_id')
             ->whereNull('users.deleted_at')
             ->whereNull('users.anonymized_at')
+            ->whereNull('users.bot_key')
             ->where('user_mail_preferences.enabled', $enabled)
             ->when($digest, static fn (Builder $query): Builder => $query->where('user_mail_preferences.digest', true))
             ->groupBy('user_mail_preferences.category')
@@ -114,6 +115,7 @@ final readonly class MailCategoryOptOutStatistics implements MailCategoryOptOutS
             ->join('users', 'users.id', '=', 'user_mail_pauses.user_id')
             ->whereNull('users.deleted_at')
             ->whereNull('users.anonymized_at')
+            ->whereNull('users.bot_key')
             ->where(static function (Builder $query) use ($now): void {
                 $query->whereNull('user_mail_pauses.paused_until')
                     ->orWhere('user_mail_pauses.paused_until', '>', $now);

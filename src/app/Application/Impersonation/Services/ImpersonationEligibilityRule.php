@@ -16,7 +16,7 @@ use Throwable;
  * The one place that decides who may impersonate whom, used when starting and again on every
  * request of an impersonation. The actor needs users.impersonate, which only the administrator
  * role can hold (AdminOnlyPermissionRule). The target may be any account except an
- * administrator, the actor's own, a deactivated or an anonymized one; accounts with panel
+ * administrator, a bot (core#863), the actor's own, a deactivated or an anonymized one; accounts with panel
  * access included. Whether the target is an administrator is read from the roles it holds,
  * not the ones in force: an administrator whose role is paused (core#772) is still one.
  *
@@ -126,6 +126,7 @@ final readonly class ImpersonationEligibilityRule
     private function targetRefusal(Authenticatable $actor, Authenticatable $target): ?ImpersonationRefusal
     {
         return match (true) {
+            $this->accounts->isBot($target) => ImpersonationRefusal::TargetIsBot,
             (string) $actor->getAuthIdentifier() === (string) $target->getAuthIdentifier() => ImpersonationRefusal::TargetIsSelf,
             $this->accounts->isDeactivated($target) => ImpersonationRefusal::TargetDeactivated,
             $this->accounts->isAnonymized($target) => ImpersonationRefusal::TargetAnonymized,

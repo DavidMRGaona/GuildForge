@@ -9,7 +9,7 @@ use App\Infrastructure\Profiles\Services\ProfileMembershipDisplayAnnouncer;
 
 /**
  * The account decides the rest of the badge's conditions (core#824): its public name, and whether it is
- * active. A new public name, anonymizing, deactivating, restoring and deleting for good announce it.
+ * active. A new public name, anonymizing, deactivating, restoring and deleting for good announce it. Bots (core#863) have no badge and announce nothing.
  */
 final readonly class AccountMembershipDisplayObserver
 {
@@ -19,6 +19,10 @@ final readonly class AccountMembershipDisplayObserver
 
     public function updated(UserModel $user): void
     {
+        if ($user->isBot()) {
+            return;
+        }
+
         if ($user->wasChanged(['display_name', 'anonymized_at'])) {
             $this->announcer->changed((string) $user->getKey());
         }
@@ -27,11 +31,19 @@ final readonly class AccountMembershipDisplayObserver
     /** Deactivating (soft delete) and deleting for good */
     public function deleted(UserModel $user): void
     {
+        if ($user->isBot()) {
+            return;
+        }
+
         $this->announcer->changed((string) $user->getKey());
     }
 
     public function restored(UserModel $user): void
     {
+        if ($user->isBot()) {
+            return;
+        }
+
         $this->announcer->changed((string) $user->getKey());
     }
 }

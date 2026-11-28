@@ -92,7 +92,8 @@ final readonly class AuthService implements AuthServiceInterface
 
         $user = $guard->getLastAttempted();
 
-        if (! $user instanceof UserModel) {
+        // Bots are hidden from the guard by their global scope; this is the second lock (core#863)
+        if (! $user instanceof UserModel || $user->isBot()) {
             return LoginAttemptDTO::failed();
         }
 

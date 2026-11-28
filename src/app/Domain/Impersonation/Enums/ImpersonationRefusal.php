@@ -24,6 +24,9 @@ enum ImpersonationRefusal: string
 
     case TargetAnonymized = 'target_anonymized';
 
+    /** A bot is not a person: never impersonated (core#863) */
+    case TargetIsBot = 'target_is_bot';
+
     /** A role to view the site as no longer exists (or never did) */
     case RoleUnavailable = 'role_unavailable';
 

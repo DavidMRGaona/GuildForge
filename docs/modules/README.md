@@ -69,6 +69,8 @@ Adding sections and counters to the members' public profiles (`/miembros/<handle
 
 Telling other modules who took part in the module's things and how (who played or ran a table, who won a tournament), for the achievements module or any other consumer, is covered in [Activity sources](./activity-sources.md): implement `ActivitySourceInterface`, return it from `registerActivitySources()`, report only what any signed-in member can know exists, and call `ActivityPublisherInterface::recorded()` whenever a subject's facts may have changed.
 
+Offering accounts that are not people and act for the site (the publisher of a forum), asking for their id, showing them as authors and turning an old system account into one is covered in [Bots](./bots.md): implement `BotInterface`, return it from `registerBots()`, ask `BotsInterface::id()` (outside a transaction when you can), add `withBots()` where you resolve author names and never call `withoutGlobalScopes()` without arguments on `UserModel`.
+
 ---
 
 ## Getting started
@@ -2490,6 +2492,7 @@ To build the same ZIP locally, run `make module-zip` on the host and pick the mo
 | `registerProfileBadgeSources()` | `class-string<ProfileBadgeSourceInterface>[]` | Featured badges of the public profiles (at most three per account), asked once per page for every visible author; badge keys start with the module, each badge checked and failing closed (see [Profile sections](./profile-sections.md#badges)) |
 | `registerSurveySubjectSources()` | `class-string<SurveySubjectSourceInterface>[]` | Records the surveys module can survey (tables, tournaments…) |
 | `registerActivitySources()` | `class-string<ActivitySourceInterface>[]` | Who took part in the module's things and how, for the achievements module; types start with the module, only what any signed-in member can know exists, read by consumers through a reader that fails closed (see [Activity sources](./activity-sources.md)) |
+| `registerBots()` | `class-string<BotInterface>[]` | Accounts that are not people and act for the site; keys start with the module, hidden from every account query, asked for with `BotsInterface::id()` (see [Bots](./bots.md)) |
 | `registerPublicationSources()` | `class-string<PublicationSourceInterface>[]` | Published records other modules may announce elsewhere (see [Publication sources](./publications.md)) |
 | `registerLinkableRecordSources()` | `class-string<LinkableRecordSourceInterface>[]` | Records other modules may link their data to, as each viewer may see them; `find()` returns `null` for what the viewer may not see (see [Linkable records](./linkable-records.md)) |
 | `registerEventProposalRequests()` | `class-string<EventProposalRequestInterface>[]` | Requests added to event proposals made from the web; keys prefixed with the module, values checked by the core and applied on approval (see [Event proposal requests](./proposal-requests.md)) |
