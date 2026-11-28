@@ -21,9 +21,9 @@ final class RawUserQueriesTest extends TestCase
 {
     use ReadsFiles;
 
-    private const string PATTERN = '/DB::table\(\s*[\'"]users[\'"]'
-        .'|->from\(\s*[\'"]users[\'"]'
-        .'|join\(\s*[\'"]users[\'"]'
+    private const string PATTERN = '/DB::table\(\s*[\'"]users(?:\s+as\s+\w+)?[\'"]'
+        .'|->from\(\s*[\'"]users(?:\s+as\s+\w+)?[\'"]'
+        .'|(?i:join)\(\s*[\'"]users(?:\s+as\s+\w+)?[\'"]'
         .'|UserModel::(?:query\(\)->)?withoutGlobalScopes\(\s*\)/';
 
     /**
@@ -92,6 +92,12 @@ final class RawUserQueriesTest extends TestCase
         yield 'query builder' => ["DB::table('users')->count();"];
         yield 'from' => ["\$db->from('users')"];
         yield 'join' => ["->join('users', 'users.id', '=', 'x.user_id')"];
+        yield 'left join' => ["->leftJoin('users', 'users.id', '=', 'x.user_id')"];
+        yield 'right join' => ["->rightJoin('users', 'users.id', '=', 'x.user_id')"];
+        yield 'cross join' => ["->crossJoin('users')"];
+        yield 'aliased table' => ["DB::table('users as u')->count();"];
+        yield 'aliased from' => ["\$db->from('users as u')"];
+        yield 'aliased join' => ["->leftJoin('users as u', 'u.id', '=', 'x.user_id')"];
         yield 'all scopes dropped' => ['UserModel::withoutGlobalScopes()->get();'];
         yield 'all scopes dropped after query' => ['UserModel::query()->withoutGlobalScopes()->get();'];
     }
@@ -104,6 +110,7 @@ final class RawUserQueriesTest extends TestCase
         yield 'eloquent' => ['UserModel::query()->count();'];
         yield 'with bots' => ['UserModel::query()->withBots()->get();'];
         yield 'one scope dropped' => ['UserModel::withoutGlobalScope(SoftDeletingScope::class)->get();'];
+        yield 'similar table name' => ["DB::table('users_archive')->count();"];
         yield 'other table' => ["DB::table('user_role')->count();"];
         yield 'other model' => ['ArticleModel::query()->withoutGlobalScopes()->get();'];
     }
