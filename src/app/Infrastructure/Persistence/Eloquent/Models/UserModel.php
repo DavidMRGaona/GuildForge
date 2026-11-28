@@ -204,12 +204,6 @@ class UserModel extends Authenticatable implements FilamentUser, HasAvatar, Must
     }
 
     /**
-     * Whether the administrator role is in force for the account: through the authorization
-     * service, so an administrator role paused for want of two-factor authentication (core#772)
-     * counts as not held, like everywhere else. Code that must tell a stored administrator apart
-     * (an account others may not manage) reads the stored roles instead.
-     */
-    /**
      * Bot accounts too (core#863): `UserModel::query()->withBots()`.
      *
      * @param  Builder<self>  $query
@@ -226,6 +220,12 @@ class UserModel extends Authenticatable implements FilamentUser, HasAvatar, Must
         return $this->bot_key !== null;
     }
 
+    /**
+     * Whether the administrator role is in force for the account: through the authorization
+     * service, so an administrator role paused for want of two-factor authentication (core#772)
+     * counts as not held, like everywhere else. Code that must tell a stored administrator apart
+     * (an account others may not manage) reads the stored roles instead.
+     */
     public function isAdmin(): bool
     {
         return app(AuthorizationServiceInterface::class)->hasRole($this, UserRole::Admin->value);
